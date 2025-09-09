@@ -1,0 +1,249 @@
+{#
+ # -------------------------------------------------------------------------
+ # Cancel Send plugin for GLPI
+ # -------------------------------------------------------------------------
+ #
+ # LICENSE
+ #
+ # This file is part of Cancel Send.
+ #
+ # Cancel Send is free software; you can redistribute it and/or modify
+ # it under the terms of the GNU General Public License as published by
+ # the Free Software Foundation; either version 3 of the License, or
+ # (at your option) any later version.
+ #
+ # Cancel Send is distributed in the hope that it will be useful,
+ # but WITHOUT ANY WARRANTY; without even the implied warranty of
+ # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ # GNU General Public License for more details.
+ #
+ # You should have received a copy of the GNU General Public License
+ # along with Cancel Send. If not, see <http://www.gnu.org/licenses/>.
+ # -------------------------------------------------------------------------
+ # @copyright Copyright (C) 2022-2024 by Cancel Send plugin team.
+ # @license   GPLv3 https://www.gnu.org/licenses/gpl-3.0.html
+ # @link      https://gitlab.teclib.com/glpi-network/moreoptions/
+ # -------------------------------------------------------------------------
+ #}
+
+{% import 'components/form/fields_macros.html.twig' as fields %}
+{% import 'components/alerts_macros.html.twig' as alerts %}
+
+{# Layout options for fields #}
+{% set field_options = {'label_class': 'col-8', 'input_class': 'col-4', 'field_class': 'col-6', 'full_width': false} %}
+
+<div class="asset">
+    <form action="{{ path('plugins/moreoptions/front/config.form.php') }}" method="post">
+    {% set item_has_pictures = item.hasItemtypeOrModelPictures() %}
+
+    <div class="card-body d-flex flex-wrap">
+        <div class="col-12 col-xxl-{{ item_has_pictures ? '9' : '12' }} flex-column">
+            <div class="d-flex flex-row flex-wrap flex-xl-nowrap">
+                <div class="row flex-row align-items-start flex-grow-1">
+                <div class="row flex-row">
+
+                        <div class="hr-text">
+                            <i class="fa-2x ti ti-alert-circle"></i>
+                            <span>{{ __('Itil items') }}</span>
+                        </div>
+
+                        {{ fields.checkboxField(
+                            'is_active',
+                            item.fields['is_active'],
+                            __('Active on this entity', 'moreoptions')
+                        ) }}
+
+                        <div class="moreoptions-config">
+                            <table class="table table-hover border card-table" id="config_table">
+                                <thead>
+                                    <tr>
+                                        <th> &nbsp; </th>
+                                        <th>{{ __('Ticket') }}</th>
+                                        <th>{{ __('Change') }}</th>
+                                        <th>{{ __('Problem') }}</th>
+                                        <th>{{ __('All') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>{{ __('Take the group of associated item', 'moreoptions') }}</td>
+                                        <td><input type="checkbox" name="take_item_group_ticket" class="form-check-input" id="take_item_group_ticket" {{ item.fields['take_item_group_ticket'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="take_item_group_change" class="form-check-input" id="take_item_group_change" {{ item.fields['take_item_group_change'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="take_item_group_problem" class="form-check-input" id="take_item_group_problem" {{ item.fields['take_item_group_problem'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="take_item_group_all" class="form-check-input" id="take_item_group_all" {{ (item.fields['take_item_group_ticket'] and item.fields['take_item_group_change'] and item.fields['take_item_group_problem']) ? 'checked' : '' }} /></td>
+                                    </tr>
+                                    <tr>
+                                        <td>{{ __('Take the requester group', 'moreoptions') }}</td>
+                                        <td>
+                                            {{ fields.dropdownArrayField(
+                                                'take_requester_group_ticket',
+                                                item.fields['take_requester_group_ticket'],
+                                                dropdown_options,
+                                                '',
+                                                field_options|merge({'field_class': 'col-12', 'no_label': true})
+                                            ) }}
+                                        </td>
+                                        <td>
+                                            {{ fields.dropdownArrayField(
+                                                'take_requester_group_change',
+                                                item.fields['take_requester_group_change'],
+                                                dropdown_options,
+                                                '',
+                                                field_options|merge({'field_class': 'col-12', 'no_label': true})
+                                            ) }}
+                                        </td>
+                                        <td>
+                                            {{ fields.dropdownArrayField(
+                                                'take_requester_group_problem',
+                                                item.fields['take_requester_group_problem'],
+                                                dropdown_options,
+                                                '',
+                                                field_options|merge({'field_class': 'col-12', 'no_label': true})
+                                            ) }}
+                                        </td>
+                                        <td></td>
+                                    </tr>
+                                    <tr>
+                                        <td>{{ __('Take the technician group', 'moreoptions') }}</td>
+                                        <td>
+                                            {{ fields.dropdownArrayField(
+                                                'take_technician_group_ticket',
+                                                item.fields['take_technician_group_ticket'],
+                                                dropdown_options,
+                                                '',
+                                                field_options|merge({'field_class': 'col-12', 'no_label': true})
+                                            ) }}
+                                        </td>
+                                        <td>
+                                            {{ fields.dropdownArrayField(
+                                                'take_technician_group_change',
+                                                item.fields['take_technician_group_change'],
+                                                dropdown_options,
+                                                '',
+                                                field_options|merge({'field_class': 'col-12', 'no_label': true})
+                                            ) }}
+                                        </td>
+                                        <td>
+                                            {{ fields.dropdownArrayField(
+                                                'take_technician_group_problem',
+                                                item.fields['take_technician_group_problem'],
+                                                dropdown_options,
+                                                '',
+                                                field_options|merge({'field_class': 'col-12', 'no_label': true})
+                                            ) }}
+                                        </td>
+                                        <td></td>
+                                    </tr>
+                                    <tr>
+                                        <td>{{ __('Prevent closure with tasks in To Do status', 'moreoptions') }}</td>
+                                        <td><input type="checkbox" name="prevent_closure_ticket" class="form-check-input" id="prevent_closure_ticket" {{ item.fields['prevent_closure_ticket'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="prevent_closure_change" class="form-check-input" id="prevent_closure_change" {{ item.fields['prevent_closure_change'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="prevent_closure_problem" class="form-check-input" id="prevent_closure_problem" {{ item.fields['prevent_closure_problem'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="prevent_closure_all" class="form-check-input" id="prevent_closure_all" {{ (item.fields['prevent_closure_ticket'] and item.fields['prevent_closure_change'] and item.fields['prevent_closure_problem']) ? 'checked' : '' }} /></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div class="hr-text">
+                                <i class="fa-2x ti ti-help-circle"></i>
+                                <span>{{ __('Solve and Close Tickets') }}</span>
+                            </div>
+
+                            {{ alerts.alert_danger(__('The options below relate to the mandatory fields for resolving and closing tickets.', 'moreoptions')) }}
+
+                            <table class="table table-hover border card-table" id="solutions_table">
+                                <thead>
+                                    <tr>
+                                        <th>{{ __('Technician') }}</th>
+                                        <th>{{ __('Technicians group') }}</th>
+                                        <th>{{ __('Category') }}</th>
+                                        <th>{{ __('Location') }}</th>
+                                        <th>{{ __('Solution') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><input type="checkbox" name="require_technician_to_close_ticket" class="form-check-input" {{ item.fields['require_technician_to_close_ticket'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_technicians_group_to_close_ticket" class="form-check-input" {{ item.fields['require_technicians_group_to_close_ticket'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_category_to_close_ticket" class="form-check-input" {{ item.fields['require_category_to_close_ticket'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_location_to_close_ticket" class="form-check-input" {{ item.fields['require_location_to_close_ticket'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_solution_to_close_ticket" class="form-check-input" {{ item.fields['require_solution_to_close_ticket'] ? 'checked' : '' }} /></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div class="hr-text">
+                                <i class="fa-2x ti ti-checklist"></i>
+                                <span>{{ __('Tasks') }}</span>
+                            </div>
+
+                            <table class="table table-hover border card-table" id="tasks_table">
+                                <thead>
+                                    <tr>
+                                        <th>{{ __('Category') }}</th>
+                                        <th>{{ __('Duration') }}</th>
+                                        <th>{{ __('User') }}</th>
+                                        <th>{{ __('Group') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><input type="checkbox" name="mandatory_task_category" class="form-check-input" {{ item.fields['mandatory_task_category'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="mandatory_task_duration" class="form-check-input" {{ item.fields['mandatory_task_duration'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="mandatory_task_user" class="form-check-input" {{ item.fields['mandatory_task_user'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="mandatory_task_group" class="form-check-input" {{ item.fields['mandatory_task_group'] ? 'checked' : '' }} /></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            {# {% if pentityconfig != false %}
+                                <input type="hidden" name="parent_entity_config" value="{{ pentityconfig }}"/>
+                                {% set use_parent_field = '<div class="badge bg-azure-lt ms-1" title="" data-bs-toggle="tooltip" data-bs-original-title="Value inherited from a parent entity">
+                                        <i class="fas fa-level-down-alt me-1"></i>' ~ pentityconfig ~ 's</div> &nbsp <input type="checkbox" name="use_parent_time" class="form-check-input" id="use_parent_time" value="' ~ item.fields['use_parent_time'] ~ '">' %}
+                                {{ fields.htmlField(
+                                    '',
+                                    use_parent_field,
+                                    __('Use parent entity config'),
+                                ) }}
+                            {% endif %} #}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ include('components/form/buttons.html.twig') }}
+    </form>
+</div>
+
+<script>
+    $(document).ready(function() {
+        const takeItemGroupAll = document.querySelector('input[id="take_item_group_all"]');
+        const takeItemGroupCheckboxes = document.querySelectorAll('input[type="checkbox"][id*="take_item_group"]');
+        takeItemGroupAll.addEventListener('change', () => {
+            if (takeItemGroupAll.checked === true) {
+                takeItemGroupCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = true;
+                })
+            } else {
+                takeItemGroupCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = false;
+                })
+            }
+        })
+
+        const preventClosureTicket = document.querySelector('input[id="prevent_closure_all"]');
+        const preventClosureCheckboxes = document.querySelectorAll('input[type="checkbox"][id*="prevent_closure"]');
+        preventClosureTicket.addEventListener('change', () => {
+            if (preventClosureTicket.checked === true) {
+                preventClosureCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = true;
+                })
+            } else {
+                preventClosureCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = false;
+                })
+            }
+        })
+    });
+</script>

@@ -1,0 +1,55 @@
+<root>
+   <name>MoreOptions</name>
+   <key>moreoptions</key>
+   <!-- stable, beta, development, alpha, ... -->
+   <state>stable</state>
+   <logo>https://raw.githubusercontent.com/pluginsGLPI/moreoptions/main/moreoptions.png</logo>
+   <description>
+      <short>
+         <!-- Add as many lang tag you want -->
+         <en>MoreOptions GLPI plugin</en>
+         <fr>Plugin GLPI MoreOptions</fr>
+      </short>
+      <long>
+         <!-- Add as many lang tag you want -->
+         <en>A long description for MoreOptions GLPI plugin.</en>
+         <fr>Une description longue pour le plugin GLPI MoreOptions.</fr>
+      </long>
+   </description>
+   <homepage>https://github.com/pluginsGLPI/moreoptions</homepage>
+   <download>https://github.com/pluginsGLPI/moreoptions/releases</download>
+   <issues>https://github.com/pluginsGLPI/moreoptions/issues</issues>
+   <readme>https://github.com/pluginsGLPI/moreoptions/blob/main/README.md</readme>
+   <authors>
+      <!-- Add as many author tag you want -->
+      <author>Teclib'</author>
+   </authors>
+   <versions>
+      <!-- Add as many version tag you want -->
+      <version>
+         <num>0.0.1</num>
+         <!-- Add as many compatibility tag you want -->
+         <compatibility>~11.0.0</compatibility>
+      </version>
+   </versions>
+   <langs>
+      <!-- Add as many lang tag you want -->
+      <lang>en_GB</lang>
+      <lang>fr_FR</lang>
+   </langs>
+   <license>MIT</license>
+   <!--tags>
+      <en>
+         <tag>One tag</tag>
+         <tag>Another tag</tag>
+      </en>
+      <fr>
+         <tag>Un tag</tag>
+         <tag>Un autre tag</tag>
+      </fr>
+   </tags-->
+   <!--screenshots>
+      <screenshot>https://github.com/pluginsGLPI/moreoptions/raw/main/screenshot.png</screenshot>
+      <screenshot>https://github.com/pluginsGLPI/moreoptions/raw/main/screenshot2.png</screenshot>
+   </screenshots-->
+</root>
