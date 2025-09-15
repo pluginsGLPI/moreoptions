@@ -46,12 +46,9 @@ use CommonDBTM;
 use CommonITILActor;
 use CommonITILObject;
 use CommonITILValidation;
-use Glpi\Application\View\TemplateRenderer;
 use GlpiPlugin\Moreoptions\Config;
-use Group_Change;
 use Group_Problem;
 use Group_Ticket;
-use Html;
 use ITILSolution;
 use Planning;
 use Problem;
@@ -121,7 +118,7 @@ class Controller extends CommonDBTM
                 break;
             case $item instanceof Problem_User:
                 if ($moconfig->fields['take_item_group_problem'] == 1) {
-                    $test = "OK";
+                    
                 }
                 if ($item->fields['type'] == \CommonITILActor::REQUESTER) {
                     if ($moconfig->fields['take_requester_group_problem'] != 0) {
@@ -138,12 +135,17 @@ class Controller extends CommonDBTM
         }
     }
 
+    private static function addItemGroup(CommonDBTM $item, Config $moconfig, $itemtype): void
+    {
+        
+    }
+
     /**
-     * Ajoute les groupes d'un type d'acteur donné au ticket/change/problem
+     * Add groups for the given actor type based on the configuration
      */
     private static function addGroupsForActorType(CommonDBTM $item, Config $moconfig, int $actorType, string $configField, string $itemType): void
     {
-        // Déterminer le type d'objet et les classes appropriées
+        // Determine the class to use
         switch ($itemType) {
             case 'Ticket':
                 $object = new Ticket();
@@ -168,13 +170,12 @@ class Controller extends CommonDBTM
 
         $actors = $object->getActorsForType($actorType);
         foreach ($actors as $actor) {
-            // Ne garder que les acteurs de type User
             if (!is_array($actor) || !isset($actor['itemtype']) || $actor['itemtype'] !== 'User') {
                 continue;
             }
 
             if ($moconfig->fields[$configField] == 1) {
-                // Utiliser le groupe principal de l'utilisateur
+                // Use only the main group of the user
                 $user = new User();
                 if (isset($actor['items_id'])) {
                     $user->getFromDB($actor['items_id']);
@@ -185,7 +186,7 @@ class Controller extends CommonDBTM
                     $idField => $object->fields['id'],
                 ];
 
-                // Ajouter le type pour les techniciens assignés
+                // Add type for assigned technicians
                 if ($actorType == \CommonITILActor::ASSIGN) {
                     $criteria['type'] = \CommonITILActor::ASSIGN;
                 }
@@ -198,7 +199,7 @@ class Controller extends CommonDBTM
                     $t_group->add($criteria);
                 }
             } else {
-                // Utiliser tous les groupes de l'utilisateur
+                // USe all groups of the user
                 $users_groups = new \Group_User();
                 if (isset($actor['items_id'])) {
                     $u_groups = $users_groups->find([
@@ -214,7 +215,7 @@ class Controller extends CommonDBTM
                             $idField => $object->fields['id'],
                         ];
 
-                        // Ajouter le type pour les techniciens assignés
+                        // Add type for assigned technicians
                         if ($actorType == \CommonITILActor::ASSIGN) {
                             $criteria['type'] = \CommonITILActor::ASSIGN;
                         }
@@ -320,12 +321,12 @@ class Controller extends CommonDBTM
             }
         }
         if ($conf->fields['require_category_to_close_ticket'] == 1) {
-            if ((isset($item->input['itilcategories_id']) && empty($item->input['itilcategories_id']))) {
+            if ((!isset($item->input['itilcategories_id']) || empty($item->input['itilcategories_id']))) {
                 $message .= '- ' . __s('Category') . '<br>';
             }
         }
         if ($conf->fields['require_location_to_close_ticket'] == 1) {
-            if ((isset($item->input['locations_id']) && empty($item->input['locations_id']))) {
+            if ((!isset($item->input['locations_id']) || empty($item->input['locations_id']))) {
                 $message .= '- ' . __s('Location') . '<br>';
             }
         }
