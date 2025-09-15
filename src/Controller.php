@@ -130,7 +130,7 @@ class Controller extends CommonDBTM
         }
     }
 
-    public static function addItemGroups($item): void
+    public static function addItemGroups(CommonDBTM $item): void
     {
         $conf = Config::getCurrentConfig();
         if ($conf->fields['is_active'] != 1) {
