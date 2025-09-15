@@ -31,8 +31,6 @@
  * @license   MIT https://opensource.org/licenses/mit-license.php
  * @license   GPLv3 https://www.gnu.org/licenses/gpl-3.0.html
  * @link      https://github.com/pluginsGLPI/moreoptions
- * @link      https://gitlab.teclib.com/glpi-network/cancelsend/
- * @link      https://gitlab.teclib.com/glpi-network/cloudinventory/
  * -------------------------------------------------------------------------
  */
 
