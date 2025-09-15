@@ -40,6 +40,7 @@ namespace GlpiPlugin\Moreoptions;
 
 use Change;
 use Change_Group;
+use Change_Item;
 use Change_User;
 use ChangeTask;
 use CommonDBTM;
@@ -47,8 +48,11 @@ use CommonITILActor;
 use CommonITILObject;
 use CommonITILValidation;
 use GlpiPlugin\Moreoptions\Config;
+use Group_Item;
 use Group_Problem;
 use Group_Ticket;
+use Item_Problem;
+use Item_Ticket;
 use ITILSolution;
 use Planning;
 use Problem;
@@ -89,9 +93,6 @@ class Controller extends CommonDBTM
 
         switch ($item) {
             case $item instanceof Ticket_User:
-                if ($moconfig->fields['take_item_group_ticket'] == 1) {
-                    $test = "OK";
-                }
                 if ($item->fields['type'] == \CommonITILActor::REQUESTER) {
                     if ($moconfig->fields['take_requester_group_ticket'] != 0) {
                         self::addGroupsForActorType($item, $moconfig, \CommonITILActor::REQUESTER, 'take_requester_group_ticket', 'Ticket');
@@ -103,9 +104,6 @@ class Controller extends CommonDBTM
                 }
                 break;
             case $item instanceof Change_User:
-                if ($moconfig->fields['take_item_group_change'] == 1) {
-                    $test = "OK";
-                }
                 if ($item->fields['type'] == \CommonITILActor::REQUESTER) {
                     if ($moconfig->fields['take_requester_group_change'] != 0) {
                         self::addGroupsForActorType($item, $moconfig, \CommonITILActor::REQUESTER, 'take_requester_group_change', 'Change');
@@ -117,9 +115,6 @@ class Controller extends CommonDBTM
                 }
                 break;
             case $item instanceof Problem_User:
-                if ($moconfig->fields['take_item_group_problem'] == 1) {
-                    
-                }
                 if ($item->fields['type'] == \CommonITILActor::REQUESTER) {
                     if ($moconfig->fields['take_requester_group_problem'] != 0) {
                         self::addGroupsForActorType($item, $moconfig, \CommonITILActor::REQUESTER, 'take_requester_group_problem', 'Problem');
@@ -135,9 +130,63 @@ class Controller extends CommonDBTM
         }
     }
 
-    private static function addItemGroup(CommonDBTM $item, Config $moconfig, $itemtype): void
+    public static function addItemGroups($item)
     {
-        
+        $conf = Config::getCurrentConfig();
+        if ($conf->fields['is_active'] != 1) {
+            return;
+        }
+
+        // Mapping of item types to their configuration fields and group classes
+        $itemMappings = [
+            Item_Ticket::class => [
+                'config_field' => 'take_item_group_ticket',
+                'group_class' => Group_Ticket::class,
+                'foreign_key' => 'tickets_id',
+            ],
+            Change_Item::class => [
+                'config_field' => 'take_item_group_change',
+                'group_class' => Change_Group::class,
+                'foreign_key' => 'changes_id',
+            ],
+            Item_Problem::class => [
+                'config_field' => 'take_item_group_problem',
+                'group_class' => Group_Problem::class,
+                'foreign_key' => 'problems_id',
+            ],
+        ];
+
+        $itemClass = get_class($item);
+
+        // Check if the item is supported and the configuration is enabled
+        if (!isset($itemMappings[$itemClass]) || $conf->fields[$itemMappings[$itemClass]['config_field']] != 1) {
+            return;
+        }
+
+        $mapping = $itemMappings[$itemClass];
+
+        // Get the groups associated with the item
+        $gitems = new Group_Item();
+        $groups = $gitems->find([
+            'itemtype' => $item->fields['itemtype'],
+            'items_id' => $item->fields['items_id'],
+        ]);
+
+        // Add each group to the ticket/change/problem
+        foreach ($groups as $g) {
+            $groupClass = $mapping['group_class'];
+            $gitem = new $groupClass();
+
+            $criteria = [
+                'groups_id' => $g['groups_id'],
+                $mapping['foreign_key'] => $item->fields[$mapping['foreign_key']],
+                'type' => CommonITILActor::OBSERVER,
+            ];
+
+            if (!$gitem->getFromDBByCrit($criteria)) {
+                $gitem->add($criteria);
+            }
+        }
     }
 
     /**

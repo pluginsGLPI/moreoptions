@@ -95,6 +95,18 @@ function plugin_init_moreoptions(): void
     $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['moreoptions'][TicketTask::class] = [
         Controller::class, 'checkTaskRequirements',
     ];
+
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Item_Ticket::class] = [
+        Controller::class, 'addItemGroups',
+    ];
+
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Change_Item::class] = [
+        Controller::class, 'addItemGroups',
+    ];
+
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Item_Problem::class] = [
+        Controller::class, 'addItemGroups',
+    ];
 }
 
 /**
