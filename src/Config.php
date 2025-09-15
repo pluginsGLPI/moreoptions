@@ -2,28 +2,34 @@
 
 /**
  * -------------------------------------------------------------------------
- * Cancel Send plugin for GLPI
+ * MoreOptions plugin for GLPI
  * -------------------------------------------------------------------------
  *
- * LICENSE
+ * MIT License
  *
- * This file is part of Cancel Send.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * Cancel Send is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
  *
- * Cancel Send is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Cancel Send. If not, see <http://www.gnu.org/licenses/>.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  * -------------------------------------------------------------------------
+ * @copyright Copyright (C) 2025 by the MoreOptions plugin team.
  * @copyright Copyright (C) 2022-2024 by Cancel Send plugin team.
+ * @license   MIT https://opensource.org/licenses/mit-license.php
  * @license   GPLv3 https://www.gnu.org/licenses/gpl-3.0.html
+ * @link      https://github.com/pluginsGLPI/moreoptions
  * @link      https://gitlab.teclib.com/glpi-network/cancelsend/
  * -------------------------------------------------------------------------
  */
@@ -41,17 +47,20 @@ class Config extends CommonDBTM
 {
     public $dohistory = true;
     public static $rightname = 'config';
-    public static function getMenuName()
+    public static function getMenuName(): string
     {
         return __('More options', 'moreoptions');
     }
 
-    public static function getTypeName($nb = 0)
+    public static function getTypeName($nb = 0): string
     {
         return __('More options', 'moreoptions');
     }
 
-    public function defineTabs($options = [])
+    /**
+     * @return array<string, mixed>
+     */
+    public function defineTabs($options = []): array
     {
         $ong = [];
         $this->addDefaultFormTab($ong);
@@ -68,7 +77,7 @@ class Config extends CommonDBTM
         return true;
     }
 
-    public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
+    public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0): string
     {
         switch ($item->getType()) {
             case Entity::class:
@@ -77,17 +86,24 @@ class Config extends CommonDBTM
         return '';
     }
 
-    public static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0)
+    public static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
     {
         switch ($item->getType()) {
             case Entity::class:
-                return self::showForEntity($item);
+                if ($item instanceof Entity) {
+                    self::showForEntity($item);
+                }
+                return true;
         }
         return true;
     }
 
-    public static function preItemUpdate(CommonDBTM $item)
+    public static function preItemUpdate(CommonDBTM $item): CommonDBTM
     {
+        if (!is_array($item->input)) {
+            return $item;
+        }
+
         foreach (self::getItilConfigFields() as $field) {
             if (!isset($item->input[$field])) {
                 $item->input[$field] = 0;
@@ -99,7 +115,10 @@ class Config extends CommonDBTM
         return $item;
     }
 
-    public static function getItilConfigFields()
+    /**
+     * @return array<string>
+     */
+    public static function getItilConfigFields(): array
     {
         return [
             'take_item_group_ticket',
@@ -121,7 +140,10 @@ class Config extends CommonDBTM
         ];
     }
 
-    public static function getSelectableActorGroup()
+    /**
+     * @return array<int, string>
+     */
+    public static function getSelectableActorGroup(): array
     {
         return [
             0  => __('No'),
@@ -130,7 +152,7 @@ class Config extends CommonDBTM
         ];
     }
 
-    public static function showForEntity($item)
+    public static function showForEntity(Entity $item): void
     {
         // $parents = getAncestorsOf(Entity::getTable(), $item->getID());
         // if (!empty($parents)) {
@@ -164,12 +186,12 @@ class Config extends CommonDBTM
         );
     }
 
-    public static function getIcon()
+    public static function getIcon(): string
     {
         return "ti ti-send";
     }
 
-    public static function addConfig(CommonDBTM $item)
+    public static function addConfig(CommonDBTM $item): void
     {
         $moconfig = new self();
         $moconfig->add([
@@ -178,7 +200,7 @@ class Config extends CommonDBTM
         ]);
     }
 
-    public static function getCurrentConfig()
+    public static function getCurrentConfig(): self
     {
         $moconfig = new self();
         $moconfig->getFromDBByCrit([
@@ -187,7 +209,7 @@ class Config extends CommonDBTM
         return $moconfig;
     }
 
-    public static function install(Migration $migration)
+    public static function install(Migration $migration): void
     {
         /** @var \DBmysql $DB */
         global $DB;
@@ -227,24 +249,26 @@ class Config extends CommonDBTM
 
         $entities = new Entity();
         foreach ($entities->find() as $entity) {
-            $data = [
-                'entities_id' => $entity['id'],
-            ];
-            $DB->insert(
-                self::getTable(),
-                $data,
-            );
+            if (is_array($entity) && isset($entity['id'])) {
+                $data = [
+                    'entities_id' => $entity['id'],
+                ];
+                $DB->insert(
+                    self::getTable(),
+                    $data,
+                );
+            }
         }
     }
 
 
-    public static function uninstall(Migration $migration)
+    public static function uninstall(Migration $migration): void
     {
         /** @var \DBmysql $DB */
         global $DB;
         $table = self::getTable();
         if ($DB->tableExists($table)) {
-            $DB->doQuery("DROP TABLE IF EXISTS `" . self::getTable() . "`") or die($DB->error());
+            $DB->doQuery("DROP TABLE IF EXISTS `" . self::getTable() . "`");
         }
     }
 }

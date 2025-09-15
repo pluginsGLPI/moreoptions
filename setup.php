@@ -52,7 +52,7 @@ define("PLUGIN_MOREOPTIONS_MAX_GLPI_VERSION", "11.0.99");
  */
 function plugin_init_moreoptions(): void
 {
-    /** @var array $PLUGIN_HOOKS */
+    /** @var array<string, mixed> $PLUGIN_HOOKS */
     global $PLUGIN_HOOKS;
 
     $PLUGIN_HOOKS['csrf_compliant']['moreoptions'] = true;
@@ -155,7 +155,7 @@ function plugin_moreoptions_check_config(bool $verbose = false): bool
 
 function plugin_moreoptions_geturl(): string
 {
-    /** @var array $CFG_GLPI */
+    /** @var array<string, mixed> $CFG_GLPI */
     global $CFG_GLPI;
-    return sprintf('%s/plugins/moreoptions/', $CFG_GLPI['url_base']);
+    return sprintf('%s/plugins/moreoptions/', (string) $CFG_GLPI['url_base']);
 }
