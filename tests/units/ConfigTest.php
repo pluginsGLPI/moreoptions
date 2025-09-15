@@ -448,14 +448,14 @@ class ConfigTest extends MoreOptionsTestCase
     }
 
     /**
-     * Test prendre le groupe du technicien
+     * Test take the technician group
      */
     public function testTakeTheTechnicianGroup(): void
     {
         $conf = $this->getCurrentConfig();
         $this->assertNotNull($conf);
 
-        // Configurer pour prendre tous les groupes du technicien
+        // Setup to take all groups of the technician
         $result = $this->updateTestConfig($conf, [
             'is_active'                       => 1,
             'entities_id'                  => 0,
@@ -533,7 +533,7 @@ class ConfigTest extends MoreOptionsTestCase
         $groups = $ticket_group->find(['tickets_id' => $ticket->getID()]);
         $this->assertCount(2, $groups);
 
-        // Configurer pour ne prendre que le groupe principal du technicien
+        // Setup to take only the main group of the technician
         $result = $this->updateTestConfig($conf, [
             'is_active'                    => 1,
             'entities_id'                  => 0,
@@ -579,7 +579,7 @@ class ConfigTest extends MoreOptionsTestCase
     }
 
     /**
-     * Test prendre les groupes des éléments
+     * Test take the item groups
      */
     public function testTakeItemGroups(): void
     {

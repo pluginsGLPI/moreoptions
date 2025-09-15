@@ -44,10 +44,10 @@ abstract class MoreOptionsTestCase extends TestCase
     {
         global $DB;
 
-        // Commencer une transaction pour chaque test
+        // Start a transaction for each test
         $DB->beginTransaction();
 
-        // Connecter l'utilisateur de test
+        // Connect the test user
         $this->login();
 
         parent::setUp();
@@ -57,14 +57,14 @@ abstract class MoreOptionsTestCase extends TestCase
     {
         global $DB;
 
-        // Annuler la transaction pour nettoyer la base
+        // Rollback the transaction to clean up the database
         $DB->rollback();
 
         parent::tearDown();
     }
 
     /**
-     * Login avec l'utilisateur de test
+     * Login with the test user
      */
     protected function login(
         string $user_name = TU_USER,
@@ -82,7 +82,7 @@ abstract class MoreOptionsTestCase extends TestCase
     }
 
     /**
-     * Logout de l'utilisateur courant
+     * Logout the current user
      */
     protected function logOut(): void
     {
@@ -94,7 +94,7 @@ abstract class MoreOptionsTestCase extends TestCase
     }
 
     /**
-     * Créer une configuration de test pour le plugin
+     * Create a test configuration for the plugin
      */
     protected function createTestConfig(array $options = []): Config
     {
@@ -135,7 +135,7 @@ abstract class MoreOptionsTestCase extends TestCase
     }
 
     /**
-     * Mettre à jour la configuration de test
+     * Update the test configuration
      */
     protected function updateTestConfig(Config $config, array $updates): bool
     {
@@ -144,7 +144,7 @@ abstract class MoreOptionsTestCase extends TestCase
     }
 
     /**
-     * Obtenir la configuration courante ou en créer une
+     * Get the current configuration or create one
      */
     protected function getCurrentConfig(): Config
     {
