@@ -95,6 +95,7 @@ abstract class MoreOptionsTestCase extends TestCase
 
     /**
      * Create a test configuration for the plugin
+     * @param array<string, mixed> $options
      */
     protected function createTestConfig(array $options = []): Config
     {
@@ -136,6 +137,7 @@ abstract class MoreOptionsTestCase extends TestCase
 
     /**
      * Update the test configuration
+     * @param array<string, mixed> $updates
      */
     protected function updateTestConfig(Config $config, array $updates): bool
     {
@@ -149,7 +151,7 @@ abstract class MoreOptionsTestCase extends TestCase
     protected function getCurrentConfig(): Config
     {
         $config = Config::getCurrentConfig();
-        if (!$config || $config->isNewItem()) {
+        if (empty($config->fields) || $config->isNewItem()) {
             $config = $this->createTestConfig();
         }
         return $config;

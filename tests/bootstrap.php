@@ -31,6 +31,7 @@
  * -------------------------------------------------------------------------
  */
 
+use function Safe\define;
 use Glpi\Application\Environment;
 use Glpi\Kernel\Kernel;
 

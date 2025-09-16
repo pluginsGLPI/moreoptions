@@ -47,7 +47,6 @@ class ConfigTest extends MoreOptionsTestCase
     public function testTaskMandatoryField(): void
     {
         $conf = $this->getCurrentConfig();
-        $this->assertNotNull($conf);
 
         $result = $this->updateTestConfig($conf, [
             'is_active'               => 1,
@@ -60,7 +59,6 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertTrue($result);
 
         $conf = Config::getCurrentConfig();
-        $this->assertNotNull($conf);
 
         //Create a ticket
         $ticket = new \Ticket();
@@ -186,7 +184,6 @@ class ConfigTest extends MoreOptionsTestCase
         $this->login();
 
         $conf = $this->getCurrentConfig();
-        $this->assertNotNull($conf);
 
         // Configure mandatory fields before closing
         $result = $this->updateTestConfig($conf, [
@@ -200,7 +197,6 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertTrue($result);
 
         $conf = Config::getCurrentConfig();
-        $this->assertNotNull($conf);
 
         //Create a ticket without mandatory fields (Expected to succeed)
         $ticket = new \Ticket();
@@ -312,7 +308,6 @@ class ConfigTest extends MoreOptionsTestCase
     public function testTakeTheRequesterGroup(): void
     {
         $conf = $this->getCurrentConfig();
-        $this->assertNotNull($conf);
 
         // Configure to take all groups of the requester
         $result = $this->updateTestConfig($conf, [
@@ -323,7 +318,6 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertTrue($result);
 
         $conf = Config::getCurrentConfig();
-        $this->assertNotNull($conf);
 
         // Create two groups
         $group1 = new \Group();
@@ -402,7 +396,6 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertTrue($result);
 
         $conf = Config::getCurrentConfig();
-        $this->assertNotNull($conf);
 
         //Create a ticket
         $ticket = new \Ticket();
@@ -453,7 +446,6 @@ class ConfigTest extends MoreOptionsTestCase
     public function testTakeTheTechnicianGroup(): void
     {
         $conf = $this->getCurrentConfig();
-        $this->assertNotNull($conf);
 
         // Setup to take all groups of the technician
         $result = $this->updateTestConfig($conf, [
@@ -464,7 +456,6 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertTrue($result);
 
         $conf = Config::getCurrentConfig();
-        $this->assertNotNull($conf);
 
         // Create two groups
         $group1 = new \Group();
@@ -542,7 +533,6 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertTrue($result);
 
         $conf = Config::getCurrentConfig();
-        $this->assertNotNull($conf);
 
         //Create a ticket
         $ticket = new \Ticket();
@@ -584,7 +574,6 @@ class ConfigTest extends MoreOptionsTestCase
     public function testTakeItemGroups(): void
     {
         $conf = $this->getCurrentConfig();
-        $this->assertNotNull($conf);
 
         // Setup to take the groups of the items
         $result = $this->updateTestConfig($conf, [
@@ -595,7 +584,6 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertTrue($result);
 
         $conf = Config::getCurrentConfig();
-        $this->assertNotNull($conf);
 
         // Create two groups
         $group1 = new \Group();
