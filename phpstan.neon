@@ -6,10 +6,11 @@ includes:
 parameters:
     level: 8
     paths:
+        - front
         - src
+        - tests
         - hook.php
         - setup.php
-        - tests
     scanDirectories:
         - ../../src
     bootstrapFiles:

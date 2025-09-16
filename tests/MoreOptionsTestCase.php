@@ -40,6 +40,9 @@ use Session;
 
 abstract class MoreOptionsTestCase extends TestCase
 {
+    public const TU_USER = 'glpi';
+    public const TU_PASS = 'glpi';
+
     protected function setUp(): void
     {
         global $DB;
@@ -67,8 +70,8 @@ abstract class MoreOptionsTestCase extends TestCase
      * Login with the test user
      */
     protected function login(
-        string $user_name = TU_USER,
-        string $user_pass = TU_PASS,
+        string $user_name = self::TU_USER,
+        string $user_pass = self::TU_PASS,
         bool $noauto = true,
         bool $expected = true,
     ): Auth {

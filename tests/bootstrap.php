@@ -36,8 +36,6 @@ use Glpi\Kernel\Kernel;
 
 use function Safe\define;
 
-define('TU_USER', 'glpi');
-define('TU_PASS', 'glpi');
 define('GLPI_LOG_DIR', __DIR__ . '/files/_logs');
 
 require_once __DIR__ . '/../../../phpunit/GLPITestCase.php';
