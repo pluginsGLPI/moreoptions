@@ -15,5 +15,4 @@ parameters:
     bootstrapFiles:
         - ../../stubs/glpi_constants.php
         - ../../vendor/autoload.php
-        - tests/bootstrap.php
     treatPhpDocTypesAsCertain: false
