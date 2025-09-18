@@ -79,7 +79,7 @@ class Controller extends CommonDBTM
 
     public static function useConfig(CommonDBTM $item): void
     {
-        if ($item->fields['type'] == \CommonITILActor::OBSERVER) {
+        if ($item->fields['type'] == \CommonITILActor::ASSIGN) {
             return;
         }
         $moconfig = new Config();
@@ -180,7 +180,7 @@ class Controller extends CommonDBTM
             $criteria = [
                 'groups_id' => $g['groups_id'],
                 $mapping['foreign_key'] => $item->fields[$mapping['foreign_key']],
-                'type' => CommonITILActor::OBSERVER,
+                'type' => CommonITILActor::ASSIGN,
             ];
 
             if (!$gitem->getFromDBByCrit($criteria)) {

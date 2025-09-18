@@ -639,7 +639,7 @@ class ConfigTest extends MoreOptionsTestCase
         $groups = $ticket_group->find(
             [
                 'tickets_id' => $ticket->getID(),
-                'type' => \CommonITILActor::OBSERVER,
+                'type' => \CommonITILActor::ASSIGN,
             ],
         );
         $this->assertCount(1, $groups);
