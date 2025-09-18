@@ -79,7 +79,7 @@ class Controller extends CommonDBTM
 
     public static function useConfig(CommonDBTM $item): void
     {
-        if ($item->fields['type'] == \CommonITILActor::ASSIGN) {
+        if ($item->fields['type'] == \CommonITILActor::OBSERVER) {
             return;
         }
         $moconfig = new Config();
@@ -349,45 +349,78 @@ class Controller extends CommonDBTM
 
         $message = '';
         $itemtype = get_class($item);
-        if ($conf->fields['require_technician_to_close_ticket'] == 1) {
-            $tech = new Ticket_User();
+
+        // Determine the configuration suffix and actor classes based on item type
+        $configSuffix = '';
+        $userClass = '';
+        $groupClass = '';
+        $itemIdField = '';
+
+        if ($item instanceof Ticket) {
+            $configSuffix = '_ticket';
+            $userClass = Ticket_User::class;
+            $groupClass = Group_Ticket::class;
+            $itemIdField = 'tickets_id';
+        } elseif ($item instanceof Change) {
+            $configSuffix = '_change';
+            $userClass = Change_User::class;
+            $groupClass = Change_Group::class;
+            $itemIdField = 'changes_id';
+        } elseif ($item instanceof Problem) {
+            $configSuffix = '_problem';
+            $userClass = Problem_User::class;
+            $groupClass = Group_Problem::class;
+            $itemIdField = 'problems_id';
+        } else {
+            return; // Unsupported item type
+        }
+
+        // Check for required technician
+        if ($conf->fields['require_technician_to_close' . $configSuffix] == 1) {
+            $tech = new $userClass();
             $techs = $tech->find([
-                'tickets_id' => $item->fields['id'],
-                'type'       => Ticket_User::ASSIGN,
+                $itemIdField => $item->fields['id'],
+                'type'       => CommonITILActor::ASSIGN,
             ]);
             if (count($techs) == 0) {
                 $message .= '- ' . __s('Technician') . '<br>';
             }
         }
-        if ($conf->fields['require_technicians_group_to_close_ticket'] == 1) {
-            $group = new Group_Ticket();
+
+        // Check for required technician group
+        if ($conf->fields['require_technicians_group_to_close' . $configSuffix] == 1) {
+            $group = new $groupClass();
             $groups = $group->find([
-                'tickets_id' => $item->fields['id'],
-                'type'       => Ticket_User::ASSIGN,
+                $itemIdField => $item->fields['id'],
+                'type'       => CommonITILActor::ASSIGN,
             ]);
             if (count($groups) == 0) {
                 $message .= '- ' . __s('Technician group') . '<br>';
             }
         }
-        if ($conf->fields['require_category_to_close_ticket'] == 1) {
+
+        // Check for required category
+        if ($conf->fields['require_category_to_close' . $configSuffix] == 1) {
             if ((!isset($item->input['itilcategories_id']) || empty($item->input['itilcategories_id']))) {
                 $message .= '- ' . __s('Category') . '<br>';
             }
         }
-        if ($conf->fields['require_location_to_close_ticket'] == 1) {
+
+        // Check for required location
+        if ($conf->fields['require_location_to_close' . $configSuffix] == 1) {
             if ((!isset($item->input['locations_id']) || empty($item->input['locations_id']))) {
                 $message .= '- ' . __s('Location') . '<br>';
             }
         }
 
-        // Check if solution exist before closing the ticket
-        if ($conf->fields['require_solution_to_close_ticket'] == 1
+        // Check if solution exists before closing
+        if ($conf->fields['require_solution_to_close' . $configSuffix] == 1
             && is_array($item->input)
             && isset($item->input['status'])
             && $item->input['status'] == CommonITILObject::CLOSED) {
             $solution = new ITILSolution();
             $solutions = $solution->find([
-                'itemtype' => Ticket::class,
+                'itemtype' => $itemtype,
                 'items_id' => $item->fields['id'],
                 'NOT' => [
                     'status' => CommonITILValidation::REFUSED,
@@ -399,7 +432,16 @@ class Controller extends CommonDBTM
         }
 
         if (!empty($message)) {
-            $message = __s('To close this ticket, you must fill in the following fields:', 'moreoptions') . '<br>' . $message;
+            $itemTypeLabel = '';
+            if ($item instanceof Ticket) {
+                $itemTypeLabel = __s('ticket');
+            } elseif ($item instanceof Change) {
+                $itemTypeLabel = __s('change');
+            } elseif ($item instanceof Problem) {
+                $itemTypeLabel = __s('problem');
+            }
+
+            $message = sprintf(__s('To close this %s, you must fill in the following fields:', 'moreoptions'), $itemTypeLabel) . '<br>' . $message;
             Session::addMessageAfterRedirect($message, false, ERROR);
             $item->input = false;
             return;

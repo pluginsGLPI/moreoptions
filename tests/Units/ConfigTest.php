@@ -179,7 +179,7 @@ class ConfigTest extends MoreOptionsTestCase
     /**
      * Test mandatory fields before closing a ticket
      */
-    public function testTicketMandatoryFieldsBeforeClose(): void
+    public function testTicketMandatoryFieldsBeforeCloseTicket(): void
     {
         $this->login();
 
@@ -298,6 +298,258 @@ class ConfigTest extends MoreOptionsTestCase
             'require_technicians_group_to_close_ticket' => 0,
             'require_category_to_close_ticket'        => 0,
             'require_location_to_close_ticket'        => 0,
+        ]);
+        $this->assertTrue($resetResult);
+    }
+
+    /**
+     * Test mandatory fields before closing a change
+     */
+    public function testChangeMandatoryFieldsBeforeCloseChange(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        // Configure mandatory fields before closing
+        $result = $this->updateTestConfig($conf, [
+            'is_active'                              => 1,
+            'entities_id'                            => 0,
+            'require_technician_to_close_change'    => 1,
+            'require_technicians_group_to_close_change' => 1,
+            'require_category_to_close_change'       => 1,
+            'require_location_to_close_change'       => 1,
+        ]);
+        $this->assertTrue($result);
+
+        $conf = Config::getCurrentConfig();
+
+        //Create a change without mandatory fields (Expected to succeed)
+        $change = new \Change();
+        $cid = $change->add(
+            [
+                'name'          => 'Test change close',
+                'content'       => 'Test content',
+            ],
+        );
+        $this->assertGreaterThan(0, $cid);
+
+        // Create group
+        $group = new \Group();
+        $gid = $group->add(
+            [
+                'name' => 'Test group close change',
+            ],
+        );
+        $this->assertNotFalse($gid);
+
+        // Close the change without mandatory fields (Expected to fail)
+        $change = new \Change();
+        $result = $change->update(
+            [
+                'id'          => $cid,
+                'status'      => \Change::CLOSED,
+            ],
+        );
+        $this->assertFalse($result);
+
+        // Create category
+        $category = new \ITILCategory();
+        $catid = $category->add(
+            [
+                'name' => 'Test category close change',
+            ],
+        );
+        $this->assertNotFalse($catid);
+
+        // Create location
+        $location = new \Location();
+        $lid = $location->add(
+            [
+                'name' => 'Test location close change',
+            ],
+        );
+        $this->assertNotFalse($lid);
+
+        // Add technician group to the change
+        $gchange = new \Change_Group();
+        $this->assertNotFalse($gchange->add(
+            [
+                'changes_id' => $cid,
+                'groups_id'  => $gid,
+                'type'       => \Change_Group::ASSIGN,
+            ],
+        ));
+
+        // Add technician to the change
+        $user = new \User();
+        $this->assertTrue($user->getFromDBByCrit(
+            [
+                'name' => 'glpi',
+            ],
+        ));
+
+        $uchange = new \Change_User();
+        $this->assertNotFalse($uchange->add(
+            [
+                'changes_id' => $cid,
+                'users_id'   => $user->getID(),
+                'type'       => \Change_User::ASSIGN,
+            ],
+        ));
+
+        // Close the change without location and category (Expected to fail)
+        $change = new \Change();
+        $this->assertFalse($change->update(
+            [
+                'id'                => $cid,
+                'status'            => \Change::CLOSED,
+            ],
+        ));
+
+        // Close the change with location and category (Expected to succeed)
+        $change = new \Change();
+        $this->assertTrue($change->update(
+            [
+                'id'                => $cid,
+                'locations_id'     => $lid,
+                'itilcategories_id' => $catid,
+                'status'            => \Change::CLOSED,
+            ],
+        ));
+
+        // Reset config
+        $resetResult = $this->updateTestConfig($conf, [
+            'require_technician_to_close_change'     => 0,
+            'require_technicians_group_to_close_change' => 0,
+            'require_category_to_close_change'        => 0,
+            'require_location_to_close_change'        => 0,
+        ]);
+        $this->assertTrue($resetResult);
+    }
+
+    /**
+     * Test mandatory fields before closing a problem
+     */
+    public function testProblemMandatoryFieldsBeforeCloseProblem(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        // Configure mandatory fields before closing
+        $result = $this->updateTestConfig($conf, [
+            'is_active'                              => 1,
+            'entities_id'                            => 0,
+            'require_technician_to_close_problem'    => 1,
+            'require_technicians_group_to_close_problem' => 1,
+            'require_category_to_close_problem'       => 1,
+            'require_location_to_close_problem'       => 1,
+        ]);
+        $this->assertTrue($result);
+
+        $conf = Config::getCurrentConfig();
+
+        //Create a problem without mandatory fields (Expected to succeed)
+        $problem = new \Problem();
+        $pid = $problem->add(
+            [
+                'name'          => 'Test problem close',
+                'content'       => 'Test content',
+            ],
+        );
+        $this->assertGreaterThan(0, $pid);
+
+        // Create group
+        $group = new \Group();
+        $gid = $group->add(
+            [
+                'name' => 'Test group close problem',
+            ],
+        );
+        $this->assertNotFalse($gid);
+
+        // Close the problem without mandatory fields (Expected to fail)
+        $problem = new \Problem();
+        $result = $problem->update(
+            [
+                'id'          => $pid,
+                'status'      => \Problem::CLOSED,
+            ],
+        );
+        $this->assertFalse($result);
+
+        // Create category
+        $category = new \ITILCategory();
+        $catid = $category->add(
+            [
+                'name' => 'Test category close problem',
+            ],
+        );
+        $this->assertNotFalse($catid);
+
+        // Create location
+        $location = new \Location();
+        $lid = $location->add(
+            [
+                'name' => 'Test location close problem',
+            ],
+        );
+        $this->assertNotFalse($lid);
+
+        // Add technician group to the problem
+        $gproblem = new \Group_Problem();
+        $this->assertNotFalse($gproblem->add(
+            [
+                'problems_id' => $pid,
+                'groups_id'  => $gid,
+                'type'       => \Group_Problem::ASSIGN,
+            ],
+        ));
+
+        // Add technician to the problem
+        $user = new \User();
+        $this->assertTrue($user->getFromDBByCrit(
+            [
+                'name' => 'glpi',
+            ],
+        ));
+
+        $uproblem = new \Problem_User();
+        $this->assertNotFalse($uproblem->add(
+            [
+                'problems_id' => $pid,
+                'users_id'   => $user->getID(),
+                'type'       => \Problem_User::ASSIGN,
+            ],
+        ));
+
+        // Close the problem without location and category (Expected to fail)
+        $problem = new \Problem();
+        $this->assertFalse($problem->update(
+            [
+                'id'                => $pid,
+                'status'            => \Problem::CLOSED,
+            ],
+        ));
+
+        // Close the problem with location and category (Expected to succeed)
+        $problem = new \Problem();
+        $this->assertTrue($problem->update(
+            [
+                'id'                => $pid,
+                'locations_id'     => $lid,
+                'itilcategories_id' => $catid,
+                'status'            => \Problem::CLOSED,
+            ],
+        ));
+
+        // Reset config
+        $resetResult = $this->updateTestConfig($conf, [
+            'require_technician_to_close_problem'     => 0,
+            'require_technicians_group_to_close_problem' => 0,
+            'require_category_to_close_problem'        => 0,
+            'require_location_to_close_problem'        => 0,
         ]);
         $this->assertTrue($resetResult);
     }

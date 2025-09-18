@@ -152,28 +152,56 @@
 
                             <div class="hr-text">
                                 <i class="fa-2x ti ti-help-circle"></i>
-                                <span>{{ __('Solve and Close Tickets') }}</span>
+                                <span>{{ __('Solve and Close Items') }}</span>
                             </div>
 
-                            {{ alerts.alert_danger(__('The options below relate to the mandatory fields for resolving and closing tickets.', 'moreoptions')) }}
+                            {{ alerts.alert_danger(__('The options below relate to the mandatory fields for resolving and closing ITIL items.', 'moreoptions')) }}
 
                             <table class="table table-hover border card-table" id="solutions_table">
                                 <thead>
                                     <tr>
-                                        <th>{{ __('Technician') }}</th>
-                                        <th>{{ __('Technicians group') }}</th>
-                                        <th>{{ __('Category') }}</th>
-                                        <th>{{ __('Location') }}</th>
-                                        <th>{{ __('Solution') }}</th>
+                                        <th> &nbsp; </th>
+                                        <th>{{ __('Ticket') }}</th>
+                                        <th>{{ __('Change') }}</th>
+                                        <th>{{ __('Problem') }}</th>
+                                        <th>{{ __('All') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td><input type="checkbox" name="require_technician_to_close_ticket" class="form-check-input" {{ item.fields['require_technician_to_close_ticket'] ? 'checked' : '' }} /></td>
-                                        <td><input type="checkbox" name="require_technicians_group_to_close_ticket" class="form-check-input" {{ item.fields['require_technicians_group_to_close_ticket'] ? 'checked' : '' }} /></td>
-                                        <td><input type="checkbox" name="require_category_to_close_ticket" class="form-check-input" {{ item.fields['require_category_to_close_ticket'] ? 'checked' : '' }} /></td>
-                                        <td><input type="checkbox" name="require_location_to_close_ticket" class="form-check-input" {{ item.fields['require_location_to_close_ticket'] ? 'checked' : '' }} /></td>
-                                        <td><input type="checkbox" name="require_solution_to_close_ticket" class="form-check-input" {{ item.fields['require_solution_to_close_ticket'] ? 'checked' : '' }} /></td>
+                                        <td>{{ __('Technician') }}</td>
+                                        <td><input type="checkbox" name="require_technician_to_close_ticket" class="form-check-input require-technician" {{ item.fields['require_technician_to_close_ticket'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_technician_to_close_change" class="form-check-input require-technician" {{ item.fields['require_technician_to_close_change'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_technician_to_close_problem" class="form-check-input require-technician" {{ item.fields['require_technician_to_close_problem'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_technician_to_close_all" class="form-check-input" id="require_technician_to_close_all" {{ (item.fields['require_technician_to_close_ticket'] and item.fields['require_technician_to_close_change'] and item.fields['require_technician_to_close_problem']) ? 'checked' : '' }} /></td>
+                                    </tr>
+                                    <tr>
+                                        <td>{{ __('Technicians group') }}</td>
+                                        <td><input type="checkbox" name="require_technicians_group_to_close_ticket" class="form-check-input require-group" {{ item.fields['require_technicians_group_to_close_ticket'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_technicians_group_to_close_change" class="form-check-input require-group" {{ item.fields['require_technicians_group_to_close_change'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_technicians_group_to_close_problem" class="form-check-input require-group" {{ item.fields['require_technicians_group_to_close_problem'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_technicians_group_to_close_all" class="form-check-input" id="require_technicians_group_to_close_all" {{ (item.fields['require_technicians_group_to_close_ticket'] and item.fields['require_technicians_group_to_close_change'] and item.fields['require_technicians_group_to_close_problem']) ? 'checked' : '' }} /></td>
+                                    </tr>
+                                    <tr>
+                                        <td>{{ __('Category') }}</td>
+                                        <td><input type="checkbox" name="require_category_to_close_ticket" class="form-check-input require-category" {{ item.fields['require_category_to_close_ticket'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_category_to_close_change" class="form-check-input require-category" {{ item.fields['require_category_to_close_change'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_category_to_close_problem" class="form-check-input require-category" {{ item.fields['require_category_to_close_problem'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_category_to_close_all" class="form-check-input" id="require_category_to_close_all" {{ (item.fields['require_category_to_close_ticket'] and item.fields['require_category_to_close_change'] and item.fields['require_category_to_close_problem']) ? 'checked' : '' }} /></td>
+                                    </tr>
+                                    <tr>
+                                        <td>{{ __('Location') }}</td>
+                                        <td><input type="checkbox" name="require_location_to_close_ticket" class="form-check-input require-location" {{ item.fields['require_location_to_close_ticket'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_location_to_close_change" class="form-check-input require-location" {{ item.fields['require_location_to_close_change'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_location_to_close_problem" class="form-check-input require-location" {{ item.fields['require_location_to_close_problem'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_location_to_close_all" class="form-check-input" id="require_location_to_close_all" {{ (item.fields['require_location_to_close_ticket'] and item.fields['require_location_to_close_change'] and item.fields['require_location_to_close_problem']) ? 'checked' : '' }} /></td>
+                                    </tr>
+                                    <tr>
+                                        <td>{{ __('Solution') }}</td>
+                                        <td><input type="checkbox" name="require_solution_to_close_ticket" class="form-check-input require-solution" {{ item.fields['require_solution_to_close_ticket'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_solution_to_close_change" class="form-check-input require-solution" {{ item.fields['require_solution_to_close_change'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_solution_to_close_problem" class="form-check-input require-solution" {{ item.fields['require_solution_to_close_problem'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="require_solution_to_close_all" class="form-check-input" id="require_solution_to_close_all" {{ (item.fields['require_solution_to_close_ticket'] and item.fields['require_solution_to_close_change'] and item.fields['require_solution_to_close_problem']) ? 'checked' : '' }} /></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -201,17 +229,6 @@
                                     </tr>
                                 </tbody>
                             </table>
-
-                            {# {% if pentityconfig != false %}
-                                <input type="hidden" name="parent_entity_config" value="{{ pentityconfig }}"/>
-                                {% set use_parent_field = '<div class="badge bg-azure-lt ms-1" title="" data-bs-toggle="tooltip" data-bs-original-title="Value inherited from a parent entity">
-                                        <i class="fas fa-level-down-alt me-1"></i>' ~ pentityconfig ~ 's</div> &nbsp <input type="checkbox" name="use_parent_time" class="form-check-input" id="use_parent_time" value="' ~ item.fields['use_parent_time'] ~ '">' %}
-                                {{ fields.htmlField(
-                                    '',
-                                    use_parent_field,
-                                    __('Use parent entity config'),
-                                ) }}
-                            {% endif %} #}
                         </div>
                     </div>
                 </div>
@@ -224,6 +241,7 @@
 
 <script>
     $(document).ready(function() {
+        // Take item group all functionality
         const takeItemGroupAll = document.querySelector('input[id="take_item_group_all"]');
         const takeItemGroupCheckboxes = document.querySelectorAll('input[type="checkbox"][id*="take_item_group"]');
         takeItemGroupAll.addEventListener('change', () => {
@@ -238,15 +256,91 @@
             }
         })
 
-        const preventClosureTicket = document.querySelector('input[id="prevent_closure_all"]');
+        // Prevent closure all functionality
+        const preventClosureAll = document.querySelector('input[id="prevent_closure_all"]');
         const preventClosureCheckboxes = document.querySelectorAll('input[type="checkbox"][id*="prevent_closure"]');
-        preventClosureTicket.addEventListener('change', () => {
-            if (preventClosureTicket.checked === true) {
+        preventClosureAll.addEventListener('change', () => {
+            if (preventClosureAll.checked === true) {
                 preventClosureCheckboxes.forEach(function(checkbox) {
                     checkbox.checked = true;
                 })
             } else {
                 preventClosureCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = false;
+                })
+            }
+        })
+
+        // Require fields to close - Technician all functionality
+        const requireTechnicianAll = document.querySelector('input[id="require_technician_to_close_all"]');
+        const requireTechnicianCheckboxes = document.querySelectorAll('input.require-technician');
+        requireTechnicianAll.addEventListener('change', () => {
+            if (requireTechnicianAll.checked === true) {
+                requireTechnicianCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = true;
+                })
+            } else {
+                requireTechnicianCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = false;
+                })
+            }
+        })
+
+        // Require fields to close - Technicians group all functionality
+        const requireGroupAll = document.querySelector('input[id="require_technicians_group_to_close_all"]');
+        const requireGroupCheckboxes = document.querySelectorAll('input.require-group');
+        requireGroupAll.addEventListener('change', () => {
+            if (requireGroupAll.checked === true) {
+                requireGroupCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = true;
+                })
+            } else {
+                requireGroupCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = false;
+                })
+            }
+        })
+
+        // Require fields to close - Category all functionality
+        const requireCategoryAll = document.querySelector('input[id="require_category_to_close_all"]');
+        const requireCategoryCheckboxes = document.querySelectorAll('input.require-category');
+        requireCategoryAll.addEventListener('change', () => {
+            if (requireCategoryAll.checked === true) {
+                requireCategoryCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = true;
+                })
+            } else {
+                requireCategoryCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = false;
+                })
+            }
+        })
+
+        // Require fields to close - Location all functionality
+        const requireLocationAll = document.querySelector('input[id="require_location_to_close_all"]');
+        const requireLocationCheckboxes = document.querySelectorAll('input.require-location');
+        requireLocationAll.addEventListener('change', () => {
+            if (requireLocationAll.checked === true) {
+                requireLocationCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = true;
+                })
+            } else {
+                requireLocationCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = false;
+                })
+            }
+        })
+
+        // Require fields to close - Solution all functionality
+        const requireSolutionAll = document.querySelector('input[id="require_solution_to_close_all"]');
+        const requireSolutionCheckboxes = document.querySelectorAll('input.require-solution');
+        requireSolutionAll.addEventListener('change', () => {
+            if (requireSolutionAll.checked === true) {
+                requireSolutionCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = true;
+                })
+            } else {
+                requireSolutionCheckboxes.forEach(function(checkbox) {
                     checkbox.checked = false;
                 })
             }
