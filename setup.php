@@ -85,7 +85,15 @@ function plugin_init_moreoptions(): void
     ];
 
     $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Ticket::class] = [
-        Controller::class, 'beforeCloseTicket',
+        Controller::class, 'beforeCloseITILObject',
+    ];
+
+    $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Change::class] = [
+        Controller::class, 'beforeCloseITILObject',
+    ];
+
+    $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Problem::class] = [
+        Controller::class, 'beforeCloseITILObject',
     ];
 
     $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Config::class] = [

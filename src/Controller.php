@@ -287,7 +287,7 @@ class Controller extends CommonDBTM
         }
     }
 
-    public static function beforeCloseTicket(CommonDBTM $item): void
+    public static function beforeCloseITILObject(CommonDBTM $item): void
     {
         if (!is_array($item->input)) {
             return;
