@@ -40,18 +40,19 @@ namespace GlpiPlugin\Moreoptions;
 
 use Change;
 use Change_Group;
+use Change_Item;
 use Change_User;
 use ChangeTask;
 use CommonDBTM;
 use CommonITILActor;
 use CommonITILObject;
 use CommonITILValidation;
-use Glpi\Application\View\TemplateRenderer;
 use GlpiPlugin\Moreoptions\Config;
-use Group_Change;
+use Group_Item;
 use Group_Problem;
 use Group_Ticket;
-use Html;
+use Item_Problem;
+use Item_Ticket;
 use ITILSolution;
 use Planning;
 use Problem;
@@ -92,9 +93,6 @@ class Controller extends CommonDBTM
 
         switch ($item) {
             case $item instanceof Ticket_User:
-                if ($moconfig->fields['take_item_group_ticket'] == 1) {
-                    $test = "OK";
-                }
                 if ($item->fields['type'] == \CommonITILActor::REQUESTER) {
                     if ($moconfig->fields['take_requester_group_ticket'] != 0) {
                         self::addGroupsForActorType($item, $moconfig, \CommonITILActor::REQUESTER, 'take_requester_group_ticket', 'Ticket');
@@ -106,9 +104,6 @@ class Controller extends CommonDBTM
                 }
                 break;
             case $item instanceof Change_User:
-                if ($moconfig->fields['take_item_group_change'] == 1) {
-                    $test = "OK";
-                }
                 if ($item->fields['type'] == \CommonITILActor::REQUESTER) {
                     if ($moconfig->fields['take_requester_group_change'] != 0) {
                         self::addGroupsForActorType($item, $moconfig, \CommonITILActor::REQUESTER, 'take_requester_group_change', 'Change');
@@ -120,9 +115,6 @@ class Controller extends CommonDBTM
                 }
                 break;
             case $item instanceof Problem_User:
-                if ($moconfig->fields['take_item_group_problem'] == 1) {
-                    $test = "OK";
-                }
                 if ($item->fields['type'] == \CommonITILActor::REQUESTER) {
                     if ($moconfig->fields['take_requester_group_problem'] != 0) {
                         self::addGroupsForActorType($item, $moconfig, \CommonITILActor::REQUESTER, 'take_requester_group_problem', 'Problem');
@@ -138,12 +130,71 @@ class Controller extends CommonDBTM
         }
     }
 
+    public static function addItemGroups(CommonDBTM $item): void
+    {
+        $conf = Config::getCurrentConfig();
+        if ($conf->fields['is_active'] != 1) {
+            return;
+        }
+
+        // Mapping of item types to their configuration fields and group classes
+        $itemMappings = [
+            Item_Ticket::class => [
+                'config_field' => 'take_item_group_ticket',
+                'group_class' => Group_Ticket::class,
+                'foreign_key' => 'tickets_id',
+            ],
+            Change_Item::class => [
+                'config_field' => 'take_item_group_change',
+                'group_class' => Change_Group::class,
+                'foreign_key' => 'changes_id',
+            ],
+            Item_Problem::class => [
+                'config_field' => 'take_item_group_problem',
+                'group_class' => Group_Problem::class,
+                'foreign_key' => 'problems_id',
+            ],
+        ];
+
+        $itemClass = get_class($item);
+
+        // Check if the item is supported and the configuration is enabled
+        if (!isset($itemMappings[$itemClass]) || $conf->fields[$itemMappings[$itemClass]['config_field']] != 1) {
+            return;
+        }
+
+        $mapping = $itemMappings[$itemClass];
+
+        // Get the groups associated with the item
+        $gitems = new Group_Item();
+        $groups = $gitems->find([
+            'itemtype' => $item->fields['itemtype'],
+            'items_id' => $item->fields['items_id'],
+        ]);
+
+        // Add each group to the ticket/change/problem
+        foreach ($groups as $g) {
+            $groupClass = $mapping['group_class'];
+            $gitem = new $groupClass();
+
+            $criteria = [
+                'groups_id' => $g['groups_id'],
+                $mapping['foreign_key'] => $item->fields[$mapping['foreign_key']],
+                'type' => CommonITILActor::ASSIGN,
+            ];
+
+            if (!$gitem->getFromDBByCrit($criteria)) {
+                $gitem->add($criteria);
+            }
+        }
+    }
+
     /**
-     * Ajoute les groupes d'un type d'acteur donné au ticket/change/problem
+     * Add groups for the given actor type based on the configuration
      */
     private static function addGroupsForActorType(CommonDBTM $item, Config $moconfig, int $actorType, string $configField, string $itemType): void
     {
-        // Déterminer le type d'objet et les classes appropriées
+        // Determine the class to use
         switch ($itemType) {
             case 'Ticket':
                 $object = new Ticket();
@@ -168,13 +219,12 @@ class Controller extends CommonDBTM
 
         $actors = $object->getActorsForType($actorType);
         foreach ($actors as $actor) {
-            // Ne garder que les acteurs de type User
             if (!is_array($actor) || !isset($actor['itemtype']) || $actor['itemtype'] !== 'User') {
                 continue;
             }
 
             if ($moconfig->fields[$configField] == 1) {
-                // Utiliser le groupe principal de l'utilisateur
+                // Use only the main group of the user
                 $user = new User();
                 if (isset($actor['items_id'])) {
                     $user->getFromDB($actor['items_id']);
@@ -185,7 +235,7 @@ class Controller extends CommonDBTM
                     $idField => $object->fields['id'],
                 ];
 
-                // Ajouter le type pour les techniciens assignés
+                // Add type for assigned technicians
                 if ($actorType == \CommonITILActor::ASSIGN) {
                     $criteria['type'] = \CommonITILActor::ASSIGN;
                 }
@@ -198,7 +248,7 @@ class Controller extends CommonDBTM
                     $t_group->add($criteria);
                 }
             } else {
-                // Utiliser tous les groupes de l'utilisateur
+                // USe all groups of the user
                 $users_groups = new \Group_User();
                 if (isset($actor['items_id'])) {
                     $u_groups = $users_groups->find([
@@ -214,7 +264,7 @@ class Controller extends CommonDBTM
                             $idField => $object->fields['id'],
                         ];
 
-                        // Ajouter le type pour les techniciens assignés
+                        // Add type for assigned technicians
                         if ($actorType == \CommonITILActor::ASSIGN) {
                             $criteria['type'] = \CommonITILActor::ASSIGN;
                         }
@@ -237,7 +287,7 @@ class Controller extends CommonDBTM
         }
     }
 
-    public static function beforeCloseTicket(CommonDBTM $item): void
+    public static function beforeCloseITILObject(CommonDBTM $item): void
     {
         if (!is_array($item->input)) {
             return;
@@ -290,7 +340,7 @@ class Controller extends CommonDBTM
         }
     }
 
-    public static function requireFieldsToClose(CommonDBTM $item): void
+    public static function requireFieldsToClose(CommonITILObject $item): void
     {
         $conf = Config::getCurrentConfig();
         if ($conf->fields['is_active'] != 1) {
@@ -299,45 +349,59 @@ class Controller extends CommonDBTM
 
         $message = '';
         $itemtype = get_class($item);
-        if ($conf->fields['require_technician_to_close_ticket'] == 1) {
-            $tech = new Ticket_User();
+
+        // Determine the configuration suffix and actor classes based on item type
+        $configSuffix = '_' . strtolower($itemtype);
+        $userClass = $item->userlinkclass;
+        $groupClass = $item->grouplinkclass;
+        $itemIdField = $item->getForeignKeyField();
+
+        // Check for required technician
+        if ($conf->fields['require_technician_to_close' . $configSuffix] == 1) {
+            $tech = new $userClass();
             $techs = $tech->find([
-                'tickets_id' => $item->fields['id'],
-                'type'       => Ticket_User::ASSIGN,
+                $itemIdField => $item->fields['id'],
+                'type'       => CommonITILActor::ASSIGN,
             ]);
             if (count($techs) == 0) {
                 $message .= '- ' . __s('Technician') . '<br>';
             }
         }
-        if ($conf->fields['require_technicians_group_to_close_ticket'] == 1) {
-            $group = new Group_Ticket();
+
+        // Check for required technician group
+        if ($conf->fields['require_technicians_group_to_close' . $configSuffix] == 1) {
+            $group = new $groupClass();
             $groups = $group->find([
-                'tickets_id' => $item->fields['id'],
-                'type'       => Ticket_User::ASSIGN,
+                $itemIdField => $item->fields['id'],
+                'type'       => CommonITILActor::ASSIGN,
             ]);
             if (count($groups) == 0) {
                 $message .= '- ' . __s('Technician group') . '<br>';
             }
         }
-        if ($conf->fields['require_category_to_close_ticket'] == 1) {
-            if ((isset($item->input['itilcategories_id']) && empty($item->input['itilcategories_id']))) {
+
+        // Check for required category
+        if ($conf->fields['require_category_to_close' . $configSuffix] == 1) {
+            if ((!isset($item->input['itilcategories_id']) || empty($item->input['itilcategories_id']))) {
                 $message .= '- ' . __s('Category') . '<br>';
             }
         }
-        if ($conf->fields['require_location_to_close_ticket'] == 1) {
-            if ((isset($item->input['locations_id']) && empty($item->input['locations_id']))) {
+
+        // Check for required location
+        if ($conf->fields['require_location_to_close' . $configSuffix] == 1) {
+            if ((!isset($item->input['locations_id']) || empty($item->input['locations_id']))) {
                 $message .= '- ' . __s('Location') . '<br>';
             }
         }
 
-        // Check if solution exist before closing the ticket
-        if ($conf->fields['require_solution_to_close_ticket'] == 1
+        // Check if solution exists before closing
+        if ($conf->fields['require_solution_to_close' . $configSuffix] == 1
             && is_array($item->input)
             && isset($item->input['status'])
             && $item->input['status'] == CommonITILObject::CLOSED) {
             $solution = new ITILSolution();
             $solutions = $solution->find([
-                'itemtype' => Ticket::class,
+                'itemtype' => $itemtype,
                 'items_id' => $item->fields['id'],
                 'NOT' => [
                     'status' => CommonITILValidation::REFUSED,
@@ -349,7 +413,16 @@ class Controller extends CommonDBTM
         }
 
         if (!empty($message)) {
-            $message = __s('To close this ticket, you must fill in the following fields:', 'moreoptions') . '<br>' . $message;
+            $itemTypeLabel = '';
+            if ($item instanceof Ticket) {
+                $itemTypeLabel = __s('ticket');
+            } elseif ($item instanceof Change) {
+                $itemTypeLabel = __s('change');
+            } elseif ($item instanceof Problem) {
+                $itemTypeLabel = __s('problem');
+            }
+
+            $message = sprintf(__s('To close this %s, you must fill in the following fields:', 'moreoptions'), $itemTypeLabel) . '<br>' . $message;
             Session::addMessageAfterRedirect($message, false, ERROR);
             $item->input = false;
             return;
