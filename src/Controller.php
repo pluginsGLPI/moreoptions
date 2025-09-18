@@ -354,7 +354,7 @@ class Controller extends CommonDBTM
         $configSuffix = '_' . strtolower($itemtype);
         $userClass = $item->userlinkclass;
         $groupClass = $item->grouplinkclass;
-        $itemIdField = strtolower($itemtype) . 's_id';
+        $itemIdField = $item->getForeignKeyField();
 
         // Check for required technician
         if ($conf->fields['require_technician_to_close' . $configSuffix] == 1) {
