@@ -260,7 +260,9 @@ class Config extends CommonDBTM
                 `mandatory_task_duration` tinyint NOT NULL DEFAULT '0',
                 `mandatory_task_user` tinyint NOT NULL DEFAULT '0',
                 `mandatory_task_group` tinyint NOT NULL DEFAULT '0',
-                PRIMARY KEY (`id`)
+                PRIMARY KEY (`id`),
+                KEY `entities_id` (`entities_id`),
+                KEY `is_active` (`is_active`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
               ";
             $DB->doQuery($query);
