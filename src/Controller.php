@@ -340,7 +340,7 @@ class Controller extends CommonDBTM
         }
     }
 
-    public static function requireFieldsToClose(CommonDBTM $item): void
+    public static function requireFieldsToClose(CommonITILObject $item): void
     {
         $conf = Config::getCurrentConfig();
         if ($conf->fields['is_active'] != 1) {
@@ -351,29 +351,10 @@ class Controller extends CommonDBTM
         $itemtype = get_class($item);
 
         // Determine the configuration suffix and actor classes based on item type
-        $configSuffix = '';
-        $userClass = '';
-        $groupClass = '';
-        $itemIdField = '';
-
-        if ($item instanceof Ticket) {
-            $configSuffix = '_ticket';
-            $userClass = Ticket_User::class;
-            $groupClass = Group_Ticket::class;
-            $itemIdField = 'tickets_id';
-        } elseif ($item instanceof Change) {
-            $configSuffix = '_change';
-            $userClass = Change_User::class;
-            $groupClass = Change_Group::class;
-            $itemIdField = 'changes_id';
-        } elseif ($item instanceof Problem) {
-            $configSuffix = '_problem';
-            $userClass = Problem_User::class;
-            $groupClass = Group_Problem::class;
-            $itemIdField = 'problems_id';
-        } else {
-            return; // Unsupported item type
-        }
+        $configSuffix = '_' . strtolower($itemtype);
+        $userClass = $item->userlinkclass;
+        $groupClass = $item->grouplinkclass;
+        $itemIdField = strtolower($itemtype) . 's_id';
 
         // Check for required technician
         if ($conf->fields['require_technician_to_close' . $configSuffix] == 1) {
