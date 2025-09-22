@@ -47,12 +47,14 @@ use CommonDBTM;
 use CommonITILActor;
 use CommonITILObject;
 use CommonITILValidation;
+use Glpi\Form\Category;
 use GlpiPlugin\Moreoptions\Config;
 use Group_Item;
 use Group_Problem;
 use Group_Ticket;
 use Item_Problem;
 use Item_Ticket;
+use ITILCategory;
 use ITILSolution;
 use Planning;
 use Problem;
@@ -460,6 +462,66 @@ class Controller extends CommonDBTM
             $item->input = false;
         }
 
+        return $item;
+    }
+
+    public static function updateItemActors(CommonITILObject $item): CommonITILObject
+    {
+        $conf = Config::getCurrentConfig();
+        if ($conf->fields['is_active'] != 1) {
+            return $item;
+        }
+
+        switch (get_class($item)) {
+            case 'Ticket':
+                $assign_tech_manager = $conf->fields['assign_technical_manager_when_changing_category_ticket'];
+                $assign_tech_group = $conf->fields['assign_technical_group_when_changing_category_ticket'];
+                break;
+            case 'Change':
+                $assign_tech_manager = $conf->fields['assign_technical_manager_when_changing_category_change'];
+                $assign_tech_group = $conf->fields['assign_technical_group_when_changing_category_change'];
+                break;
+            case 'Problem':
+                $assign_tech_manager = $conf->fields['assign_technical_manager_when_changing_category_problem'];
+                $assign_tech_group = $conf->fields['assign_technical_group_when_changing_category_problem'];
+                break;
+            default:
+                return $item;
+        }
+
+        if ($assign_tech_manager || $assign_tech_group) {
+
+            $itemIdField = strtolower(get_class($item)) . 's_id';
+            $category = new ITILCategory();
+            $fund = $category->getFromDB($item->fields['itilcategories_id']);
+            if ($fund) {
+                $crit = [
+                    'type'     => CommonITILActor::ASSIGN,
+                ];
+                if ($assign_tech_manager) {
+                    $user_link = new $item->userlinkclass();
+                    $criteria = [
+                        'users_id' => $category->fields['users_id'],
+                        'type'     => CommonITILActor::ASSIGN,
+                        $itemIdField => $item->fields['id'],
+                    ];
+                    if (!$user_link->getFromDBByCrit($criteria)) {
+                        $user_link->add($criteria);
+                    }
+                }
+                if ($assign_tech_group) {
+                    $group_link = new $item->grouplinkclass();
+                    $criteria = [
+                        'groups_id' => $category->fields['groups_id'],
+                        'type'     => CommonITILActor::ASSIGN,
+                        $itemIdField => $item->fields['id'],
+                    ];
+                    if (!$group_link->getFromDBByCrit($criteria)) {
+                        $group_link->add($criteria);
+                    }
+                }
+            }
+        }
         return $item;
     }
 }

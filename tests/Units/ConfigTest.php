@@ -896,4 +896,314 @@ class ConfigTest extends MoreOptionsTestCase
         );
         $this->assertCount(1, $groups);
     }
+
+    /**
+     * Test automatic assignment of technical manager and group when updating ticket category
+     */
+    public function testUpdateTicketActorsOnCategoryChange(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        // Configure to assign technical manager and group when changing category
+        $result = $this->updateTestConfig($conf, [
+            'is_active' => 1,
+            'entities_id' => 0,
+            'assign_technical_manager_when_changing_category_ticket' => 1,
+            'assign_technical_group_when_changing_category_ticket' => 1,
+        ]);
+        $this->assertTrue($result);
+
+        // Create a group for the category
+        $group = new \Group();
+        $gid = $group->add([
+            'name' => 'Test Technical Group',
+        ]);
+        $this->assertNotFalse($gid);
+
+        // Create a user for technical manager
+        $user = new \User();
+        $uid = $user->add([
+            'name' => 'test_tech_manager',
+            'login' => 'test_tech_manager',
+        ]);
+        $this->assertNotFalse($uid);
+
+        // Create a category with technical manager and group
+        $category = new \ITILCategory();
+        $cid = $category->add([
+            'name' => 'Test Category with Tech',
+            'users_id' => $uid,
+            'groups_id' => $gid,
+        ]);
+        $this->assertNotFalse($cid);
+
+        // Create a ticket
+        $ticket = new \Ticket();
+        $tid = $ticket->add([
+            'name' => 'Test ticket category update',
+            'content' => 'Test content',
+        ]);
+        $this->assertGreaterThan(0, $tid);
+
+        // Update ticket with the category
+        $ticket = new \Ticket();
+        $this->assertTrue($ticket->update([
+            'id' => $tid,
+            'itilcategories_id' => $cid,
+        ]));
+
+        // Check if technical manager was assigned
+        $ticket_user = new \Ticket_User();
+        $assigned_users = $ticket_user->find([
+            'tickets_id' => $tid,
+            'users_id' => $uid,
+            'type' => \CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(1, $assigned_users);
+
+        // Check if technical group was assigned
+        $ticket_group = new \Group_Ticket();
+        $assigned_groups = $ticket_group->find([
+            'tickets_id' => $tid,
+            'groups_id' => $gid,
+            'type' => \CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(1, $assigned_groups);
+
+        // Reset config
+        $resetResult = $this->updateTestConfig($conf, [
+            'assign_technical_manager_when_changing_category_ticket' => 0,
+            'assign_technical_group_when_changing_category_ticket' => 0,
+        ]);
+        $this->assertTrue($resetResult);
+    }
+
+    /**
+     * Test automatic assignment of technical manager and group when updating change category
+     */
+    public function testUpdateChangeActorsOnCategoryChange(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        // Configure to assign technical manager and group when changing category
+        $result = $this->updateTestConfig($conf, [
+            'is_active' => 1,
+            'entities_id' => 0,
+            'assign_technical_manager_when_changing_category_change' => 1,
+            'assign_technical_group_when_changing_category_change' => 1,
+        ]);
+        $this->assertTrue($result);
+
+        // Create a group for the category
+        $group = new \Group();
+        $gid = $group->add([
+            'name' => 'Test Technical Group Change',
+        ]);
+        $this->assertNotFalse($gid);
+
+        // Create a user for technical manager
+        $user = new \User();
+        $uid = $user->add([
+            'name' => 'test_tech_manager_change',
+            'login' => 'test_tech_manager_change',
+        ]);
+        $this->assertNotFalse($uid);
+
+        // Create a category with technical manager and group
+        $category = new \ITILCategory();
+        $cid = $category->add([
+            'name' => 'Test Category with Tech Change',
+            'users_id' => $uid,
+            'groups_id' => $gid,
+        ]);
+        $this->assertNotFalse($cid);
+
+        // Create a change
+        $change = new \Change();
+        $chid = $change->add([
+            'name' => 'Test change category update',
+            'content' => 'Test content',
+        ]);
+        $this->assertGreaterThan(0, $chid);
+
+        // Update change with the category
+        $change = new \Change();
+        $this->assertTrue($change->update([
+            'id' => $chid,
+            'itilcategories_id' => $cid,
+        ]));
+
+        // Check if technical manager was assigned
+        $change_user = new \Change_User();
+        $assigned_users = $change_user->find([
+            'changes_id' => $chid,
+            'users_id' => $uid,
+            'type' => \CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(1, $assigned_users);
+
+        // Check if technical group was assigned
+        $change_group = new \Change_Group();
+        $assigned_groups = $change_group->find([
+            'changes_id' => $chid,
+            'groups_id' => $gid,
+            'type' => \CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(1, $assigned_groups);
+
+        // Reset config
+        $resetResult = $this->updateTestConfig($conf, [
+            'assign_technical_manager_when_changing_category_change' => 0,
+            'assign_technical_group_when_changing_category_change' => 0,
+        ]);
+        $this->assertTrue($resetResult);
+    }
+
+    /**
+     * Test automatic assignment of technical manager and group when updating problem category
+     */
+    public function testUpdateProblemActorsOnCategoryChange(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        // Configure to assign technical manager and group when changing category
+        $result = $this->updateTestConfig($conf, [
+            'is_active' => 1,
+            'entities_id' => 0,
+            'assign_technical_manager_when_changing_category_problem' => 1,
+            'assign_technical_group_when_changing_category_problem' => 1,
+        ]);
+        $this->assertTrue($result);
+
+        // Create a group for the category
+        $group = new \Group();
+        $gid = $group->add([
+            'name' => 'Test Technical Group Problem',
+        ]);
+        $this->assertNotFalse($gid);
+
+        // Create a user for technical manager
+        $user = new \User();
+        $uid = $user->add([
+            'name' => 'test_tech_manager_problem',
+            'login' => 'test_tech_manager_problem',
+        ]);
+        $this->assertNotFalse($uid);
+
+        // Create a category with technical manager and group
+        $category = new \ITILCategory();
+        $cid = $category->add([
+            'name' => 'Test Category with Tech Problem',
+            'users_id' => $uid,
+            'groups_id' => $gid,
+        ]);
+        $this->assertNotFalse($cid);
+
+        // Create a problem
+        $problem = new \Problem();
+        $pid = $problem->add([
+            'name' => 'Test problem category update',
+            'content' => 'Test content',
+        ]);
+        $this->assertGreaterThan(0, $pid);
+
+        // Update problem with the category
+        $problem = new \Problem();
+        $this->assertTrue($problem->update([
+            'id' => $pid,
+            'itilcategories_id' => $cid,
+        ]));
+
+        // Check if technical manager was assigned
+        $problem_user = new \Problem_User();
+        $assigned_users = $problem_user->find([
+            'problems_id' => $pid,
+            'users_id' => $uid,
+            'type' => \CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(1, $assigned_users);
+
+        // Check if technical group was assigned
+        $problem_group = new \Group_Problem();
+        $assigned_groups = $problem_group->find([
+            'problems_id' => $pid,
+            'groups_id' => $gid,
+            'type' => \CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(1, $assigned_groups);
+
+        // Reset config
+        $resetResult = $this->updateTestConfig($conf, [
+            'assign_technical_manager_when_changing_category_problem' => 0,
+            'assign_technical_group_when_changing_category_problem' => 0,
+        ]);
+        $this->assertTrue($resetResult);
+    }
+
+    /**
+     * Test that actors are not assigned when configuration is disabled
+     */
+    public function testUpdateActorsDisabledConfiguration(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        // Ensure configuration is disabled
+        $result = $this->updateTestConfig($conf, [
+            'is_active' => 1,
+            'entities_id' => 0,
+            'assign_technical_manager_when_changing_category_ticket' => 0,
+            'assign_technical_group_when_changing_category_ticket' => 0,
+        ]);
+        $this->assertTrue($result);
+
+        // Create a category with technical manager and group
+        $group = new \Group();
+        $gid = $group->add(['name' => 'Test Group Disabled']);
+        $this->assertNotFalse($gid);
+
+        $user = new \User();
+        $uid = $user->add(['name' => 'test_user_disabled', 'login' => 'test_user_disabled']);
+        $this->assertNotFalse($uid);
+
+        $category = new \ITILCategory();
+        $cid = $category->add([
+            'name' => 'Test Category Disabled',
+            'users_id' => $uid,
+            'groups_id' => $gid,
+        ]);
+        $this->assertNotFalse($cid);
+
+        // Create and update a ticket
+        $ticket = new \Ticket();
+        $tid = $ticket->add(['name' => 'Test disabled config', 'content' => 'Test content']);
+        $this->assertGreaterThan(0, $tid);
+
+        $ticket = new \Ticket();
+        $this->assertTrue($ticket->update(['id' => $tid, 'itilcategories_id' => $cid]));
+
+        // Verify no technical actors were assigned
+        $ticket_user = new \Ticket_User();
+        $assigned_users = $ticket_user->find([
+            'tickets_id' => $tid,
+            'users_id' => $uid,
+            'type' => \CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(0, $assigned_users);
+
+        $ticket_group = new \Group_Ticket();
+        $assigned_groups = $ticket_group->find([
+            'tickets_id' => $tid,
+            'groups_id' => $gid,
+            'type' => \CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(0, $assigned_groups);
+    }
 }

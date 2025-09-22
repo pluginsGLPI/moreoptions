@@ -147,6 +147,20 @@
                                         <td><input type="checkbox" name="prevent_closure_problem" class="form-check-input" id="prevent_closure_problem" {{ item.fields['prevent_closure_problem'] ? 'checked' : '' }} /></td>
                                         <td><input type="checkbox" name="prevent_closure_all" class="form-check-input" id="prevent_closure_all" {{ (item.fields['prevent_closure_ticket'] and item.fields['prevent_closure_change'] and item.fields['prevent_closure_problem']) ? 'checked' : '' }} /></td>
                                     </tr>
+                                    <tr>
+                                        <td>{{ __('Assign technical manager when changing category', 'moreoptions') }}</td>
+                                        <td><input type="checkbox" name="assign_technical_manager_when_changing_category_ticket" class="form-check-input" {{ item.fields['assign_technical_manager_when_changing_category_ticket'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="assign_technical_manager_when_changing_category_change" class="form-check-input" {{ item.fields['assign_technical_manager_when_changing_category_change'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="assign_technical_manager_when_changing_category_problem" class="form-check-input" {{ item.fields['assign_technical_manager_when_changing_category_problem'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="assign_technical_manager_when_changing_category_all" class="form-check-input" {{ (item.fields['assign_technical_manager_when_changing_category_ticket'] and item.fields['assign_technical_manager_when_changing_category_change'] and item.fields['assign_technical_manager_when_changing_category_problem']) ? 'checked' : '' }} /></td>
+                                    </tr>
+                                    <tr>
+                                        <td>{{ __('Assign technical group when changing category', 'moreoptions') }}</td>
+                                        <td><input type="checkbox" name="assign_technical_group_when_changing_category_ticket" class="form-check-input" {{ item.fields['assign_technical_group_when_changing_category_ticket'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="assign_technical_group_when_changing_category_change" class="form-check-input" {{ item.fields['assign_technical_group_when_changing_category_change'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="assign_technical_group_when_changing_category_problem" class="form-check-input" {{ item.fields['assign_technical_group_when_changing_category_problem'] ? 'checked' : '' }} /></td>
+                                        <td><input type="checkbox" name="assign_technical_group_when_changing_category_all" class="form-check-input" {{ (item.fields['assign_technical_group_when_changing_category_ticket'] and item.fields['assign_technical_group_when_changing_category_change'] and item.fields['assign_technical_group_when_changing_category_problem']) ? 'checked' : '' }} /></td>
+                                    </tr>
                                 </tbody>
                             </table>
 
@@ -211,6 +225,8 @@
                                 <span>{{ __('Tasks') }}</span>
                             </div>
 
+                            {{ alerts.alert_danger(__('The options below relate to the mandatory fields for creating a task.', 'moreoptions')) }}
+
                             <table class="table table-hover border card-table" id="tasks_table">
                                 <thead>
                                     <tr>
@@ -266,6 +282,36 @@
                 })
             } else {
                 preventClosureCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = false;
+                })
+            }
+        })
+
+        // Assign technical manager when changing category all functionality
+        const assignTechManagerAll = document.querySelector('input[name="assign_technical_manager_when_changing_category_all"]');
+        const assignTechManagerCheckboxes = document.querySelectorAll('input[type="checkbox"][name*="assign_technical_manager_when_changing_category_"]');
+        assignTechManagerAll.addEventListener('change', () => {
+            if (assignTechManagerAll.checked === true) {
+                assignTechManagerCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = true;
+                })
+            } else {
+                assignTechManagerCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = false;
+                })
+            }
+        })
+
+        // Assign technical group when changing category all functionality
+        const assignTechGroupAll = document.querySelector('input[name="assign_technical_group_when_changing_category_all"]');
+        const assignTechGroupCheckboxes = document.querySelectorAll('input[type="checkbox"][name*="assign_technical_group_when_changing_category_"]');
+        assignTechGroupAll.addEventListener('change', () => {
+            if (assignTechGroupAll.checked === true) {
+                assignTechGroupCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = true;
+                })
+            } else {
+                assignTechGroupCheckboxes.forEach(function(checkbox) {
                     checkbox.checked = false;
                 })
             }
