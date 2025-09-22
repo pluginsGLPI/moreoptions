@@ -413,14 +413,7 @@ class Controller extends CommonDBTM
         }
 
         if (!empty($message)) {
-            $itemTypeLabel = '';
-            if ($item instanceof Ticket) {
-                $itemTypeLabel = __s('ticket');
-            } elseif ($item instanceof Change) {
-                $itemTypeLabel = __s('change');
-            } elseif ($item instanceof Problem) {
-                $itemTypeLabel = __s('problem');
-            }
+            $itemTypeLabel = $item->getTypeName();
 
             $message = sprintf(__s('To close this %s, you must fill in the following fields:', 'moreoptions'), $itemTypeLabel) . '<br>' . $message;
             Session::addMessageAfterRedirect($message, false, ERROR);
