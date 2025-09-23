@@ -289,7 +289,7 @@ class Controller extends CommonDBTM
         }
     }
 
-    public static function beforeCloseITILObject(CommonDBTM $item): void
+    public static function beforeCloseITILObject(CommonITILObject $item): void
     {
         if (!is_array($item->input)) {
             return;
@@ -360,7 +360,12 @@ class Controller extends CommonDBTM
 
         // Check for required technician
         if ($conf->fields['require_technician_to_close' . $configSuffix] == 1) {
-            $tech = new $userClass();
+            if (is_a($userClass, CommonDBTM::class, true)) {
+                $tech = new $userClass();
+            } else {
+                // If the user class is not valid, skip this check
+                return;
+            }
             $techs = $tech->find([
                 $itemIdField => $item->fields['id'],
                 'type'       => CommonITILActor::ASSIGN,
@@ -372,7 +377,12 @@ class Controller extends CommonDBTM
 
         // Check for required technician group
         if ($conf->fields['require_technicians_group_to_close' . $configSuffix] == 1) {
-            $group = new $groupClass();
+            if (is_a($groupClass, CommonDBTM::class, true)) {
+                $group = new $groupClass();
+            } else {
+                // If the group class is not valid, skip this check
+                return;
+            }
             $groups = $group->find([
                 $itemIdField => $item->fields['id'],
                 'type'       => CommonITILActor::ASSIGN,
@@ -495,29 +505,30 @@ class Controller extends CommonDBTM
             $category = new ITILCategory();
             $fund = $category->getFromDB($item->fields['itilcategories_id']);
             if ($fund) {
-                $crit = [
-                    'type'     => CommonITILActor::ASSIGN,
-                ];
                 if ($assign_tech_manager) {
-                    $user_link = new $item->userlinkclass();
-                    $criteria = [
-                        'users_id' => $category->fields['users_id'],
-                        'type'     => CommonITILActor::ASSIGN,
-                        $itemIdField => $item->fields['id'],
-                    ];
-                    if (!$user_link->getFromDBByCrit($criteria)) {
-                        $user_link->add($criteria);
+                    if (is_a($item->userlinkclass, CommonDBTM::class, true)) {
+                        $user_link = new $item->userlinkclass();
+                        $criteria = [
+                            'users_id' => $category->fields['users_id'],
+                            'type'     => CommonITILActor::ASSIGN,
+                            $itemIdField => $item->fields['id'],
+                        ];
+                        if (!$user_link->getFromDBByCrit($criteria)) {
+                            $user_link->add($criteria);
+                        }
                     }
                 }
                 if ($assign_tech_group) {
-                    $group_link = new $item->grouplinkclass();
-                    $criteria = [
-                        'groups_id' => $category->fields['groups_id'],
-                        'type'     => CommonITILActor::ASSIGN,
-                        $itemIdField => $item->fields['id'],
-                    ];
-                    if (!$group_link->getFromDBByCrit($criteria)) {
-                        $group_link->add($criteria);
+                    if (is_a($item->grouplinkclass, CommonDBTM::class, true)) {
+                        $group_link = new $item->grouplinkclass();
+                        $criteria = [
+                            'groups_id' => $category->fields['groups_id'],
+                            'type'     => CommonITILActor::ASSIGN,
+                            $itemIdField => $item->fields['id'],
+                        ];
+                        if (!$group_link->getFromDBByCrit($criteria)) {
+                            $group_link->add($criteria);
+                        }
                     }
                 }
             }
