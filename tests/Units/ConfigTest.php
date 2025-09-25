@@ -1457,7 +1457,7 @@ class ConfigTest extends MoreOptionsTestCase
         // Get or create config for root entity
         $root_config = new Config();
         $root_config->getFromDBByCrit(['entities_id' => 0]);
-        
+
         $should_delete = false; // Initialize variable
         if (!$root_config->getID()) {
             // Create root config if it doesn't exist
