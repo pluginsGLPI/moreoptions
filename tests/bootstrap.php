@@ -31,8 +31,17 @@
  * -------------------------------------------------------------------------
  */
 
-require __DIR__ . '/../../../phpunit/bootstrap.php';
+use Glpi\Application\Environment;
+use Glpi\Kernel\Kernel;
 
-if (!Plugin::isPluginActive("moreoptions")) {
-    throw new RuntimeException("Plugin moreoptions is not active in the test database");
-}
+use function Safe\define;
+
+define('GLPI_LOG_DIR', __DIR__ . '/files/_logs');
+
+require_once __DIR__ . '/../../../phpunit/GLPITestCase.php';
+require_once __DIR__ . '/../../../phpunit/DbTestCase.php';
+require_once __DIR__ . '/../../../vendor/autoload.php';
+require_once __DIR__ . '/MoreOptionsTestCase.php';
+
+$kernel = new Kernel(Environment::TESTING->value);
+$kernel->boot();

@@ -112,6 +112,13 @@ class Config extends CommonDBTM
             }
         }
 
+        // Handle use_parent_entity field
+        if (!isset($item->input['use_parent_entity'])) {
+            $item->input['use_parent_entity'] = 0;
+        } elseif ($item->input['use_parent_entity'] == 'on') {
+            $item->input['use_parent_entity'] = 1;
+        }
+
         return $item;
     }
 
@@ -132,7 +139,22 @@ class Config extends CommonDBTM
             'require_category_to_close_ticket',
             'require_location_to_close_ticket',
             'require_solution_to_close_ticket',
-            'require_solution_type_to_close_ticket',
+            'require_technician_to_close_change',
+            'require_technicians_group_to_close_change',
+            'require_category_to_close_change',
+            'require_location_to_close_change',
+            'require_solution_to_close_change',
+            'require_technician_to_close_problem',
+            'require_technicians_group_to_close_problem',
+            'require_category_to_close_problem',
+            'require_location_to_close_problem',
+            'require_solution_to_close_problem',
+            'assign_technical_manager_when_changing_category_ticket',
+            'assign_technical_group_when_changing_category_ticket',
+            'assign_technical_manager_when_changing_category_change',
+            'assign_technical_group_when_changing_category_change',
+            'assign_technical_manager_when_changing_category_problem',
+            'assign_technical_group_when_changing_category_problem',
             'mandatory_task_category',
             'mandatory_task_duration',
             'mandatory_task_user',
@@ -154,31 +176,28 @@ class Config extends CommonDBTM
 
     public static function showForEntity(Entity $item): void
     {
-        // $parents = getAncestorsOf(Entity::getTable(), $item->getID());
-        // if (!empty($parents)) {
-        //     foreach ($parents as $parent) {
-        //         $pconfig = new Config();
-        //         $pconfig->getFromDBByCrit([
-        //             'entities_id' => $parent,
-        //         ]);
-        //         if ($pconfig->getField('is_active') == 1) {
-        //             $pentity = $parent;
-        //         }
-        //     }
-        //     $csconfig = new self();
-        //     $csconfig->getFromDBByCrit([
-        //         'entities_id' => $pentity ?? 0,
-        //     ]);
-        // }
         $moconfig = new self();
         $moconfig->getFromDBByCrit([
             'entities_id' => $item->getID(),
         ]);
+
+        // Get effective configuration to show which entity's config is actually used
+        $effectiveConfig = self::getEffectiveConfigForEntity($item->getID());
+        $parentEntityInfo = null;
+
+        if (isset($moconfig->fields['use_parent_entity']) && $moconfig->fields['use_parent_entity'] == 1 && $effectiveConfig->fields['entities_id'] != $item->getID()) {
+            $parentEntity = new Entity();
+            if ($parentEntity->getFromDB($effectiveConfig->fields['entities_id'])) {
+                $parentEntityInfo = $parentEntity->getName();
+            }
+        }
+
         TemplateRenderer::getInstance()->display(
             '@moreoptions/config.html.twig',
             [
                 'item' => $moconfig,
                 'dropdown_options' => self::getSelectableActorGroup(),
+                'parent_entity_info' => $parentEntityInfo,
                 'params' => [
                     'canedit' => true,
                 ],
@@ -209,6 +228,36 @@ class Config extends CommonDBTM
         return $moconfig;
     }
 
+    /**
+     * Get effective configuration for current entity, considering parent entity inheritance
+     */
+    public static function getEffectiveConfig(): self
+    {
+        return self::getEffectiveConfigForEntity(Session::getActiveEntity());
+    }
+
+    /**
+     * Get effective configuration for a specific entity, considering parent entity inheritance
+     */
+    public static function getEffectiveConfigForEntity(int $entityId): self
+    {
+        $moconfig = new self();
+        $moconfig->getFromDBByCrit([
+            'entities_id' => $entityId,
+        ]);
+
+        // If use_parent_entity is enabled and we're not at root entity
+        if (isset($moconfig->fields['use_parent_entity']) && $moconfig->fields['use_parent_entity'] == 1 && $entityId > 0) {
+            $entity = new Entity();
+            if ($entity->getFromDB($entityId)) {
+                $parentId = $entity->fields['entities_id'];
+                return self::getEffectiveConfigForEntity($parentId);
+            }
+        }
+
+        return $moconfig;
+    }
+
     public static function install(Migration $migration): void
     {
         /** @var \DBmysql $DB */
@@ -220,6 +269,7 @@ class Config extends CommonDBTM
                 `id` int unsigned NOT NULL AUTO_INCREMENT,
                 `is_active`  tinyint NOT NULL DEFAULT '1',
                 `entities_id` int unsigned NOT NULL DEFAULT '0',
+                `use_parent_entity` tinyint NOT NULL DEFAULT '0',
                 `take_item_group_ticket` tinyint NOT NULL DEFAULT '0',
                 `take_item_group_change` tinyint NOT NULL DEFAULT '0',
                 `take_item_group_problem` tinyint NOT NULL DEFAULT '0',
@@ -237,11 +287,29 @@ class Config extends CommonDBTM
                 `require_category_to_close_ticket` tinyint NOT NULL DEFAULT '0',
                 `require_location_to_close_ticket` tinyint NOT NULL DEFAULT '0',
                 `require_solution_to_close_ticket` tinyint NOT NULL DEFAULT '0',
+                `require_technician_to_close_change` tinyint NOT NULL DEFAULT '0',
+                `require_technicians_group_to_close_change` tinyint NOT NULL DEFAULT '0',
+                `require_category_to_close_change` tinyint NOT NULL DEFAULT '0',
+                `require_location_to_close_change` tinyint NOT NULL DEFAULT '0',
+                `require_solution_to_close_change` tinyint NOT NULL DEFAULT '0',
+                `require_technician_to_close_problem` tinyint NOT NULL DEFAULT '0',
+                `require_technicians_group_to_close_problem` tinyint NOT NULL DEFAULT '0',
+                `require_category_to_close_problem` tinyint NOT NULL DEFAULT '0',
+                `require_location_to_close_problem` tinyint NOT NULL DEFAULT '0',
+                `require_solution_to_close_problem` tinyint NOT NULL DEFAULT '0',
+                `assign_technical_manager_when_changing_category_ticket` tinyint NOT NULL DEFAULT '0',
+                `assign_technical_group_when_changing_category_ticket` tinyint NOT NULL DEFAULT '0',
+                `assign_technical_manager_when_changing_category_change` tinyint NOT NULL DEFAULT '0',
+                `assign_technical_group_when_changing_category_change` tinyint NOT NULL DEFAULT '0',
+                `assign_technical_manager_when_changing_category_problem` tinyint NOT NULL DEFAULT '0',
+                `assign_technical_group_when_changing_category_problem` tinyint NOT NULL DEFAULT '0',
                 `mandatory_task_category` tinyint NOT NULL DEFAULT '0',
                 `mandatory_task_duration` tinyint NOT NULL DEFAULT '0',
                 `mandatory_task_user` tinyint NOT NULL DEFAULT '0',
                 `mandatory_task_group` tinyint NOT NULL DEFAULT '0',
-                PRIMARY KEY (`id`)
+                PRIMARY KEY (`id`),
+                KEY `entities_id` (`entities_id`),
+                KEY `is_active` (`is_active`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
               ";
             $DB->doQuery($query);
