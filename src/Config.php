@@ -180,18 +180,18 @@ class Config extends CommonDBTM
         $moconfig->getFromDBByCrit([
             'entities_id' => $item->getID(),
         ]);
-        
+
         // Get effective configuration to show which entity's config is actually used
         $effectiveConfig = self::getEffectiveConfigForEntity($item->getID());
         $parentEntityInfo = null;
-        
+
         if (isset($moconfig->fields['use_parent_entity']) && $moconfig->fields['use_parent_entity'] == 1 && $effectiveConfig->fields['entities_id'] != $item->getID()) {
             $parentEntity = new Entity();
             if ($parentEntity->getFromDB($effectiveConfig->fields['entities_id'])) {
                 $parentEntityInfo = $parentEntity->getName();
             }
         }
-        
+
         TemplateRenderer::getInstance()->display(
             '@moreoptions/config.html.twig',
             [
@@ -201,7 +201,7 @@ class Config extends CommonDBTM
                 'params' => [
                     'canedit' => true,
                 ],
-            ]
+            ],
         );
     }
 

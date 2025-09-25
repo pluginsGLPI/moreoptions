@@ -1237,6 +1237,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertGreaterThan(0, $parent_config_id);
 
         // Configure child entity to use parent configuration
+        $this->assertIsInt($child_entity_id);
         $child_conf = Config::getEffectiveConfigForEntity($child_entity_id);
         $child_config = new Config();
         $child_config_id = $child_config->update([
@@ -1273,6 +1274,7 @@ class ConfigTest extends MoreOptionsTestCase
             'name' => 'Grandparent Entity Test',
             'entities_id' => 0, // Root entity as parent
         ]);
+        $this->assertIsInt($grandparent_entity_id);
         $this->assertGreaterThan(0, $grandparent_entity_id);
 
         // Create parent entity (level 2)
@@ -1303,9 +1305,11 @@ class ConfigTest extends MoreOptionsTestCase
             'prevent_closure_ticket' => 1,
             'require_technician_to_close_ticket' => 1,
         ]);
+        $this->assertIsInt($grandparent_config_id);
         $this->assertGreaterThan(0, $grandparent_config_id);
 
         // Configure parent entity to use parent configuration (cascade)
+        $this->assertIsInt($parent_entity_id);
         $parent_conf = Config::getEffectiveConfigForEntity($parent_entity_id);
         $parent_config = new Config();
         $parent_config_id = $parent_config->update([
@@ -1317,9 +1321,11 @@ class ConfigTest extends MoreOptionsTestCase
             'prevent_closure_ticket' => 0,
             'require_technician_to_close_ticket' => 0,
         ]);
+        $this->assertIsInt($parent_config_id);
         $this->assertGreaterThan(0, $parent_config_id);
 
         // Configure child entity to use parent configuration
+        $this->assertIsInt($child_entity_id);
         $child_conf = Config::getEffectiveConfigForEntity($child_entity_id);
         $child_config = new Config();
         $child_config_id = $child_config->update([
@@ -1331,6 +1337,7 @@ class ConfigTest extends MoreOptionsTestCase
             'prevent_closure_ticket' => 0,
             'require_technician_to_close_ticket' => 0,
         ]);
+        $this->assertIsInt($child_config_id);
         $this->assertGreaterThan(0, $child_config_id);
 
         // Test effective configuration for child entity (should cascade to grandparent)
@@ -1365,6 +1372,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertGreaterThan(0, $child_entity_id);
 
         // Configure parent entity
+        $this->assertIsInt($parent_entity_id);
         $parent_conf = Config::getEffectiveConfigForEntity($parent_entity_id);
         $parent_config = new Config();
         $parent_config_id = $parent_config->update([
@@ -1378,6 +1386,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertGreaterThan(0, $parent_config_id);
 
         // Configure child entity WITHOUT inheritance
+        $this->assertIsInt($child_entity_id);
         $child_conf = Config::getEffectiveConfigForEntity($child_entity_id);
         $child_config = new Config();
         $child_config_id = $child_config->update([
@@ -1413,6 +1422,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertGreaterThan(0, $test_entity_id);
 
         // Configure this entity
+        $this->assertIsInt($test_entity_id);
         $test_conf = Config::getEffectiveConfigForEntity($test_entity_id);
         $test_config = new Config();
         $test_config_id = $test_config->update([
@@ -1448,6 +1458,7 @@ class ConfigTest extends MoreOptionsTestCase
         $root_config = new Config();
         $root_config->getFromDBByCrit(['entities_id' => 0]);
         
+        $should_delete = false; // Initialize variable
         if (!$root_config->getID()) {
             // Create root config if it doesn't exist
             $root_config_id = $root_config->add([
@@ -1465,7 +1476,6 @@ class ConfigTest extends MoreOptionsTestCase
                 'use_parent_entity' => 1, // This should be ignored
                 'take_item_group_ticket' => 1,
             ]);
-            $should_delete = false;
         }
 
         // Test effective configuration for root entity
@@ -1476,7 +1486,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertEquals(1, $effective_config->fields['take_item_group_ticket']);
 
         // Clean up only if we created the config
-        if (isset($should_delete) && $should_delete) {
+        if ($should_delete) {
             $root_config->delete(['id' => $root_config->getID()]);
         }
     }
@@ -1503,6 +1513,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertGreaterThan(0, $child_entity_id);
 
         // Configure parent entity with specific settings
+        $this->assertIsInt($parent_entity_id);
         $parent_conf = Config::getEffectiveConfigForEntity($parent_entity_id);
         $parent_config = new Config();
         $parent_config_id = $parent_config->update([
@@ -1516,6 +1527,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertGreaterThan(0, $parent_config_id);
 
         // Configure child entity to inherit from parent
+        $this->assertIsInt($child_entity_id);
         $child_conf = Config::getEffectiveConfigForEntity($child_entity_id);
         $child_config = new Config();
         $child_config_id = $child_config->update([
