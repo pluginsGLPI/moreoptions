@@ -1296,7 +1296,7 @@ class ConfigTest extends MoreOptionsTestCase
         // Configure grandparent entity with specific settings
         $grandparent_conf = Config::getEffectiveConfigForEntity($grandparent_entity_id);
         $grandparent_config = new Config();
-        $grandparent_config_id = $grandparent_config->update([
+        $grandparent_config->update([
             'id' => $grandparent_conf->getID(),
             'entities_id' => $grandparent_entity_id,
             'is_active' => 1,
@@ -1305,14 +1305,13 @@ class ConfigTest extends MoreOptionsTestCase
             'prevent_closure_ticket' => 1,
             'require_technician_to_close_ticket' => 1,
         ]);
-        $this->assertIsInt($grandparent_config_id);
-        $this->assertGreaterThan(0, $grandparent_config_id);
+        $this->assertGreaterThan(0, $grandparent_conf->getID());
 
         // Configure parent entity to use parent configuration (cascade)
         $this->assertIsInt($parent_entity_id);
         $parent_conf = Config::getEffectiveConfigForEntity($parent_entity_id);
         $parent_config = new Config();
-        $parent_config_id = $parent_config->update([
+        $parent_config->update([
             'id' => $parent_conf->getID(),
             'entities_id' => $parent_entity_id,
             'is_active' => 1,
@@ -1321,14 +1320,13 @@ class ConfigTest extends MoreOptionsTestCase
             'prevent_closure_ticket' => 0,
             'require_technician_to_close_ticket' => 0,
         ]);
-        $this->assertIsInt($parent_config_id);
-        $this->assertGreaterThan(0, $parent_config_id);
+        $this->assertGreaterThan(0, $parent_conf->getID());
 
         // Configure child entity to use parent configuration
         $this->assertIsInt($child_entity_id);
         $child_conf = Config::getEffectiveConfigForEntity($child_entity_id);
         $child_config = new Config();
-        $child_config_id = $child_config->update([
+        $child_config->update([
             'id' => $child_conf->getID(),
             'entities_id' => $child_entity_id,
             'is_active' => 1,
@@ -1337,8 +1335,7 @@ class ConfigTest extends MoreOptionsTestCase
             'prevent_closure_ticket' => 0,
             'require_technician_to_close_ticket' => 0,
         ]);
-        $this->assertIsInt($child_config_id);
-        $this->assertGreaterThan(0, $child_config_id);
+        $this->assertGreaterThan(0, $child_conf->getID());
 
         // Test effective configuration for child entity (should cascade to grandparent)
         $effective_config = Config::getEffectiveConfigForEntity($child_entity_id);
