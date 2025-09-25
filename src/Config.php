@@ -112,6 +112,13 @@ class Config extends CommonDBTM
             }
         }
 
+        // Handle use_parent_entity field
+        if (!isset($item->input['use_parent_entity'])) {
+            $item->input['use_parent_entity'] = 0;
+        } elseif ($item->input['use_parent_entity'] == 'on') {
+            $item->input['use_parent_entity'] = 1;
+        }
+
         return $item;
     }
 
@@ -169,35 +176,32 @@ class Config extends CommonDBTM
 
     public static function showForEntity(Entity $item): void
     {
-        // $parents = getAncestorsOf(Entity::getTable(), $item->getID());
-        // if (!empty($parents)) {
-        //     foreach ($parents as $parent) {
-        //         $pconfig = new Config();
-        //         $pconfig->getFromDBByCrit([
-        //             'entities_id' => $parent,
-        //         ]);
-        //         if ($pconfig->getField('is_active') == 1) {
-        //             $pentity = $parent;
-        //         }
-        //     }
-        //     $csconfig = new self();
-        //     $csconfig->getFromDBByCrit([
-        //         'entities_id' => $pentity ?? 0,
-        //     ]);
-        // }
         $moconfig = new self();
         $moconfig->getFromDBByCrit([
             'entities_id' => $item->getID(),
         ]);
+        
+        // Get effective configuration to show which entity's config is actually used
+        $effectiveConfig = self::getEffectiveConfigForEntity($item->getID());
+        $parentEntityInfo = null;
+        
+        if (isset($moconfig->fields['use_parent_entity']) && $moconfig->fields['use_parent_entity'] == 1 && $effectiveConfig->fields['entities_id'] != $item->getID()) {
+            $parentEntity = new Entity();
+            if ($parentEntity->getFromDB($effectiveConfig->fields['entities_id'])) {
+                $parentEntityInfo = $parentEntity->getName();
+            }
+        }
+        
         TemplateRenderer::getInstance()->display(
             '@moreoptions/config.html.twig',
             [
                 'item' => $moconfig,
                 'dropdown_options' => self::getSelectableActorGroup(),
+                'parent_entity_info' => $parentEntityInfo,
                 'params' => [
                     'canedit' => true,
                 ],
-            ],
+            ]
         );
     }
 
@@ -224,6 +228,36 @@ class Config extends CommonDBTM
         return $moconfig;
     }
 
+    /**
+     * Get effective configuration for current entity, considering parent entity inheritance
+     */
+    public static function getEffectiveConfig(): self
+    {
+        return self::getEffectiveConfigForEntity(Session::getActiveEntity());
+    }
+
+    /**
+     * Get effective configuration for a specific entity, considering parent entity inheritance
+     */
+    public static function getEffectiveConfigForEntity(int $entityId): self
+    {
+        $moconfig = new self();
+        $moconfig->getFromDBByCrit([
+            'entities_id' => $entityId,
+        ]);
+
+        // If use_parent_entity is enabled and we're not at root entity
+        if (isset($moconfig->fields['use_parent_entity']) && $moconfig->fields['use_parent_entity'] == 1 && $entityId > 0) {
+            $entity = new Entity();
+            if ($entity->getFromDB($entityId)) {
+                $parentId = $entity->fields['entities_id'];
+                return self::getEffectiveConfigForEntity($parentId);
+            }
+        }
+
+        return $moconfig;
+    }
+
     public static function install(Migration $migration): void
     {
         /** @var \DBmysql $DB */
@@ -235,6 +269,7 @@ class Config extends CommonDBTM
                 `id` int unsigned NOT NULL AUTO_INCREMENT,
                 `is_active`  tinyint NOT NULL DEFAULT '1',
                 `entities_id` int unsigned NOT NULL DEFAULT '0',
+                `use_parent_entity` tinyint NOT NULL DEFAULT '0',
                 `take_item_group_ticket` tinyint NOT NULL DEFAULT '0',
                 `take_item_group_change` tinyint NOT NULL DEFAULT '0',
                 `take_item_group_problem` tinyint NOT NULL DEFAULT '0',

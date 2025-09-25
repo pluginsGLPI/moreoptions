@@ -1206,4 +1206,361 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertCount(0, $assigned_groups);
     }
+
+    /**
+     * Test parent entity configuration inheritance
+     */
+    public function testParentEntityConfigInheritance(): void
+    {
+        $parent_entity_id = 0;
+        // Create child entity
+        $child_entity = new \Entity();
+        $child_entity_id = $child_entity->add([
+            'name' => 'Child Entity Test',
+            'entities_id' => 0, // Parent entity as parent
+        ]);
+        $this->assertGreaterThan(0, $child_entity_id);
+
+        // Configure parent entity with specific settings
+        $conf = Config::getEffectiveConfigForEntity(0);
+        $parent_config = new Config();
+        $parent_config_id = $parent_config->update([
+            'id' => $conf->getID(),
+            'entities_id' => $parent_entity_id,
+            'is_active' => 1,
+            'use_parent_entity' => 0, // This is the source config
+            'take_item_group_ticket' => 1,
+            'prevent_closure_ticket' => 1,
+            'require_technician_to_close_ticket' => 1,
+            'mandatory_task_category' => 1,
+        ]);
+        $this->assertGreaterThan(0, $parent_config_id);
+
+        // Configure child entity to use parent configuration
+        $child_conf = Config::getEffectiveConfigForEntity($child_entity_id);
+        $child_config = new Config();
+        $child_config_id = $child_config->update([
+            'id' => $child_conf->getID(),
+            'entities_id' => $child_entity_id,
+            'is_active' => 1,
+            'use_parent_entity' => 1, // Enable inheritance
+            'take_item_group_ticket' => 0, // These values should be ignored
+            'prevent_closure_ticket' => 0,
+            'require_technician_to_close_ticket' => 0,
+            'mandatory_task_category' => 0,
+        ]);
+        $this->assertGreaterThan(0, $child_config_id);
+
+        // Test effective configuration for child entity
+        $effective_config = Config::getEffectiveConfigForEntity($child_entity_id);
+
+        // Should return parent config
+        $this->assertEquals($parent_entity_id, $effective_config->fields['entities_id']);
+        $this->assertEquals(1, $effective_config->fields['take_item_group_ticket']);
+        $this->assertEquals(1, $effective_config->fields['prevent_closure_ticket']);
+        $this->assertEquals(1, $effective_config->fields['require_technician_to_close_ticket']);
+        $this->assertEquals(1, $effective_config->fields['mandatory_task_category']);
+    }
+
+    /**
+     * Test multi-level parent entity configuration inheritance
+     */
+    public function testMultiLevelParentEntityConfigInheritance(): void
+    {
+        // Create grandparent entity (level 1)
+        $grandparent_entity = new \Entity();
+        $grandparent_entity_id = $grandparent_entity->add([
+            'name' => 'Grandparent Entity Test',
+            'entities_id' => 0, // Root entity as parent
+        ]);
+        $this->assertGreaterThan(0, $grandparent_entity_id);
+
+        // Create parent entity (level 2)
+        $parent_entity = new \Entity();
+        $parent_entity_id = $parent_entity->add([
+            'name' => 'Parent Entity Test Level 2',
+            'entities_id' => $grandparent_entity_id,
+        ]);
+        $this->assertGreaterThan(0, $parent_entity_id);
+
+        // Create child entity (level 3)
+        $child_entity = new \Entity();
+        $child_entity_id = $child_entity->add([
+            'name' => 'Child Entity Test Level 3',
+            'entities_id' => $parent_entity_id,
+        ]);
+        $this->assertGreaterThan(0, $child_entity_id);
+
+        // Configure grandparent entity with specific settings
+        $grandparent_conf = Config::getEffectiveConfigForEntity($grandparent_entity_id);
+        $grandparent_config = new Config();
+        $grandparent_config_id = $grandparent_config->update([
+            'id' => $grandparent_conf->getID(),
+            'entities_id' => $grandparent_entity_id,
+            'is_active' => 1,
+            'use_parent_entity' => 0, // This is the source config
+            'take_item_group_ticket' => 1,
+            'prevent_closure_ticket' => 1,
+            'require_technician_to_close_ticket' => 1,
+        ]);
+        $this->assertGreaterThan(0, $grandparent_config_id);
+
+        // Configure parent entity to use parent configuration (cascade)
+        $parent_conf = Config::getEffectiveConfigForEntity($parent_entity_id);
+        $parent_config = new Config();
+        $parent_config_id = $parent_config->update([
+            'id' => $parent_conf->getID(),
+            'entities_id' => $parent_entity_id,
+            'is_active' => 1,
+            'use_parent_entity' => 1, // Cascade to grandparent
+            'take_item_group_ticket' => 0, // Should be ignored
+            'prevent_closure_ticket' => 0,
+            'require_technician_to_close_ticket' => 0,
+        ]);
+        $this->assertGreaterThan(0, $parent_config_id);
+
+        // Configure child entity to use parent configuration
+        $child_conf = Config::getEffectiveConfigForEntity($child_entity_id);
+        $child_config = new Config();
+        $child_config_id = $child_config->update([
+            'id' => $child_conf->getID(),
+            'entities_id' => $child_entity_id,
+            'is_active' => 1,
+            'use_parent_entity' => 1, // Should cascade to grandparent
+            'take_item_group_ticket' => 0, // Should be ignored
+            'prevent_closure_ticket' => 0,
+            'require_technician_to_close_ticket' => 0,
+        ]);
+        $this->assertGreaterThan(0, $child_config_id);
+
+        // Test effective configuration for child entity (should cascade to grandparent)
+        $effective_config = Config::getEffectiveConfigForEntity($child_entity_id);
+
+        // Should return grandparent config (skipping parent because it also has use_parent_entity = 1)
+        $this->assertEquals($grandparent_entity_id, $effective_config->fields['entities_id']);
+        $this->assertEquals(1, $effective_config->fields['take_item_group_ticket']);
+        $this->assertEquals(1, $effective_config->fields['prevent_closure_ticket']);
+        $this->assertEquals(1, $effective_config->fields['require_technician_to_close_ticket']);
+    }
+
+    /**
+     * Test that child entity without use_parent_entity uses its own config
+     */
+    public function testChildEntityWithoutInheritanceUsesOwnConfig(): void
+    {
+        // Create parent entity
+        $parent_entity = new \Entity();
+        $parent_entity_id = $parent_entity->add([
+            'name' => 'Parent Entity No Inherit Test',
+            'entities_id' => 0,
+        ]);
+        $this->assertGreaterThan(0, $parent_entity_id);
+
+        // Create child entity
+        $child_entity = new \Entity();
+        $child_entity_id = $child_entity->add([
+            'name' => 'Child Entity No Inherit Test',
+            'entities_id' => $parent_entity_id,
+        ]);
+        $this->assertGreaterThan(0, $child_entity_id);
+
+        // Configure parent entity
+        $parent_conf = Config::getEffectiveConfigForEntity($parent_entity_id);
+        $parent_config = new Config();
+        $parent_config_id = $parent_config->update([
+            'id' => $parent_conf->getID(),
+            'entities_id' => $parent_entity_id,
+            'is_active' => 1,
+            'use_parent_entity' => 0,
+            'take_item_group_ticket' => 1,
+            'prevent_closure_ticket' => 1,
+        ]);
+        $this->assertGreaterThan(0, $parent_config_id);
+
+        // Configure child entity WITHOUT inheritance
+        $child_conf = Config::getEffectiveConfigForEntity($child_entity_id);
+        $child_config = new Config();
+        $child_config_id = $child_config->update([
+            'id' => $child_conf->getID(),
+            'entities_id' => $child_entity_id,
+            'is_active' => 1,
+            'use_parent_entity' => 0, // NO inheritance
+            'take_item_group_ticket' => 0, // Different from parent
+            'prevent_closure_ticket' => 0,
+        ]);
+        $this->assertGreaterThan(0, $child_config_id);
+
+        // Test effective configuration for child entity
+        $effective_config = Config::getEffectiveConfigForEntity($child_entity_id);
+
+        // Should return child's own config
+        $this->assertEquals($child_entity_id, $effective_config->fields['entities_id']);
+        $this->assertEquals(0, $effective_config->fields['take_item_group_ticket']);
+        $this->assertEquals(0, $effective_config->fields['prevent_closure_ticket']);
+    }
+
+    /**
+     * Test getEffectiveConfig method uses current session entity
+     */
+    public function testGetEffectiveConfigUsesCurrentSession(): void
+    {
+        // Create test entity
+        $test_entity = new \Entity();
+        $test_entity_id = $test_entity->add([
+            'name' => 'Session Test Entity',
+            'entities_id' => 0,
+        ]);
+        $this->assertGreaterThan(0, $test_entity_id);
+
+        // Configure this entity
+        $test_conf = Config::getEffectiveConfigForEntity($test_entity_id);
+        $test_config = new Config();
+        $test_config_id = $test_config->update([
+            'id' => $test_conf->getID(),
+            'entities_id' => $test_entity_id,
+            'is_active' => 1,
+            'use_parent_entity' => 0,
+            'take_item_group_ticket' => 1,
+        ]);
+        $this->assertGreaterThan(0, $test_config_id);
+
+        // Store current session entity
+        $original_entity = $_SESSION['glpiactive_entity'];
+
+        // Set session to our test entity
+        $_SESSION['glpiactive_entity'] = $test_entity_id;
+
+        // Test getEffectiveConfig (should use session entity)
+        $effective_config = Config::getEffectiveConfig();
+        $this->assertEquals($test_entity_id, $effective_config->fields['entities_id']);
+        $this->assertEquals(1, $effective_config->fields['take_item_group_ticket']);
+
+        // Restore original session entity
+        $_SESSION['glpiactive_entity'] = $original_entity;
+    }
+
+    /**
+     * Test that root entity (ID=0) cannot inherit from parent
+     */
+    public function testRootEntityCannotInheritFromParent(): void
+    {
+        // Get or create config for root entity
+        $root_config = new Config();
+        $root_config->getFromDBByCrit(['entities_id' => 0]);
+        
+        if (!$root_config->getID()) {
+            // Create root config if it doesn't exist
+            $root_config_id = $root_config->add([
+                'entities_id' => 0,
+                'is_active' => 1,
+                'use_parent_entity' => 1, // This should be ignored for root entity
+                'take_item_group_ticket' => 1,
+            ]);
+            $this->assertGreaterThan(0, $root_config_id);
+            $should_delete = true;
+        } else {
+            // Update existing root config
+            $root_config->update([
+                'id' => $root_config->getID(),
+                'use_parent_entity' => 1, // This should be ignored
+                'take_item_group_ticket' => 1,
+            ]);
+            $should_delete = false;
+        }
+
+        // Test effective configuration for root entity
+        $effective_config = Config::getEffectiveConfigForEntity(0);
+
+        // Should return root config itself (cannot inherit)
+        $this->assertEquals(0, $effective_config->fields['entities_id']);
+        $this->assertEquals(1, $effective_config->fields['take_item_group_ticket']);
+
+        // Clean up only if we created the config
+        if (isset($should_delete) && $should_delete) {
+            $root_config->delete(['id' => $root_config->getID()]);
+        }
+    }
+
+    /**
+     * Test that Controller methods use effective configuration with inheritance
+     */
+    public function testControllerUsesEffectiveConfigWithInheritance(): void
+    {
+        // Create parent entity
+        $parent_entity = new \Entity();
+        $parent_entity_id = $parent_entity->add([
+            'name' => 'Controller Parent Entity Test',
+            'entities_id' => 0,
+        ]);
+        $this->assertGreaterThan(0, $parent_entity_id);
+
+        // Create child entity
+        $child_entity = new \Entity();
+        $child_entity_id = $child_entity->add([
+            'name' => 'Controller Child Entity Test',
+            'entities_id' => $parent_entity_id,
+        ]);
+        $this->assertGreaterThan(0, $child_entity_id);
+
+        // Configure parent entity with specific settings
+        $parent_conf = Config::getEffectiveConfigForEntity($parent_entity_id);
+        $parent_config = new Config();
+        $parent_config_id = $parent_config->update([
+            'id' => $parent_conf->getID(),
+            'entities_id' => $parent_entity_id,
+            'is_active' => 1,
+            'use_parent_entity' => 0,
+            'mandatory_task_category' => 1, // Enable mandatory task category
+            'mandatory_task_duration' => 1,
+        ]);
+        $this->assertGreaterThan(0, $parent_config_id);
+
+        // Configure child entity to inherit from parent
+        $child_conf = Config::getEffectiveConfigForEntity($child_entity_id);
+        $child_config = new Config();
+        $child_config_id = $child_config->update([
+            'id' => $child_conf->getID(),
+            'entities_id' => $child_entity_id,
+            'is_active' => 1,
+            'use_parent_entity' => 1, // Inherit from parent
+            'mandatory_task_category' => 0, // Should be ignored
+            'mandatory_task_duration' => 0,
+        ]);
+        $this->assertGreaterThan(0, $child_config_id);
+
+        // Store original session and set to child entity
+        $original_entity = $_SESSION['glpiactive_entity'];
+        $_SESSION['glpiactive_entity'] = $child_entity_id;
+
+        // Create a task item to test
+        $task = new \TicketTask();
+        $task->input = [
+            'content' => 'Test task content',
+            'taskcategories_id' => '', // Empty category - should trigger error due to inheritance
+            'actiontime' => '', // Empty duration - should trigger error
+        ];
+
+        // Test Controller::checkTaskRequirements with inherited config
+        $result_task = \GlpiPlugin\Moreoptions\Controller::checkTaskRequirements($task);
+
+        // Task input should be set to false due to mandatory fields from inherited config
+        $this->assertFalse($result_task->input);
+
+        // Now test with filled mandatory fields
+        $task2 = new \TicketTask();
+        $task2->input = [
+            'content' => 'Test task content',
+            'taskcategories_id' => 1, // Valid category
+            'actiontime' => 3600, // Valid duration
+            'users_id_tech' => 1,
+            'groups_id_tech' => 1,
+        ];
+
+        $result_task2 = \GlpiPlugin\Moreoptions\Controller::checkTaskRequirements($task2);
+        // Should not be false since mandatory fields are filled
+        $this->assertNotFalse($result_task2->input);
+
+        // Restore original session
+        $_SESSION['glpiactive_entity'] = $original_entity;
+    }
 }

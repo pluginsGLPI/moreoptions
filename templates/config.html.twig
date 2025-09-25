@@ -59,6 +59,19 @@
                             __('Active on this entity', 'moreoptions')
                         ) }}
 
+                        {% if item.fields['entities_id'] != 0 %}
+                            {{ fields.checkboxField(
+                                'use_parent_entity',
+                                item.fields['use_parent_entity'],
+                                __('Use parent entity configuration', 'moreoptions'),
+                                {'helper': __('When enabled, this entity will inherit configuration from its parent entity', 'moreoptions')}
+                            ) }}
+
+                            {% if parent_entity_info %}
+                                {{ alerts.alert_info(__('Configuration is inherited from parent entity: %s', 'moreoptions')|format(parent_entity_info)) }}
+                            {% endif %}
+                        {% endif %}
+
                         <div class="moreoptions-config">
                             <table class="table table-hover border card-table" id="config_table">
                                 <thead>
@@ -257,6 +270,29 @@
 
 <script>
     $(document).ready(function() {
+        // Handle use parent entity option
+        function toggleConfigOptions() {
+            const useParentEntity = document.querySelector('input[name="use_parent_entity"]');
+            const configDiv = document.querySelector('.moreoptions-config');
+            
+            if (useParentEntity && configDiv) {
+                if (useParentEntity.checked) {
+                    configDiv.style.display = 'none';
+                } else {
+                    configDiv.style.display = 'block';
+                }
+            }
+        }
+
+        // Initialize on load
+        toggleConfigOptions();
+
+        // Listen for changes
+        const useParentEntityCheckbox = document.querySelector('input[name="use_parent_entity"]');
+        if (useParentEntityCheckbox) {
+            useParentEntityCheckbox.addEventListener('change', toggleConfigOptions);
+        }
+
         // Take item group all functionality
         const takeItemGroupAll = document.querySelector('input[id="take_item_group_all"]');
         const takeItemGroupCheckboxes = document.querySelectorAll('input[type="checkbox"][id*="take_item_group"]');
