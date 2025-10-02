@@ -1206,7 +1206,7 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertCount(0, $assigned_groups);
     }
-
+  
     /**
      * Test parent entity configuration inheritance
      */
