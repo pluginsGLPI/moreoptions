@@ -11,5 +11,10 @@
             "php": "8.2.99"
         },
         "sort-packages": true
+    },
+    "autoload": {
+        "psr-4": {
+            "GlpiPlugin\\Moreoptions\\Tests\\": "tests"
+        }
     }
 }
