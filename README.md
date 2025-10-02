@@ -1,4 +1,4 @@
-# MoreOptions GLPI plugin
+# MoreOptions GLPI Plugin
 
 [![License](https://img.shields.io/github/license/pluginsGLPI/moreoptions.svg?&label=License)](https://github.com/pluginsGLPI/moreoptions/blob/develop/LICENSE)
 [![Follow twitter](https://img.shields.io/twitter/follow/Teclib.svg?style=social&label=Twitter&style=flat-square)](https://twitter.com/teclib)
