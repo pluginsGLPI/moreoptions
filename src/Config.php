@@ -112,9 +112,6 @@ class Config extends CommonDBTM
             }
         }
 
-        // Handle use_parent_entity field
-        $item->input['use_parent_entity'] = ($item->input['use_parent_entity'] ?? '') === 'on';
-
         return $item;
     }
 
@@ -124,6 +121,7 @@ class Config extends CommonDBTM
     public static function getItilConfigFields(): array
     {
         return [
+            'use_parent_entity',
             'take_item_group_ticket',
             'take_item_group_change',
             'take_item_group_problem',
