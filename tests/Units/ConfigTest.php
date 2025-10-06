@@ -1212,7 +1212,7 @@ class ConfigTest extends MoreOptionsTestCase
      */
     public function testParentEntityConfigInheritance(): void
     {
-        $parent_entity_id = 0;
+        $parent_entity_id = false;
         // Create child entity
         $child_entity = new \Entity();
         $child_entity_id = $child_entity->add([
@@ -1227,12 +1227,12 @@ class ConfigTest extends MoreOptionsTestCase
         $parent_config_id = $parent_config->update([
             'id' => $conf->getID(),
             'entities_id' => $parent_entity_id,
-            'is_active' => 1,
-            'use_parent_entity' => 0, // This is the source config
-            'take_item_group_ticket' => 1,
-            'prevent_closure_ticket' => 1,
-            'require_technician_to_close_ticket' => 1,
-            'mandatory_task_category' => 1,
+            'is_active' => true,
+            'use_parent_entity' => false, // This is the source config
+            'take_item_group_ticket' => true,
+            'prevent_closure_ticket' => true,
+            'require_technician_to_close_ticket' => true,
+            'mandatory_task_category' => true,
         ]);
         $this->assertGreaterThan(0, $parent_config_id);
 

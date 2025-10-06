@@ -113,11 +113,7 @@ class Config extends CommonDBTM
         }
 
         // Handle use_parent_entity field
-        if (!isset($item->input['use_parent_entity'])) {
-            $item->input['use_parent_entity'] = 0;
-        } elseif ($item->input['use_parent_entity'] == 'on') {
-            $item->input['use_parent_entity'] = 1;
-        }
+        $item->input['use_parent_entity'] = ($item->input['use_parent_entity'] ?? '') === 'on';
 
         return $item;
     }
@@ -185,7 +181,7 @@ class Config extends CommonDBTM
         $effectiveConfig = self::getEffectiveConfigForEntity($item->getID());
         $parentEntityInfo = null;
 
-        if (isset($moconfig->fields['use_parent_entity']) && $moconfig->fields['use_parent_entity'] == 1 && $effectiveConfig->fields['entities_id'] != $item->getID()) {
+        if (($moconfig->fields['use_parent_entity'] ?? false) && ($effectiveConfig->fields['entities_id'] != $item->getID())) {
             $parentEntity = new Entity();
             if ($parentEntity->getFromDB($effectiveConfig->fields['entities_id'])) {
                 $parentEntityInfo = $parentEntity->getName();
@@ -247,7 +243,7 @@ class Config extends CommonDBTM
         ]);
 
         // If use_parent_entity is enabled and we're not at root entity
-        if (isset($moconfig->fields['use_parent_entity']) && $moconfig->fields['use_parent_entity'] == 1 && $entityId > 0) {
+        if (($moconfig->fields['use_parent_entity'] ?? false) && $entityId > 0) {
             $entity = new Entity();
             if ($entity->getFromDB($entityId)) {
                 $parentId = $entity->fields['entities_id'];
