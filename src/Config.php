@@ -176,7 +176,7 @@ class Config extends CommonDBTM
         ]);
 
         // Get effective configuration to show which entity's config is actually used
-        $effectiveConfig = self::getEffectiveConfigForEntity($item->getID());
+        $effectiveConfig = self::getConfig($item->getID(), true);
         $parentEntityInfo = null;
 
         if (($moconfig->fields['use_parent_entity'] ?? false) && ($effectiveConfig->fields['entities_id'] != $item->getID())) {
@@ -213,39 +213,31 @@ class Config extends CommonDBTM
         ]);
     }
 
-    public static function getCurrentConfig(): self
-    {
-        $moconfig = new self();
-        $moconfig->getFromDBByCrit([
-            'entities_id' => Session::getActiveEntity(),
-        ]);
-        return $moconfig;
-    }
-
     /**
-     * Get effective configuration for current entity, considering parent entity inheritance
+     * Get configuration for an entity
+     *
+     * @param int|null $entityId Entity ID (null = current active entity)
+     * @param bool $useInheritance Whether to follow parent entity inheritance (default: true)
+     * @return self
      */
-    public static function getEffectiveConfig(): self
+    public static function getConfig(?int $entityId = null, bool $useInheritance = true): self
     {
-        return self::getEffectiveConfigForEntity(Session::getActiveEntity());
-    }
+        // Use current entity if not specified
+        if ($entityId === null) {
+            $entityId = Session::getActiveEntity();
+        }
 
-    /**
-     * Get effective configuration for a specific entity, considering parent entity inheritance
-     */
-    public static function getEffectiveConfigForEntity(int $entityId): self
-    {
         $moconfig = new self();
         $moconfig->getFromDBByCrit([
             'entities_id' => $entityId,
         ]);
 
-        // If use_parent_entity is enabled and we're not at root entity
-        if (($moconfig->fields['use_parent_entity'] ?? false) && $entityId > 0) {
+        // If inheritance is enabled, use_parent_entity is set, and we're not at root entity
+        if ($useInheritance && ($moconfig->fields['use_parent_entity'] ?? false) && $entityId > 0) {
             $entity = new Entity();
             if ($entity->getFromDB($entityId)) {
                 $parentId = $entity->fields['entities_id'];
-                return self::getEffectiveConfigForEntity($parentId);
+                return self::getConfig($parentId, true);
             }
         }
 

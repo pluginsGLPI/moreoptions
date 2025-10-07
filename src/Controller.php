@@ -84,7 +84,7 @@ class Controller extends CommonDBTM
         if ($item->fields['type'] == \CommonITILActor::OBSERVER) {
             return;
         }
-        $moconfig = Config::getEffectiveConfig();
+        $moconfig = Config::getConfig();
 
         if ($moconfig->fields['is_active'] != 1) {
             return;
@@ -131,7 +131,7 @@ class Controller extends CommonDBTM
 
     public static function addItemGroups(CommonDBTM $item): void
     {
-        $conf = Config::getEffectiveConfig();
+        $conf = Config::getConfig();
         if ($conf->fields['is_active'] != 1) {
             return;
         }
@@ -304,7 +304,7 @@ class Controller extends CommonDBTM
 
     public static function preventClosure(CommonDBTM $item): void
     {
-        $conf = Config::getEffectiveConfig();
+        $conf = Config::getConfig();
         if ($conf->fields['is_active'] != 1) {
             return;
         }
@@ -341,7 +341,7 @@ class Controller extends CommonDBTM
 
     public static function requireFieldsToClose(CommonITILObject $item): void
     {
-        $conf = Config::getEffectiveConfig();
+        $conf = Config::getConfig();
         if ($conf->fields['is_active'] != 1) {
             return;
         }
@@ -433,7 +433,7 @@ class Controller extends CommonDBTM
 
     public static function checkTaskRequirements(CommonDBTM $item): CommonDBTM
     {
-        $conf = Config::getEffectiveConfig();
+        $conf = Config::getConfig();
         if ($conf->fields['is_active'] != 1) {
             return $item;
         }
@@ -474,7 +474,7 @@ class Controller extends CommonDBTM
 
     public static function updateItemActors(CommonITILObject $item): CommonITILObject
     {
-        $conf = Config::getEffectiveConfig();
+        $conf = Config::getConfig();
         if ($conf->fields['is_active'] != 1) {
             return $item;
         }

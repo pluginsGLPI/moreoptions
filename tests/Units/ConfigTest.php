@@ -58,7 +58,7 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertTrue($result);
 
-        $conf = Config::getCurrentConfig();
+        $conf = Config::getConfig();
 
         //Create a ticket
         $ticket = new \Ticket();
@@ -196,7 +196,7 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertTrue($result);
 
-        $conf = Config::getCurrentConfig();
+        $conf = Config::getConfig();
 
         //Create a ticket without mandatory fields (Expected to succeed)
         $ticket = new \Ticket();
@@ -322,7 +322,7 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertTrue($result);
 
-        $conf = Config::getCurrentConfig();
+        $conf = Config::getConfig();
 
         //Create a change without mandatory fields (Expected to succeed)
         $change = new \Change();
@@ -448,7 +448,7 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertTrue($result);
 
-        $conf = Config::getCurrentConfig();
+        $conf = Config::getConfig();
 
         //Create a problem without mandatory fields (Expected to succeed)
         $problem = new \Problem();
@@ -569,7 +569,7 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertTrue($result);
 
-        $conf = Config::getCurrentConfig();
+        $conf = Config::getConfig();
 
         // Create two groups
         $group1 = new \Group();
@@ -647,7 +647,7 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertTrue($result);
 
-        $conf = Config::getCurrentConfig();
+        $conf = Config::getConfig();
 
         //Create a ticket
         $ticket = new \Ticket();
@@ -701,13 +701,13 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Setup to take all groups of the technician
         $result = $this->updateTestConfig($conf, [
-            'is_active'                       => 1,
+            'is_active'                    => 1,
             'entities_id'                  => 0,
             'take_technician_group_ticket' => 2, // All
         ]);
         $this->assertTrue($result);
 
-        $conf = Config::getCurrentConfig();
+        $conf = Config::getConfig();
 
         // Create two groups
         $group1 = new \Group();
@@ -784,7 +784,7 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertTrue($result);
 
-        $conf = Config::getCurrentConfig();
+        $conf = Config::getConfig();
 
         //Create a ticket
         $ticket = new \Ticket();
@@ -835,7 +835,7 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertTrue($result);
 
-        $conf = Config::getCurrentConfig();
+        $conf = Config::getConfig();
 
         // Create two groups
         $group1 = new \Group();
@@ -1222,7 +1222,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertGreaterThan(0, $child_entity_id);
 
         // Configure parent entity with specific settings
-        $conf = Config::getEffectiveConfigForEntity(0);
+        $conf = Config::getConfig(0, false);
         $parent_config = new Config();
         $parent_config_id = $parent_config->update([
             'id' => $conf->getID(),
@@ -1238,7 +1238,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Configure child entity to use parent configuration
         $this->assertIsInt($child_entity_id);
-        $child_conf = Config::getEffectiveConfigForEntity($child_entity_id);
+        $child_conf = Config::getConfig($child_entity_id, false);
         $child_config = new Config();
         $child_config_id = $child_config->update([
             'id' => $child_conf->getID(),
@@ -1253,7 +1253,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertGreaterThan(0, $child_config_id);
 
         // Test effective configuration for child entity
-        $effective_config = Config::getEffectiveConfigForEntity($child_entity_id);
+        $effective_config = Config::getConfig($child_entity_id, true);
 
         // Should return parent config
         $this->assertEquals($parent_entity_id, $effective_config->fields['entities_id']);
@@ -1294,7 +1294,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertGreaterThan(0, $child_entity_id);
 
         // Configure grandparent entity with specific settings
-        $grandparent_conf = Config::getEffectiveConfigForEntity($grandparent_entity_id);
+        $grandparent_conf = Config::getConfig($grandparent_entity_id, false);
         $grandparent_config = new Config();
         $grandparent_config->update([
             'id' => $grandparent_conf->getID(),
@@ -1309,7 +1309,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Configure parent entity to use parent configuration (cascade)
         $this->assertIsInt($parent_entity_id);
-        $parent_conf = Config::getEffectiveConfigForEntity($parent_entity_id);
+        $parent_conf = Config::getConfig($parent_entity_id, false);
         $parent_config = new Config();
         $parent_config->update([
             'id' => $parent_conf->getID(),
@@ -1324,7 +1324,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Configure child entity to use parent configuration
         $this->assertIsInt($child_entity_id);
-        $child_conf = Config::getEffectiveConfigForEntity($child_entity_id);
+        $child_conf = Config::getConfig($child_entity_id, false);
         $child_config = new Config();
         $child_config->update([
             'id' => $child_conf->getID(),
@@ -1338,7 +1338,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertGreaterThan(0, $child_conf->getID());
 
         // Test effective configuration for child entity (should cascade to grandparent)
-        $effective_config = Config::getEffectiveConfigForEntity($child_entity_id);
+        $effective_config = Config::getConfig($child_entity_id, true);
 
         // Should return grandparent config (skipping parent because it also has use_parent_entity = 1)
         $this->assertEquals($grandparent_entity_id, $effective_config->fields['entities_id']);
@@ -1370,7 +1370,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Configure parent entity
         $this->assertIsInt($parent_entity_id);
-        $parent_conf = Config::getEffectiveConfigForEntity($parent_entity_id);
+        $parent_conf = Config::getConfig($parent_entity_id, false);
         $parent_config = new Config();
         $parent_config_id = $parent_config->update([
             'id' => $parent_conf->getID(),
@@ -1384,7 +1384,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Configure child entity WITHOUT inheritance
         $this->assertIsInt($child_entity_id);
-        $child_conf = Config::getEffectiveConfigForEntity($child_entity_id);
+        $child_conf = Config::getConfig($child_entity_id, false);
         $child_config = new Config();
         $child_config_id = $child_config->update([
             'id' => $child_conf->getID(),
@@ -1397,7 +1397,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertGreaterThan(0, $child_config_id);
 
         // Test effective configuration for child entity
-        $effective_config = Config::getEffectiveConfigForEntity($child_entity_id);
+        $effective_config = Config::getConfig($child_entity_id, true);
 
         // Should return child's own config
         $this->assertEquals($child_entity_id, $effective_config->fields['entities_id']);
@@ -1420,7 +1420,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Configure this entity
         $this->assertIsInt($test_entity_id);
-        $test_conf = Config::getEffectiveConfigForEntity($test_entity_id);
+        $test_conf = Config::getConfig($test_entity_id, false);
         $test_config = new Config();
         $test_config_id = $test_config->update([
             'id' => $test_conf->getID(),
@@ -1438,7 +1438,7 @@ class ConfigTest extends MoreOptionsTestCase
         $_SESSION['glpiactive_entity'] = $test_entity_id;
 
         // Test getEffectiveConfig (should use session entity)
-        $effective_config = Config::getEffectiveConfig();
+        $effective_config = Config::getConfig();
         $this->assertEquals($test_entity_id, $effective_config->fields['entities_id']);
         $this->assertEquals(1, $effective_config->fields['take_item_group_ticket']);
 
@@ -1476,7 +1476,7 @@ class ConfigTest extends MoreOptionsTestCase
         }
 
         // Test effective configuration for root entity
-        $effective_config = Config::getEffectiveConfigForEntity(0);
+        $effective_config = Config::getConfig(0, true);
 
         // Should return root config itself (cannot inherit)
         $this->assertEquals(0, $effective_config->fields['entities_id']);
@@ -1511,7 +1511,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Configure parent entity with specific settings
         $this->assertIsInt($parent_entity_id);
-        $parent_conf = Config::getEffectiveConfigForEntity($parent_entity_id);
+        $parent_conf = Config::getConfig($parent_entity_id, false);
         $parent_config = new Config();
         $parent_config_id = $parent_config->update([
             'id' => $parent_conf->getID(),
@@ -1525,7 +1525,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Configure child entity to inherit from parent
         $this->assertIsInt($child_entity_id);
-        $child_conf = Config::getEffectiveConfigForEntity($child_entity_id);
+        $child_conf = Config::getConfig($child_entity_id, false);
         $child_config = new Config();
         $child_config_id = $child_config->update([
             'id' => $child_conf->getID(),

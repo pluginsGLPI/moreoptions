@@ -153,7 +153,7 @@ abstract class MoreOptionsTestCase extends TestCase
      */
     protected function getCurrentConfig(): Config
     {
-        $config = Config::getCurrentConfig();
+        $config = Config::getConfig();
         if (empty($config->fields) || $config->isNewItem()) {
             $config = $this->createTestConfig();
         }
