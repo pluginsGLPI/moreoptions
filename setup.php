@@ -81,7 +81,7 @@ function plugin_init_moreoptions(): void
     ];
 
     $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['moreoptions'][ITILSolution::class] = [
-        Controller::class, 'requireFieldsToClose',
+        Controller::class, 'requireFieldsToAddSolution',
     ];
 
     $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Ticket::class] = [
