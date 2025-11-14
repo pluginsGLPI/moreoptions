@@ -541,10 +541,10 @@ class Controller extends CommonDBTM
      * When a task is created with a technician assigned, this method will
      * automatically assign that technician to the parent ticket/change/problem
      *
-     * @param CommonDBTM $item The task item (TicketTask, ChangeTask, or ProblemTask)
+     * @param CommonITILTask $item The task item (TicketTask, ChangeTask, or ProblemTask)
      * @return void
      */
-    public static function assignTechnicianFromTask(CommonDBTM $item): void
+    public static function assignTechnicianFromTask(CommonITILTask $item): void
     {
         $conf = Config::getCurrentConfig();
         if ($conf->fields['is_active'] != 1) {
@@ -552,16 +552,16 @@ class Controller extends CommonDBTM
         }
 
         // Check if a technician is assigned to the task
-        if (!isset($item->fields['users_id_tech']) || empty($item->fields['users_id_tech'])) {
+        if (empty($item->fields['users_id_tech'])) {
             return;
         }
 
         $users_id_tech = $item->fields['users_id_tech'];
 
         // Determine the parent ITIL object and user link class based on task type
-        switch (get_class($item)) {
+        switch ($item::class) {
             case TicketTask::class:
-                if (!isset($item->fields['tickets_id'])) {
+                if (empty($item->fields['tickets_id'])) {
                     return;
                 }
                 $itilObject = new Ticket();
@@ -571,7 +571,7 @@ class Controller extends CommonDBTM
                 break;
 
             case ChangeTask::class:
-                if (!isset($item->fields['changes_id'])) {
+                if (empty($item->fields['changes_id'])) {
                     return;
                 }
                 $itilObject = new Change();
@@ -581,7 +581,7 @@ class Controller extends CommonDBTM
                 break;
 
             case ProblemTask::class:
-                if (!isset($item->fields['problems_id'])) {
+                if (empty($item->fields['problems_id'])) {
                     return;
                 }
                 $itilObject = new Problem();
