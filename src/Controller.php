@@ -541,10 +541,10 @@ class Controller extends CommonDBTM
      * When a task is created with a technician assigned, this method will
      * automatically assign that technician to the parent ticket/change/problem
      *
-     * @param CommonITILTask $item The task item (TicketTask, ChangeTask, or ProblemTask)
+     * @param \CommonITILTask $item The task item (TicketTask, ChangeTask, or ProblemTask)
      * @return void
      */
-    public static function assignTechnicianFromTask(CommonITILTask $item): void
+    public static function assignTechnicianFromTask(\CommonITILTask $item): void
     {
         $conf = Config::getCurrentConfig();
         if ($conf->fields['is_active'] != 1) {
