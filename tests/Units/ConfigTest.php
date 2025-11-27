@@ -1212,7 +1212,7 @@ class ConfigTest extends MoreOptionsTestCase
      */
     public function testParentEntityConfigInheritance(): void
     {
-        $parent_entity_id = false;
+        $parent_entity_id = 0; // Root entity
         // Create child entity
         $child_entity = new \Entity();
         $child_entity_id = $child_entity->add([

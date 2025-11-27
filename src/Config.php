@@ -255,7 +255,8 @@ class Config extends CommonDBTM
                 `id` int unsigned NOT NULL AUTO_INCREMENT,
                 `is_active`  tinyint NOT NULL DEFAULT '1',
                 `entities_id` int unsigned NOT NULL DEFAULT '0',
-               `take_item_group_ticket` tinyint NOT NULL DEFAULT '-2',
+                `use_parent_entity` tinyint NOT NULL DEFAULT '0',
+                `take_item_group_ticket` tinyint NOT NULL DEFAULT '-2',
                 `take_item_group_change` tinyint NOT NULL DEFAULT '0',
                 `take_item_group_problem` tinyint NOT NULL DEFAULT '0',
                 `take_requester_group_ticket` int unsigned NOT NULL DEFAULT '0',
@@ -298,6 +299,16 @@ class Config extends CommonDBTM
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
               ";
             $DB->doQuery($query);
+        }
+
+        // Migration: Add use_parent_entity column if it doesn't exist
+        if (!$DB->fieldExists($table, 'use_parent_entity')) {
+            $migration->displayMessage("Adding use_parent_entity field to $table");
+            $migration->addField($table, 'use_parent_entity', 'tinyint', [
+                'after' => 'entities_id',
+                'value' => 0,
+                'nodefault' => false,
+            ]);
         }
 
         $entities = new Entity();
