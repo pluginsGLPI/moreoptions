@@ -34,37 +34,14 @@
 namespace GlpiPlugin\Moreoptions\Tests;
 
 use Auth;
+use DbTestCase;
 use GlpiPlugin\Moreoptions\Config;
-use PHPUnit\Framework\TestCase;
 use Session;
 
-abstract class MoreOptionsTestCase extends TestCase
+abstract class MoreOptionsTestCase extends DbTestCase
 {
     public const TU_USER = 'glpi';
     public const TU_PASS = 'glpi';
-
-    protected function setUp(): void
-    {
-        global $DB;
-
-        // Start a transaction for each test
-        $DB->beginTransaction();
-
-        // Connect the test user
-        $this->login();
-
-        parent::setUp();
-    }
-
-    protected function tearDown(): void
-    {
-        global $DB;
-
-        // Rollback the transaction to clean up the database
-        $DB->rollback();
-
-        parent::tearDown();
-    }
 
     /**
      * Login with the test user
@@ -102,8 +79,6 @@ abstract class MoreOptionsTestCase extends TestCase
      */
     protected function createTestConfig(array $options = []): Config
     {
-        $config = new Config();
-
         $default_config = [
             'is_active' => 1,
             'entities_id' => 0,
@@ -132,20 +107,16 @@ abstract class MoreOptionsTestCase extends TestCase
 
         $input = array_merge($default_config, $options);
 
-        $result = $config->add($input);
-        $this->assertGreaterThan(0, $result, 'Failed to create test config');
-
-        return $config;
+        return $this->createItem(Config::class, $input);
     }
 
     /**
      * Update the test configuration
      * @param array<string, mixed> $updates
      */
-    protected function updateTestConfig(Config $config, array $updates): bool
+    protected function updateTestConfig(Config $config, array $updates): Config
     {
-        $input = array_merge(['id' => $config->getID()], $updates);
-        return $config->update($input);
+        return $this->updateItem(Config::class, $config->getID(), $updates);
     }
 
     /**
