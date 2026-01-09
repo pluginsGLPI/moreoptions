@@ -1219,52 +1219,49 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertTrue($result);
 
-        $tech = $this->createItem(
-            \User::class,
-            [
-                'name'         => 'tech_from_task',
-                'password'     => 'tech_from_task',
-                'password2'    => 'tech_from_task',
-                '_profiles_id' => 4,
-            ]
-        );
+        $tech = new \User();
+        $tech_id = $tech->add([
+            'name'         => 'tech_from_task',
+            'password'     => 'tech_from_task',
+            'password2'    => 'tech_from_task',
+            '_profiles_id' => 4,
+        ]);
+        $this->assertGreaterThan(0, $tech_id);
 
-        $ticket = $this->createItem(
-            \Ticket::class,
-            [
-                'name'    => 'Test ticket for task assignment',
-                'content' => 'Test content',
-            ]
-        );
+        $ticket = new \Ticket();
+        $ticket_id = $ticket->add([
+            'name'    => 'Test ticket for task assignment',
+            'content' => 'Test content',
+        ]);
+        $this->assertGreaterThan(0, $ticket_id);
 
         $ticket_user = new \Ticket_User();
         $assigned_users_before = $ticket_user->find([
-            'tickets_id' => $ticket->getID(),
-            'users_id'   => $tech->getID(),
+            'tickets_id' => $ticket_id,
+            'users_id'   => $tech_id,
             'type'       => \CommonITILActor::ASSIGN,
         ]);
         $this->assertCount(0, $assigned_users_before);
 
-        $task = $this->createItem(
-            \TicketTask::class,
-            [
-                'tickets_id'    => $ticket->getID(),
-                'content'       => 'Test task',
-                'users_id_tech' => $tech->getID(),
-                'actiontime'    => 3600,
-                'state'         => \Planning::TODO,
-            ]
-        );
+        $task = new \TicketTask();
+        $task_id = $task->add([
+            'tickets_id'    => $ticket_id,
+            'content'       => 'Test task',
+            'users_id_tech' => $tech_id,
+            'actiontime'    => 3600,
+            'state'         => \Planning::TODO,
+        ]);
+        $this->assertGreaterThan(0, $task_id);
 
         $assigned_users_after = $ticket_user->find([
-            'tickets_id' => $ticket->getID(),
-            'users_id'   => $tech->getID(),
+            'tickets_id' => $ticket_id,
+            'users_id'   => $tech_id,
             'type'       => \CommonITILActor::ASSIGN,
         ]);
 
         $this->assertCount(1, $assigned_users_after);
         $assignedUser = reset($assigned_users_after);
-        $this->assertEquals($tech->getID(), $assignedUser['users_id']);
+        $this->assertEquals($tech_id, $assignedUser['users_id']);
         $this->assertEquals(\CommonITILActor::ASSIGN, $assignedUser['type']);
     }
 
@@ -1280,52 +1277,49 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertTrue($result);
 
-        $tech = $this->createItem(
-            \User::class,
-            [
-                'name'         => 'tech_from_change_task',
-                'password'     => 'tech_from_change_task',
-                'password2'    => 'tech_from_change_task',
-                '_profiles_id' => 4,
-            ]
-        );
+        $tech = new \User();
+        $tech_id = $tech->add([
+            'name'         => 'tech_from_change_task',
+            'password'     => 'tech_from_change_task',
+            'password2'    => 'tech_from_change_task',
+            '_profiles_id' => 4,
+        ]);
+        $this->assertGreaterThan(0, $tech_id);
 
-        $change = $this->createItem(
-            \Change::class,
-            [
-                'name'    => 'Test change for task assignment',
-                'content' => 'Test content',
-            ]
-        );
+        $change = new \Change();
+        $change_id = $change->add([
+            'name'    => 'Test change for task assignment',
+            'content' => 'Test content',
+        ]);
+        $this->assertGreaterThan(0, $change_id);
 
         $change_user = new \Change_User();
         $assigned_users_before = $change_user->find([
-            'changes_id' => $change->getID(),
-            'users_id'   => $tech->getID(),
+            'changes_id' => $change_id,
+            'users_id'   => $tech_id,
             'type'       => \CommonITILActor::ASSIGN,
         ]);
         $this->assertCount(0, $assigned_users_before);
 
-        $task = $this->createItem(
-            \ChangeTask::class,
-            [
-                'changes_id'    => $change->getID(),
-                'content'       => 'Test change task',
-                'users_id_tech' => $tech->getID(),
-                'actiontime'    => 3600,
-                'state'         => \Planning::TODO,
-            ]
-        );
+        $task = new \ChangeTask();
+        $task_id = $task->add([
+            'changes_id'    => $change_id,
+            'content'       => 'Test change task',
+            'users_id_tech' => $tech_id,
+            'actiontime'    => 3600,
+            'state'         => \Planning::TODO,
+        ]);
+        $this->assertGreaterThan(0, $task_id);
 
         $assigned_users_after = $change_user->find([
-            'changes_id' => $change->getID(),
-            'users_id'   => $tech->getID(),
+            'changes_id' => $change_id,
+            'users_id'   => $tech_id,
             'type'       => \CommonITILActor::ASSIGN,
         ]);
 
         $this->assertCount(1, $assigned_users_after);
         $assignedUser = reset($assigned_users_after);
-        $this->assertEquals($tech->getID(), $assignedUser['users_id']);
+        $this->assertEquals($tech_id, $assignedUser['users_id']);
         $this->assertEquals(\CommonITILActor::ASSIGN, $assignedUser['type']);
     }
 
@@ -1341,52 +1335,49 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertTrue($result);
 
-        $tech = $this->createItem(
-            \User::class,
-            [
-                'name'         => 'tech_from_problem_task',
-                'password'     => 'tech_from_problem_task',
-                'password2'    => 'tech_from_problem_task',
-                '_profiles_id' => 4,
-            ]
-        );
+        $tech = new \User();
+        $tech_id = $tech->add([
+            'name'         => 'tech_from_problem_task',
+            'password'     => 'tech_from_problem_task',
+            'password2'    => 'tech_from_problem_task',
+            '_profiles_id' => 4,
+        ]);
+        $this->assertGreaterThan(0, $tech_id);
 
-        $problem = $this->createItem(
-            \Problem::class,
-            [
-                'name'    => 'Test problem for task assignment',
-                'content' => 'Test content',
-            ]
-        );
+        $problem = new \Problem();
+        $problem_id = $problem->add([
+            'name'    => 'Test problem for task assignment',
+            'content' => 'Test content',
+        ]);
+        $this->assertGreaterThan(0, $problem_id);
 
         $problem_user = new \Problem_User();
         $assigned_users_before = $problem_user->find([
-            'problems_id' => $problem->getID(),
-            'users_id'    => $tech->getID(),
+            'problems_id' => $problem_id,
+            'users_id'    => $tech_id,
             'type'        => \CommonITILActor::ASSIGN,
         ]);
         $this->assertCount(0, $assigned_users_before);
 
-        $task = $this->createItem(
-            \ProblemTask::class,
-            [
-                'problems_id'   => $problem->getID(),
-                'content'       => 'Test problem task',
-                'users_id_tech' => $tech->getID(),
-                'actiontime'    => 3600,
-                'state'         => \Planning::TODO,
-            ]
-        );
+        $task = new \ProblemTask();
+        $task_id = $task->add([
+            'problems_id'   => $problem_id,
+            'content'       => 'Test problem task',
+            'users_id_tech' => $tech_id,
+            'actiontime'    => 3600,
+            'state'         => \Planning::TODO,
+        ]);
+        $this->assertGreaterThan(0, $task_id);
 
         $assigned_users_after = $problem_user->find([
-            'problems_id' => $problem->getID(),
-            'users_id'    => $tech->getID(),
+            'problems_id' => $problem_id,
+            'users_id'    => $tech_id,
             'type'        => \CommonITILActor::ASSIGN,
         ]);
 
         $this->assertCount(1, $assigned_users_after);
         $assignedUser = reset($assigned_users_after);
-        $this->assertEquals($tech->getID(), $assignedUser['users_id']);
+        $this->assertEquals($tech_id, $assignedUser['users_id']);
         $this->assertEquals(\CommonITILActor::ASSIGN, $assignedUser['type']);
     }
 }
