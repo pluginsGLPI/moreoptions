@@ -31,8 +31,10 @@
  * -------------------------------------------------------------------------
  */
 
-require __DIR__ . '/../../../tests/bootstrap.php';
-require __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../../../tests/src/GLPITestCase.php';
+require_once __DIR__ . '/../../../tests/src/DbTestCase.php';
+require_once __DIR__ . '/../../../tests/bootstrap.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 if (!Plugin::isPluginActive('moreoptions')) {
     throw new RuntimeException('Plugin moreoptions is not active in the test database');
