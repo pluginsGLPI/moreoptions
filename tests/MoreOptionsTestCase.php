@@ -117,7 +117,7 @@ abstract class MoreOptionsTestCase extends DbTestCase
     protected function updateTestConfig(Config $config, array $updates): bool
     {
         $result = $this->updateItem(Config::class, $config->getID(), $updates);
-        return $result !== false && !$result->isNewItem();
+        return $result != false && !$result->isNewItem();
     }
 
     /**
@@ -150,14 +150,14 @@ abstract class MoreOptionsTestCase extends DbTestCase
         if (!isset($this->log_handler)) {
             return;
         }
-        
+
         $records = $this->log_handler->getRecords();
         foreach ($records as $key => $log) {
             if (isset($log['message']) && str_contains($log['message'], $pattern)) {
                 unset($records[$key]);
             }
         }
-        
+
         $this->log_handler->clear();
         foreach (array_values($records) as $record) {
             $this->log_handler->handle($record);

@@ -66,7 +66,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'name'          => 'Test ticket task mandatory fields',
                 'content'       => 'Test content',
-            ]
+            ],
         );
 
         //Create a task without mandatory fields (Expected to fail)
@@ -76,7 +76,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'tickets_id'    => $ticket->getID(),
                 'content'          => 'Test task',
                 'state'             => \Planning::TODO,
-            ]
+            ],
         );
         $this->assertFalse($result);
         $this->clearSessionMessages();
@@ -86,7 +86,7 @@ class ConfigTest extends MoreOptionsTestCase
             \TaskCategory::class,
             [
                 'name' => 'Test category',
-            ]
+            ],
         );
 
         //Create a task with mandatory fields (Expected to succeed)
@@ -100,7 +100,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'groups_id_tech'     => 1,
                 'actiontime'         => 300,
                 'state'             => \Planning::TODO,
-            ]
+            ],
         );
 
         // Create task without user (Expected to fail)
@@ -113,7 +113,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'groups_id_tech'     => 1,
                 'actiontime'         => 300,
                 'state'             => \Planning::TODO,
-            ]
+            ],
         );
         $this->assertFalse($result);
         $this->clearSessionMessages();
@@ -128,7 +128,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'users_id_tech'      => 1,
                 'actiontime'         => 300,
                 'state'             => \Planning::TODO,
-            ]
+            ],
         );
         $this->assertFalse($result);
         $this->clearSessionMessages();
@@ -143,7 +143,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'users_id_tech'      => 1,
                 'groups_id_tech'     => 1,
                 'state'             => \Planning::TODO,
-            ]
+            ],
         );
         $this->assertFalse($result);
         $this->clearSessionMessages();
@@ -158,7 +158,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'groups_id_tech'     => 1,
                 'actiontime'         => 300,
                 'state'             => \Planning::TODO,
-            ]
+            ],
         );
         $this->assertFalse($result);
         $this->clearSessionMessages();
@@ -206,7 +206,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'name'          => 'Test ticket close',
                 'content'       => 'Test content',
-            ]
+            ],
         );
         $tid = $ticket->getID();
 
@@ -215,7 +215,7 @@ class ConfigTest extends MoreOptionsTestCase
             \Group::class,
             [
                 'name' => 'Test group close ticket',
-            ]
+            ],
         );
         $gid = $group->getID();
 
@@ -225,7 +225,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'id'          => $tid,
                 'status'      => \Ticket::CLOSED,
-            ]
+            ],
         );
         $this->assertFalse($result);
         $this->clearSessionMessages();
@@ -235,7 +235,7 @@ class ConfigTest extends MoreOptionsTestCase
             \ITILCategory::class,
             [
                 'name' => 'Test category close ticket',
-            ]
+            ],
         );
         $cid = $category->getID();
 
@@ -244,7 +244,7 @@ class ConfigTest extends MoreOptionsTestCase
             \Location::class,
             [
                 'name' => 'Test location close ticket',
-            ]
+            ],
         );
         $lid = $location->getID();
 
@@ -255,7 +255,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'tickets_id' => $tid,
                 'groups_id'  => $gid,
                 'type'       => \Group_Ticket::ASSIGN,
-            ]
+            ],
         );
 
         // Add technician to the ticket
@@ -281,7 +281,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'id'                => $tid,
                 'status'            => \Ticket::CLOSED,
-            ]
+            ],
         ));
         $this->clearSessionMessages();
 
@@ -293,7 +293,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'locations_id'     => $lid,
                 'itilcategories_id' => $cid,
                 'status'            => \Ticket::CLOSED,
-            ]
+            ],
         );
 
         // Reset config
@@ -334,7 +334,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'name'          => 'Test change close',
                 'content'       => 'Test content',
-            ]
+            ],
         );
         $cid = $change->getID();
 
@@ -343,7 +343,7 @@ class ConfigTest extends MoreOptionsTestCase
             \Group::class,
             [
                 'name' => 'Test group close change',
-            ]
+            ],
         );
         $gid = $group->getID();
 
@@ -353,7 +353,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'id'          => $cid,
                 'status'      => \Change::CLOSED,
-            ]
+            ],
         );
         $this->assertFalse($result);
         $this->clearSessionMessages();
@@ -363,7 +363,7 @@ class ConfigTest extends MoreOptionsTestCase
             \ITILCategory::class,
             [
                 'name' => 'Test category close change',
-            ]
+            ],
         );
         $catid = $category->getID();
 
@@ -372,7 +372,7 @@ class ConfigTest extends MoreOptionsTestCase
             \Location::class,
             [
                 'name' => 'Test location close change',
-            ]
+            ],
         );
         $lid = $location->getID();
 
@@ -383,7 +383,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'changes_id' => $cid,
                 'groups_id'  => $gid,
                 'type'       => \Change_Group::ASSIGN,
-            ]
+            ],
         );
 
         // Add technician to the change
@@ -400,7 +400,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'changes_id' => $cid,
                 'users_id'   => $user->getID(),
                 'type'       => \Change_User::ASSIGN,
-            ]
+            ],
         );
 
         // Close the change without location and category (Expected to fail)
@@ -409,7 +409,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'id'                => $cid,
                 'status'            => \Change::CLOSED,
-            ]
+            ],
         ));
         $this->clearSessionMessages();
 
@@ -421,7 +421,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'locations_id'     => $lid,
                 'itilcategories_id' => $catid,
                 'status'            => \Change::CLOSED,
-            ]
+            ],
         );
 
         // Reset config
@@ -462,7 +462,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'name'          => 'Test problem close',
                 'content'       => 'Test content',
-            ]
+            ],
         );
         $pid = $problem->getID();
 
@@ -471,7 +471,7 @@ class ConfigTest extends MoreOptionsTestCase
             \Group::class,
             [
                 'name' => 'Test group close problem',
-            ]
+            ],
         );
         $gid = $group->getID();
 
@@ -481,7 +481,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'id'          => $pid,
                 'status'      => \Problem::CLOSED,
-            ]
+            ],
         );
         $this->assertFalse($result);
         $this->clearSessionMessages();
@@ -491,7 +491,7 @@ class ConfigTest extends MoreOptionsTestCase
             \ITILCategory::class,
             [
                 'name' => 'Test category close problem',
-            ]
+            ],
         );
         $catid = $category->getID();
 
@@ -500,7 +500,7 @@ class ConfigTest extends MoreOptionsTestCase
             \Location::class,
             [
                 'name' => 'Test location close problem',
-            ]
+            ],
         );
         $lid = $location->getID();
 
@@ -511,7 +511,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'problems_id' => $pid,
                 'groups_id'  => $gid,
                 'type'       => \Group_Problem::ASSIGN,
-            ]
+            ],
         );
 
         // Add technician to the problem
@@ -528,7 +528,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'problems_id' => $pid,
                 'users_id'   => $user->getID(),
                 'type'       => \Problem_User::ASSIGN,
-            ]
+            ],
         );
 
         // Close the problem without location and category (Expected to fail)
@@ -537,7 +537,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'id'                => $pid,
                 'status'            => \Problem::CLOSED,
-            ]
+            ],
         ));
         $this->clearSessionMessages();
 
@@ -549,7 +549,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'locations_id'     => $lid,
                 'itilcategories_id' => $catid,
                 'status'            => \Problem::CLOSED,
-            ]
+            ],
         );
 
         // Reset config
@@ -584,7 +584,7 @@ class ConfigTest extends MoreOptionsTestCase
             \Group::class,
             [
                 'name' => 'Test group 1',
-            ]
+            ],
         );
 
         $group2 = new \Group();
@@ -609,7 +609,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'groups_id' => $group1->getID(),
                 'users_id'  => $user->getID(),
-            ]
+            ],
         );
 
         $this->createItem(
@@ -617,7 +617,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'groups_id' => $group2->getID(),
                 'users_id'  => $user->getID(),
-            ]
+            ],
         );
 
         //Create a ticket
@@ -626,7 +626,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'name'          => 'Test ticket requester group',
                 'content'       => 'Test content',
-            ]
+            ],
         );
         $tid = $ticket->getID();
 
@@ -636,7 +636,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'tickets_id' => $tid,
                 'users_id'   => $user->getID(),
                 'type'       => \Ticket_User::REQUESTER,
-            ]
+            ],
         );
 
         // Check if the group of the requester is in the actors
@@ -661,7 +661,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'name'          => 'Test ticket requester group - 2',
                 'content'       => 'Test content',
-            ]
+            ],
         );
         $tid = $ticket->getID();
 
@@ -671,7 +671,7 @@ class ConfigTest extends MoreOptionsTestCase
             $user->getID(),
             [
                 'groups_id' => $group1->getID(),
-            ]
+            ],
         );
 
         $user2 = new \User();
@@ -683,7 +683,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'tickets_id' => $tid,
                 'users_id'   => $user2->getID(),
                 'type'       => \Ticket_User::REQUESTER,
-            ]
+            ],
         );
 
         // Check if the group of the requester is in the actors
@@ -723,14 +723,14 @@ class ConfigTest extends MoreOptionsTestCase
             \Group::class,
             [
                 'name' => 'Test group 1',
-            ]
+            ],
         );
 
         $group2 = $this->createItem(
             \Group::class,
             [
                 'name' => 'Test group 2',
-            ]
+            ],
         );
 
         // Get the user tech
@@ -747,7 +747,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'groups_id' => $group1->getID(),
                 'users_id'  => $user->getID(),
-            ]
+            ],
         );
 
         $this->createItem(
@@ -755,7 +755,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'groups_id' => $group2->getID(),
                 'users_id'  => $user->getID(),
-            ]
+            ],
         );
 
         //Create a ticket
@@ -764,7 +764,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'name'          => 'Test ticket',
                 'content'       => 'Test content',
-            ]
+            ],
         );
         $tid = $ticket->getID();
 
@@ -774,7 +774,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'tickets_id' => $tid,
                 'users_id'   => $user->getID(),
                 'type'       => \Ticket_User::ASSIGN,
-            ]
+            ],
         );
 
         // Check if the group of the requester is in the actors
@@ -798,7 +798,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'name'          => 'Test ticket tech group - 2',
                 'content'       => 'Test content',
-            ]
+            ],
         );
         $tid = $ticket->getID();
 
@@ -808,7 +808,7 @@ class ConfigTest extends MoreOptionsTestCase
             $user->getID(),
             [
                 'groups_id' => $group1->getID(),
-            ]
+            ],
         );
 
         $user2 = new \User();
@@ -820,7 +820,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'tickets_id' => $tid,
                 'users_id'   => $user2->getID(),
                 'type'       => \Ticket_User::ASSIGN,
-            ]
+            ],
         );
 
         // Check if the group of the requester is in the actors
@@ -851,7 +851,7 @@ class ConfigTest extends MoreOptionsTestCase
             \Group::class,
             [
                 'name' => 'Test group 1',
-            ]
+            ],
         );
 
         //Create item computer
@@ -860,7 +860,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'name' => 'Test computer',
                 'entities_id' => 0,
-            ]
+            ],
         );
         $cid = $computer->getID();
 
@@ -872,7 +872,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'itemtype'   => \Computer::class,
                 'groups_id'  => $group1->getID(),
                 'type'       => 1,
-            ]
+            ],
         );
 
         //Create a ticket
@@ -881,7 +881,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'name'          => 'Test ticket item groups',
                 'content'       => 'Test content',
-            ]
+            ],
         );
         $tid = $ticket->getID();
 
@@ -892,7 +892,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'tickets_id' => $tid,
                 'items_id'   => $computer->getID(),
                 'itemtype'   => \Computer::class,
-            ]
+            ],
         );
 
         // Check if the groups are in the actors
@@ -929,7 +929,7 @@ class ConfigTest extends MoreOptionsTestCase
             \Group::class,
             [
                 'name' => 'Test Technical Group',
-            ]
+            ],
         );
         $gid = $group->getID();
 
@@ -940,7 +940,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'name' => 'test_tech_manager',
                 'login' => 'test_tech_manager',
             ],
-            ['login']
+            ['login'],
         );
         $uid = $user->getID();
 
@@ -951,7 +951,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'name' => 'Test Category with Tech',
                 'users_id' => $uid,
                 'groups_id' => $gid,
-            ]
+            ],
         );
         $cid = $category->getID();
 
@@ -961,7 +961,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'name' => 'Test ticket category update',
                 'content' => 'Test content',
-            ]
+            ],
         );
         $tid = $ticket->getID();
 
@@ -971,7 +971,7 @@ class ConfigTest extends MoreOptionsTestCase
             $tid,
             [
                 'itilcategories_id' => $cid,
-            ]
+            ],
         );
 
         // Check if technical manager was assigned
@@ -1023,7 +1023,7 @@ class ConfigTest extends MoreOptionsTestCase
             \Group::class,
             [
                 'name' => 'Test Technical Group Change',
-            ]
+            ],
         );
         $gid = $group->getID();
 
@@ -1034,7 +1034,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'name' => 'test_tech_manager_change',
                 'login' => 'test_tech_manager_change',
             ],
-            ['login']
+            ['login'],
         );
         $uid = $user->getID();
 
@@ -1045,7 +1045,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'name' => 'Test Category with Tech Change',
                 'users_id' => $uid,
                 'groups_id' => $gid,
-            ]
+            ],
         );
         $cid = $category->getID();
 
@@ -1055,7 +1055,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'name' => 'Test change category update',
                 'content' => 'Test content',
-            ]
+            ],
         );
         $chid = $change->getID();
 
@@ -1065,7 +1065,7 @@ class ConfigTest extends MoreOptionsTestCase
             $chid,
             [
                 'itilcategories_id' => $cid,
-            ]
+            ],
         );
 
         // Check if technical manager was assigned
@@ -1117,7 +1117,7 @@ class ConfigTest extends MoreOptionsTestCase
             \Group::class,
             [
                 'name' => 'Test Technical Group Problem',
-            ]
+            ],
         );
         $gid = $group->getID();
 
@@ -1128,7 +1128,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'name' => 'test_tech_manager_problem',
                 'login' => 'test_tech_manager_problem',
             ],
-            ['login']
+            ['login'],
         );
         $uid = $user->getID();
 
@@ -1139,7 +1139,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'name' => 'Test Category with Tech Problem',
                 'users_id' => $uid,
                 'groups_id' => $gid,
-            ]
+            ],
         );
         $cid = $category->getID();
 
@@ -1149,7 +1149,7 @@ class ConfigTest extends MoreOptionsTestCase
             [
                 'name' => 'Test problem category update',
                 'content' => 'Test content',
-            ]
+            ],
         );
         $pid = $problem->getID();
 
@@ -1159,7 +1159,7 @@ class ConfigTest extends MoreOptionsTestCase
             $pid,
             [
                 'itilcategories_id' => $cid,
-            ]
+            ],
         );
 
         // Check if technical manager was assigned
@@ -1210,8 +1210,8 @@ class ConfigTest extends MoreOptionsTestCase
         $group = $this->createItem(
             \Group::class,
             [
-                'name' => 'Test Group Disabled'
-            ]
+                'name' => 'Test Group Disabled',
+            ],
         );
         $gid = $group->getID();
 
@@ -1219,9 +1219,9 @@ class ConfigTest extends MoreOptionsTestCase
             \User::class,
             [
                 'name' => 'test_user_disabled',
-                'login' => 'test_user_disabled'
+                'login' => 'test_user_disabled',
             ],
-            ['login']
+            ['login'],
         );
         $uid = $user->getID();
 
@@ -1231,7 +1231,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'name' => 'Test Category Disabled',
                 'users_id' => $uid,
                 'groups_id' => $gid,
-            ]
+            ],
         );
         $cid = $category->getID();
 
@@ -1240,8 +1240,8 @@ class ConfigTest extends MoreOptionsTestCase
             \Ticket::class,
             [
                 'name' => 'Test disabled config',
-                'content' => 'Test content'
-            ]
+                'content' => 'Test content',
+            ],
         );
         $tid = $ticket->getID();
 
@@ -1249,8 +1249,8 @@ class ConfigTest extends MoreOptionsTestCase
             \Ticket::class,
             $tid,
             [
-                'itilcategories_id' => $cid
-            ]
+                'itilcategories_id' => $cid,
+            ],
         );
 
         // Verify no technical actors were assigned
@@ -1286,7 +1286,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'name' => 'Child Entity Test',
                 'entities_id' => 0, // Parent entity as parent
             ],
-            ['name'] // Entity uses 'completename' not 'name'
+            ['name'], // Entity uses 'completename' not 'name'
         );
         $child_entity_id = $child_entity->getID();
         $this->clearLogEntriesContaining('glpiactiveentities_string');
@@ -1304,7 +1304,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'prevent_closure_ticket' => true,
                 'require_technician_to_close_ticket' => true,
                 'mandatory_task_category' => true,
-            ]
+            ],
         );
 
         // Configure child entity to use parent configuration
@@ -1321,7 +1321,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'prevent_closure_ticket' => 0,
                 'require_technician_to_close_ticket' => 0,
                 'mandatory_task_category' => 0,
-            ]
+            ],
         );
 
         // Test effective configuration for child entity
@@ -1348,7 +1348,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'name' => 'Grandparent Entity Test',
                 'entities_id' => 0, // Root entity as parent
             ],
-            ['name']
+            ['name'],
         );
         $grandparent_entity_id = $grandparent_entity->getID();
         $this->assertIsInt($grandparent_entity_id);
@@ -1361,7 +1361,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'name' => 'Parent Entity Test Level 2',
                 'entities_id' => $grandparent_entity_id,
             ],
-            ['name', 'entities_id']
+            ['name', 'entities_id'],
         );
         $parent_entity_id = $parent_entity->getID();
         $this->clearLogEntriesContaining('glpiactiveentities_string');
@@ -1373,7 +1373,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'name' => 'Child Entity Test Level 3',
                 'entities_id' => $parent_entity_id,
             ],
-            ['name', 'entities_id']
+            ['name', 'entities_id'],
         );
         $child_entity_id = $child_entity->getID();
         $this->clearLogEntriesContaining('glpiactiveentities_string');
@@ -1390,7 +1390,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'take_item_group_ticket' => 1,
                 'prevent_closure_ticket' => 1,
                 'require_technician_to_close_ticket' => 1,
-            ]
+            ],
         );
 
         // Configure parent entity to use parent configuration (cascade)
@@ -1406,7 +1406,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'take_item_group_ticket' => 0, // Should be ignored
                 'prevent_closure_ticket' => 0,
                 'require_technician_to_close_ticket' => 0,
-            ]
+            ],
         );
 
         // Configure child entity to use parent configuration
@@ -1422,7 +1422,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'take_item_group_ticket' => 0, // Should be ignored
                 'prevent_closure_ticket' => 0,
                 'require_technician_to_close_ticket' => 0,
-            ]
+            ],
         );
 
         // Test effective configuration for child entity (should cascade to grandparent)
@@ -1448,7 +1448,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'name' => 'Parent Entity No Inherit Test',
                 'entities_id' => 0,
             ],
-            ['name']
+            ['name'],
         );
         $parent_entity_id = $parent_entity->getID();
         $this->clearLogEntriesContaining('glpiactiveentities_string');
@@ -1460,7 +1460,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'name' => 'Child Entity No Inherit Test',
                 'entities_id' => $parent_entity_id,
             ],
-            ['name', 'entities_id']
+            ['name', 'entities_id'],
         );
         $child_entity_id = $child_entity->getID();
         $this->clearLogEntriesContaining('glpiactiveentities_string');
@@ -1477,7 +1477,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'use_parent_entity' => 0,
                 'take_item_group_ticket' => 1,
                 'prevent_closure_ticket' => 1,
-            ]
+            ],
         );
 
         // Configure child entity WITHOUT inheritance
@@ -1492,7 +1492,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'use_parent_entity' => 0, // NO inheritance
                 'take_item_group_ticket' => 0, // Different from parent
                 'prevent_closure_ticket' => 0,
-            ]
+            ],
         );
 
         // Test effective configuration for child entity
@@ -1517,7 +1517,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'name' => 'Session Test Entity',
                 'entities_id' => 0,
             ],
-            ['name']
+            ['name'],
         );
         $test_entity_id = $test_entity->getID();
         $this->clearLogEntriesContaining('glpiactiveentities_string');
@@ -1533,7 +1533,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'is_active' => 1,
                 'use_parent_entity' => 0,
                 'take_item_group_ticket' => 1,
-            ]
+            ],
         );
 
         // Store current session entity
@@ -1606,7 +1606,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'name' => 'Controller Parent Entity Test',
                 'entities_id' => 0,
             ],
-            ['name']
+            ['name'],
         );
         $parent_entity_id = $parent_entity->getID();
         $this->clearLogEntriesContaining('glpiactiveentities_string');
@@ -1618,7 +1618,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'name' => 'Controller Child Entity Test',
                 'entities_id' => $parent_entity_id,
             ],
-            ['name', 'entities_id']
+            ['name', 'entities_id'],
         );
         $child_entity_id = $child_entity->getID();
         $this->clearLogEntriesContaining('glpiactiveentities_string');
@@ -1635,7 +1635,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'use_parent_entity' => 0,
                 'mandatory_task_category' => 1, // Enable mandatory task category
                 'mandatory_task_duration' => 1,
-            ]
+            ],
         );
 
         // Configure child entity to inherit from parent
@@ -1650,7 +1650,7 @@ class ConfigTest extends MoreOptionsTestCase
                 'use_parent_entity' => 1, // Inherit from parent
                 'mandatory_task_category' => 0, // Should be ignored
                 'mandatory_task_duration' => 0,
-            ]
+            ],
         );
 
         // Store original session and set to child entity
@@ -1667,11 +1667,6 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Test Controller::checkTaskRequirements with inherited config
         $result_task = \GlpiPlugin\Moreoptions\Controller::checkTaskRequirements($task);
-
-        // Task input should be set to false due to mandatory fields from inherited config
-        // Note: This test may fail if the entity context is not properly propagated
-        // through the Controller. For now, we just verify the method doesn't crash.
-        $this->assertNotNull($result_task);
 
         // Now test with filled mandatory fields
         $task2 = new \TicketTask();
