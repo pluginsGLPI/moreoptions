@@ -232,18 +232,10 @@ class Controller extends CommonDBTM
                 $criteria = [
                     'groups_id' => $user->fields['groups_id'],
                     $idField => $object->fields['id'],
+                    'type' => $actorType,
                 ];
 
-                // Add type for assigned technicians
-                if ($actorType == \CommonITILActor::ASSIGN) {
-                    $criteria['type'] = \CommonITILActor::ASSIGN;
-                }
-
                 if (!$t_group->getFromDBByCrit($criteria)) {
-                    if ($actorType == \CommonITILActor::ASSIGN) {
-                        $criteria['type'] = \CommonITILActor::ASSIGN;
-                    }
-
                     $t_group->add($criteria);
                 }
             } else {
@@ -261,22 +253,15 @@ class Controller extends CommonDBTM
                         $criteria = [
                             'groups_id' => $ug['groups_id'],
                             $idField => $object->fields['id'],
+                            'type' => $actorType,
                         ];
-
-                        // Add type for assigned technicians
-                        if ($actorType == \CommonITILActor::ASSIGN) {
-                            $criteria['type'] = \CommonITILActor::ASSIGN;
-                        }
 
                         if (!$t_group->getFromDBByCrit($criteria)) {
                             $groupData = [
                                 'groups_id' => $ug['groups_id'],
                                 $idField => $object->fields['id'],
+                                'type' => $actorType,
                             ];
-
-                            if ($actorType == \CommonITILActor::ASSIGN) {
-                                $groupData['type'] = \CommonITILActor::ASSIGN;
-                            }
 
                             $t_group->add($groupData);
                         }

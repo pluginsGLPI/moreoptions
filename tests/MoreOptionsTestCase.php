@@ -131,4 +131,49 @@ abstract class MoreOptionsTestCase extends DbTestCase
         }
         return $config;
     }
+
+    /**
+     * Clear session messages
+     */
+    protected function clearSessionMessages(): void
+    {
+        if (isset($_SESSION['MESSAGE_AFTER_REDIRECT'])) {
+            $_SESSION['MESSAGE_AFTER_REDIRECT'] = [];
+        }
+    }
+
+    /**
+     * Clear specific log entries containing a pattern
+     */
+    protected function clearLogEntriesContaining(string $pattern): void
+    {
+        if (!isset($this->log_handler)) {
+            return;
+        }
+        
+        $records = $this->log_handler->getRecords();
+        foreach ($records as $key => $log) {
+            if (isset($log['message']) && str_contains($log['message'], $pattern)) {
+                unset($records[$key]);
+            }
+        }
+        
+        $this->log_handler->clear();
+        foreach (array_values($records) as $record) {
+            $this->log_handler->handle($record);
+        }
+    }
+
+    /**
+     * Initialize session variables for entity management
+     */
+    protected function initEntitySession(): void
+    {
+        if (!isset($_SESSION['glpiactiveentities_string'])) {
+            $_SESSION['glpiactiveentities_string'] = '';
+        }
+        if (!isset($_SESSION['glpiactiveentities'])) {
+            $_SESSION['glpiactiveentities'] = [];
+        }
+    }
 }
