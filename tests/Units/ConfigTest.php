@@ -1206,4 +1206,187 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertCount(0, $assigned_groups);
     }
+
+    public function testAssignTechnicianFromTask(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        $result = $this->updateTestConfig($conf, [
+            'is_active'   => 1,
+            'entities_id' => 0,
+        ]);
+        $this->assertTrue($result);
+
+        $tech = $this->createItem(
+            \User::class,
+            [
+                'name'         => 'tech_from_task',
+                'password'     => 'tech_from_task',
+                'password2'    => 'tech_from_task',
+                '_profiles_id' => 4,
+            ]
+        );
+
+        $ticket = $this->createItem(
+            \Ticket::class,
+            [
+                'name'    => 'Test ticket for task assignment',
+                'content' => 'Test content',
+            ]
+        );
+
+        $ticket_user = new \Ticket_User();
+        $assigned_users_before = $ticket_user->find([
+            'tickets_id' => $ticket->getID(),
+            'users_id'   => $tech->getID(),
+            'type'       => \CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(0, $assigned_users_before);
+
+        $task = $this->createItem(
+            \TicketTask::class,
+            [
+                'tickets_id'    => $ticket->getID(),
+                'content'       => 'Test task',
+                'users_id_tech' => $tech->getID(),
+                'actiontime'    => 3600,
+                'state'         => \Planning::TODO,
+            ]
+        );
+
+        $assigned_users_after = $ticket_user->find([
+            'tickets_id' => $ticket->getID(),
+            'users_id'   => $tech->getID(),
+            'type'       => \CommonITILActor::ASSIGN,
+        ]);
+
+        $this->assertCount(1, $assigned_users_after);
+        $assignedUser = reset($assigned_users_after);
+        $this->assertEquals($tech->getID(), $assignedUser['users_id']);
+        $this->assertEquals(\CommonITILActor::ASSIGN, $assignedUser['type']);
+    }
+
+    public function testAssignTechnicianFromChangeTask(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        $result = $this->updateTestConfig($conf, [
+            'is_active'   => 1,
+            'entities_id' => 0,
+        ]);
+        $this->assertTrue($result);
+
+        $tech = $this->createItem(
+            \User::class,
+            [
+                'name'         => 'tech_from_change_task',
+                'password'     => 'tech_from_change_task',
+                'password2'    => 'tech_from_change_task',
+                '_profiles_id' => 4,
+            ]
+        );
+
+        $change = $this->createItem(
+            \Change::class,
+            [
+                'name'    => 'Test change for task assignment',
+                'content' => 'Test content',
+            ]
+        );
+
+        $change_user = new \Change_User();
+        $assigned_users_before = $change_user->find([
+            'changes_id' => $change->getID(),
+            'users_id'   => $tech->getID(),
+            'type'       => \CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(0, $assigned_users_before);
+
+        $task = $this->createItem(
+            \ChangeTask::class,
+            [
+                'changes_id'    => $change->getID(),
+                'content'       => 'Test change task',
+                'users_id_tech' => $tech->getID(),
+                'actiontime'    => 3600,
+                'state'         => \Planning::TODO,
+            ]
+        );
+
+        $assigned_users_after = $change_user->find([
+            'changes_id' => $change->getID(),
+            'users_id'   => $tech->getID(),
+            'type'       => \CommonITILActor::ASSIGN,
+        ]);
+
+        $this->assertCount(1, $assigned_users_after);
+        $assignedUser = reset($assigned_users_after);
+        $this->assertEquals($tech->getID(), $assignedUser['users_id']);
+        $this->assertEquals(\CommonITILActor::ASSIGN, $assignedUser['type']);
+    }
+
+    public function testAssignTechnicianFromProblemTask(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        $result = $this->updateTestConfig($conf, [
+            'is_active'   => 1,
+            'entities_id' => 0,
+        ]);
+        $this->assertTrue($result);
+
+        $tech = $this->createItem(
+            \User::class,
+            [
+                'name'         => 'tech_from_problem_task',
+                'password'     => 'tech_from_problem_task',
+                'password2'    => 'tech_from_problem_task',
+                '_profiles_id' => 4,
+            ]
+        );
+
+        $problem = $this->createItem(
+            \Problem::class,
+            [
+                'name'    => 'Test problem for task assignment',
+                'content' => 'Test content',
+            ]
+        );
+
+        $problem_user = new \Problem_User();
+        $assigned_users_before = $problem_user->find([
+            'problems_id' => $problem->getID(),
+            'users_id'    => $tech->getID(),
+            'type'        => \CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(0, $assigned_users_before);
+
+        $task = $this->createItem(
+            \ProblemTask::class,
+            [
+                'problems_id'   => $problem->getID(),
+                'content'       => 'Test problem task',
+                'users_id_tech' => $tech->getID(),
+                'actiontime'    => 3600,
+                'state'         => \Planning::TODO,
+            ]
+        );
+
+        $assigned_users_after = $problem_user->find([
+            'problems_id' => $problem->getID(),
+            'users_id'    => $tech->getID(),
+            'type'        => \CommonITILActor::ASSIGN,
+        ]);
+
+        $this->assertCount(1, $assigned_users_after);
+        $assignedUser = reset($assigned_users_after);
+        $this->assertEquals($tech->getID(), $assignedUser['users_id']);
+        $this->assertEquals(\CommonITILActor::ASSIGN, $assignedUser['type']);
+    }
 }
