@@ -38,8 +38,8 @@ use function Safe\define;
 
 define('GLPI_LOG_DIR', __DIR__ . '/files/_logs');
 
-require_once __DIR__ . '/../../../tests/GLPITestCase.php';
-require_once __DIR__ . '/../../../tests/DbTestCase.php';
+require_once __DIR__ . '/../../../tests/src/GLPITestCase.php';
+require_once __DIR__ . '/../../../tests/src/DbTestCase.php';
 require_once __DIR__ . '/../../../vendor/autoload.php';
 require_once __DIR__ . '/MoreOptionsTestCase.php';
 
