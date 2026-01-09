@@ -117,7 +117,7 @@ abstract class MoreOptionsTestCase extends DbTestCase
     protected function updateTestConfig(Config $config, array $updates): bool
     {
         $result = $this->updateItem(Config::class, $config->getID(), $updates);
-        return $result != false && !$result->isNewItem();
+        return  !$result->isNewItem();
     }
 
     /**
