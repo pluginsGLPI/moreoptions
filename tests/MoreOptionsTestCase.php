@@ -34,7 +34,7 @@
 namespace GlpiPlugin\Moreoptions\Tests;
 
 use Auth;
-use DbTestCase;
+use Glpi\Tests\DbTestCase;
 use GlpiPlugin\Moreoptions\Config;
 use Session;
 
