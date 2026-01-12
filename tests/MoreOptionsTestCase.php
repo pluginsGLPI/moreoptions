@@ -34,37 +34,14 @@
 namespace GlpiPlugin\Moreoptions\Tests;
 
 use Auth;
+use Glpi\Tests\DbTestCase;
 use GlpiPlugin\Moreoptions\Config;
-use PHPUnit\Framework\TestCase;
 use Session;
 
-abstract class MoreOptionsTestCase extends TestCase
+abstract class MoreOptionsTestCase extends DbTestCase
 {
     public const TU_USER = 'glpi';
     public const TU_PASS = 'glpi';
-
-    protected function setUp(): void
-    {
-        global $DB;
-
-        // Start a transaction for each test
-        $DB->beginTransaction();
-
-        // Connect the test user
-        $this->login();
-
-        parent::setUp();
-    }
-
-    protected function tearDown(): void
-    {
-        global $DB;
-
-        // Rollback the transaction to clean up the database
-        $DB->rollback();
-
-        parent::tearDown();
-    }
 
     /**
      * Login with the test user
@@ -102,8 +79,6 @@ abstract class MoreOptionsTestCase extends TestCase
      */
     protected function createTestConfig(array $options = []): Config
     {
-        $config = new Config();
-
         $default_config = [
             'is_active' => 1,
             'entities_id' => 0,
@@ -132,10 +107,7 @@ abstract class MoreOptionsTestCase extends TestCase
 
         $input = array_merge($default_config, $options);
 
-        $result = $config->add($input);
-        $this->assertGreaterThan(0, $result, 'Failed to create test config');
-
-        return $config;
+        return $this->createItem(Config::class, $input);
     }
 
     /**
@@ -144,8 +116,8 @@ abstract class MoreOptionsTestCase extends TestCase
      */
     protected function updateTestConfig(Config $config, array $updates): bool
     {
-        $input = array_merge(['id' => $config->getID()], $updates);
-        return $config->update($input);
+        $result = $this->updateItem(Config::class, $config->getID(), $updates);
+        return  !$result->isNewItem();
     }
 
     /**
@@ -153,10 +125,55 @@ abstract class MoreOptionsTestCase extends TestCase
      */
     protected function getCurrentConfig(): Config
     {
-        $config = Config::getCurrentConfig();
+        $config = Config::getConfig();
         if (empty($config->fields) || $config->isNewItem()) {
             $config = $this->createTestConfig();
         }
         return $config;
+    }
+
+    /**
+     * Clear session messages
+     */
+    protected function clearSessionMessages(): void
+    {
+        if (isset($_SESSION['MESSAGE_AFTER_REDIRECT'])) {
+            $_SESSION['MESSAGE_AFTER_REDIRECT'] = [];
+        }
+    }
+
+    /**
+     * Clear specific log entries containing a pattern
+     */
+    protected function clearLogEntriesContaining(string $pattern): void
+    {
+        if (!isset($this->log_handler)) {
+            return;
+        }
+
+        $records = $this->log_handler->getRecords();
+        foreach ($records as $key => $log) {
+            if (isset($log['message']) && str_contains($log['message'], $pattern)) {
+                unset($records[$key]);
+            }
+        }
+
+        $this->log_handler->clear();
+        foreach (array_values($records) as $record) {
+            $this->log_handler->handle($record);
+        }
+    }
+
+    /**
+     * Initialize session variables for entity management
+     */
+    protected function initEntitySession(): void
+    {
+        if (!isset($_SESSION['glpiactiveentities_string'])) {
+            $_SESSION['glpiactiveentities_string'] = '';
+        }
+        if (!isset($_SESSION['glpiactiveentities'])) {
+            $_SESSION['glpiactiveentities'] = [];
+        }
     }
 }
