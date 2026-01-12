@@ -135,6 +135,18 @@ function plugin_init_moreoptions(): void
     $PLUGIN_HOOKS[Hooks::ITEM_UPDATE]['moreoptions'][Problem::class] = [
         Controller::class, 'updateItemActors',
     ];
+
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][TicketTask::class] = [
+        Controller::class, 'assignTechnicianFromTask',
+    ];
+
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][ChangeTask::class] = [
+        Controller::class, 'assignTechnicianFromTask',
+    ];
+
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][ProblemTask::class] = [
+        Controller::class, 'assignTechnicianFromTask',
+    ];
 }
 
 /**

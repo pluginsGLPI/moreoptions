@@ -31,11 +31,19 @@
  * -------------------------------------------------------------------------
  */
 
+use function Safe\define;
+
+define('GLPI_LOG_DIR', __DIR__ . '/files/_logs');
+
 require_once __DIR__ . '/../../../tests/src/GLPITestCase.php';
 require_once __DIR__ . '/../../../tests/src/DbTestCase.php';
 require_once __DIR__ . '/../../../tests/bootstrap.php';
 require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/MoreOptionsTestCase.php';
 
 if (!Plugin::isPluginActive('moreoptions')) {
     throw new RuntimeException('Plugin moreoptions is not active in the test database');
 }
+
+$kernel = new Kernel(Environment::TESTING->value);
+$kernel->boot();

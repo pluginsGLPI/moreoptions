@@ -1685,4 +1685,178 @@ class ConfigTest extends MoreOptionsTestCase
         // Restore original session
         $_SESSION['glpiactive_entity'] = $original_entity;
     }
+
+    public function testAssignTechnicianFromTask(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        $result = $this->updateTestConfig($conf, [
+            'is_active'   => 1,
+            'entities_id' => 0,
+        ]);
+        $this->assertTrue($result);
+
+        $tech = new \User();
+        $tech_id = $tech->add([
+            'name'         => 'tech_from_task',
+            'password'     => 'tech_from_task',
+            'password2'    => 'tech_from_task',
+            '_profiles_id' => 4,
+        ]);
+        $this->assertGreaterThan(0, $tech_id);
+
+        $ticket = new \Ticket();
+        $ticket_id = $ticket->add([
+            'name'    => 'Test ticket for task assignment',
+            'content' => 'Test content',
+        ]);
+        $this->assertGreaterThan(0, $ticket_id);
+
+        $ticket_user = new \Ticket_User();
+        $assigned_users_before = $ticket_user->find([
+            'tickets_id' => $ticket_id,
+            'users_id'   => $tech_id,
+            'type'       => \CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(0, $assigned_users_before);
+
+        $task = new \TicketTask();
+        $task_id = $task->add([
+            'tickets_id'    => $ticket_id,
+            'content'       => 'Test task',
+            'users_id_tech' => $tech_id,
+            'actiontime'    => 3600,
+            'state'         => \Planning::TODO,
+        ]);
+        $this->assertGreaterThan(0, $task_id);
+
+        $assigned_users_after = $ticket_user->find([
+            'tickets_id' => $ticket_id,
+            'users_id'   => $tech_id,
+            'type'       => \CommonITILActor::ASSIGN,
+        ]);
+
+        $this->assertCount(1, $assigned_users_after);
+        $assignedUser = reset($assigned_users_after);
+        $this->assertEquals($tech_id, $assignedUser['users_id']);
+        $this->assertEquals(\CommonITILActor::ASSIGN, $assignedUser['type']);
+    }
+
+    public function testAssignTechnicianFromChangeTask(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        $result = $this->updateTestConfig($conf, [
+            'is_active'   => 1,
+            'entities_id' => 0,
+        ]);
+        $this->assertTrue($result);
+
+        $tech = new \User();
+        $tech_id = $tech->add([
+            'name'         => 'tech_from_change_task',
+            'password'     => 'tech_from_change_task',
+            'password2'    => 'tech_from_change_task',
+            '_profiles_id' => 4,
+        ]);
+        $this->assertGreaterThan(0, $tech_id);
+
+        $change = new \Change();
+        $change_id = $change->add([
+            'name'    => 'Test change for task assignment',
+            'content' => 'Test content',
+        ]);
+        $this->assertGreaterThan(0, $change_id);
+
+        $change_user = new \Change_User();
+        $assigned_users_before = $change_user->find([
+            'changes_id' => $change_id,
+            'users_id'   => $tech_id,
+            'type'       => \CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(0, $assigned_users_before);
+
+        $task = new \ChangeTask();
+        $task_id = $task->add([
+            'changes_id'    => $change_id,
+            'content'       => 'Test change task',
+            'users_id_tech' => $tech_id,
+            'actiontime'    => 3600,
+            'state'         => \Planning::TODO,
+        ]);
+        $this->assertGreaterThan(0, $task_id);
+
+        $assigned_users_after = $change_user->find([
+            'changes_id' => $change_id,
+            'users_id'   => $tech_id,
+            'type'       => \CommonITILActor::ASSIGN,
+        ]);
+
+        $this->assertCount(1, $assigned_users_after);
+        $assignedUser = reset($assigned_users_after);
+        $this->assertEquals($tech_id, $assignedUser['users_id']);
+        $this->assertEquals(\CommonITILActor::ASSIGN, $assignedUser['type']);
+    }
+
+    public function testAssignTechnicianFromProblemTask(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        $result = $this->updateTestConfig($conf, [
+            'is_active'   => 1,
+            'entities_id' => 0,
+        ]);
+        $this->assertTrue($result);
+
+        $tech = new \User();
+        $tech_id = $tech->add([
+            'name'         => 'tech_from_problem_task',
+            'password'     => 'tech_from_problem_task',
+            'password2'    => 'tech_from_problem_task',
+            '_profiles_id' => 4,
+        ]);
+        $this->assertGreaterThan(0, $tech_id);
+
+        $problem = new \Problem();
+        $problem_id = $problem->add([
+            'name'    => 'Test problem for task assignment',
+            'content' => 'Test content',
+        ]);
+        $this->assertGreaterThan(0, $problem_id);
+
+        $problem_user = new \Problem_User();
+        $assigned_users_before = $problem_user->find([
+            'problems_id' => $problem_id,
+            'users_id'    => $tech_id,
+            'type'        => \CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(0, $assigned_users_before);
+
+        $task = new \ProblemTask();
+        $task_id = $task->add([
+            'problems_id'   => $problem_id,
+            'content'       => 'Test problem task',
+            'users_id_tech' => $tech_id,
+            'actiontime'    => 3600,
+            'state'         => \Planning::TODO,
+        ]);
+        $this->assertGreaterThan(0, $task_id);
+
+        $assigned_users_after = $problem_user->find([
+            'problems_id' => $problem_id,
+            'users_id'    => $tech_id,
+            'type'        => \CommonITILActor::ASSIGN,
+        ]);
+
+        $this->assertCount(1, $assigned_users_after);
+        $assignedUser = reset($assigned_users_after);
+        $this->assertEquals($tech_id, $assignedUser['users_id']);
+        $this->assertEquals(\CommonITILActor::ASSIGN, $assignedUser['type']);
+    }
 }

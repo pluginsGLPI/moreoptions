@@ -517,4 +517,81 @@ class Controller extends CommonDBTM
         }
         return $item;
     }
+
+    /**
+     * Assign technician from task to parent ITIL object
+     * When a task is created with a technician assigned, this method will
+     * automatically assign that technician to the parent ticket/change/problem
+     *
+     * @param \CommonITILTask $item The task item (TicketTask, ChangeTask, or ProblemTask)
+     * @return void
+     */
+    public static function assignTechnicianFromTask(\CommonITILTask $item): void
+    {
+        $conf = Config::getCurrentConfig();
+        if ($conf->fields['is_active'] != 1) {
+            return;
+        }
+
+        // Check if a technician is assigned to the task
+        if (empty($item->fields['users_id_tech'])) {
+            return;
+        }
+
+        $users_id_tech = $item->fields['users_id_tech'];
+
+        // Determine the parent ITIL object and user link class based on task type
+        switch ($item::class) {
+            case TicketTask::class:
+                if (empty($item->fields['tickets_id'])) {
+                    return;
+                }
+                $itilObject = new Ticket();
+                $userLinkClass = Ticket_User::class;
+                $itilIdField = 'tickets_id';
+                $itilId = $item->fields['tickets_id'];
+                break;
+
+            case ChangeTask::class:
+                if (empty($item->fields['changes_id'])) {
+                    return;
+                }
+                $itilObject = new Change();
+                $userLinkClass = Change_User::class;
+                $itilIdField = 'changes_id';
+                $itilId = $item->fields['changes_id'];
+                break;
+
+            case ProblemTask::class:
+                if (empty($item->fields['problems_id'])) {
+                    return;
+                }
+                $itilObject = new Problem();
+                $userLinkClass = Problem_User::class;
+                $itilIdField = 'problems_id';
+                $itilId = $item->fields['problems_id'];
+                break;
+
+            default:
+                return;
+        }
+
+        // Get the parent ITIL object
+        if (!$itilObject->getFromDB($itilId)) {
+            return;
+        }
+
+        // Check if the technician is already assigned to the parent ITIL object
+        $userLink = new $userLinkClass();
+        $criteria = [
+            'users_id' => $users_id_tech,
+            'type' => CommonITILActor::ASSIGN,
+            $itilIdField => $itilId,
+        ];
+
+        // If the technician is not already assigned, add them
+        if (!$userLink->getFromDBByCrit($criteria)) {
+            $userLink->add($criteria);
+        }
+    }
 }
