@@ -528,7 +528,7 @@ class Controller extends CommonDBTM
      */
     public static function assignTechnicianFromTask(\CommonITILTask $item): void
     {
-        $conf = Config::getCurrentConfig();
+        $conf = Config::getConfig(Session::getActiveEntity());
         if ($conf->fields['is_active'] != 1) {
             return;
         }

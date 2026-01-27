@@ -266,14 +266,14 @@ class ConfigTest extends MoreOptionsTestCase
             ],
         ));
 
-        $uticket = new \Ticket_User();
-        $this->assertNotFalse($uticket->add(
+        $this->createItem(
+            \Ticket_User::class,
             [
                 'tickets_id' => $tid,
                 'users_id'   => $user->getID(),
                 'type'       => \Ticket_User::ASSIGN,
             ],
-        ));
+        );
 
         // Close the ticket without location and category (Expected to fail)
         $ticket = new \Ticket();
@@ -405,12 +405,13 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Close the change without location and category (Expected to fail)
         $change = new \Change();
-        $this->assertFalse($change->update(
+        $result = $change->update(
             [
                 'id'                => $cid,
                 'status'            => \Change::CLOSED,
             ],
-        ));
+        );
+        $this->assertFalse($result);
         $this->clearSessionMessages();
 
         // Close the change with location and category (Expected to succeed)
@@ -533,12 +534,13 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Close the problem without location and category (Expected to fail)
         $problem = new \Problem();
-        $this->assertFalse($problem->update(
+        $result = $problem->update(
             [
                 'id'                => $pid,
                 'status'            => \Problem::CLOSED,
             ],
-        ));
+        );
+        $this->assertFalse($result);
         $this->clearSessionMessages();
 
         // Close the problem with location and category (Expected to succeed)
@@ -587,13 +589,12 @@ class ConfigTest extends MoreOptionsTestCase
             ],
         );
 
-        $group2 = new \Group();
-        $result = $group2->add(
+        $group2 = $this->createItem(
+            \Group::class,
             [
                 'name' => 'Test group 2',
             ],
         );
-        $this->assertNotFalse($result);
 
         // Get the user glpi
         $user = new \User();
@@ -1563,21 +1564,26 @@ class ConfigTest extends MoreOptionsTestCase
         $should_delete = false; // Initialize variable
         if (!$root_config->getID()) {
             // Create root config if it doesn't exist
-            $root_config_id = $root_config->add([
-                'entities_id' => 0,
-                'is_active' => 1,
-                'use_parent_entity' => 1, // This should be ignored for root entity
-                'take_item_group_ticket' => 1,
-            ]);
-            $this->assertGreaterThan(0, $root_config_id);
+            $root_config = $this->createItem(
+                Config::class,
+                [
+                    'entities_id' => 0,
+                    'is_active' => 1,
+                    'use_parent_entity' => 1, // This should be ignored for root entity
+                    'take_item_group_ticket' => 1,
+                ],
+            );
             $should_delete = true;
         } else {
             // Update existing root config
-            $root_config->update([
-                'id' => $root_config->getID(),
-                'use_parent_entity' => 1, // This should be ignored
-                'take_item_group_ticket' => 1,
-            ]);
+            $this->updateItem(
+                Config::class,
+                $root_config->getID(),
+                [
+                    'use_parent_entity' => 1, // This should be ignored
+                    'take_item_group_ticket' => 1,
+                ],
+            );
         }
 
         // Test effective configuration for root entity
@@ -1589,7 +1595,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Clean up only if we created the config
         if ($should_delete) {
-            $root_config->delete(['id' => $root_config->getID()]);
+            $this->deleteItem(Config::class, $root_config->getID());
         }
     }
 
@@ -1698,21 +1704,26 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertTrue($result);
 
-        $tech = new \User();
-        $tech_id = $tech->add([
-            'name'         => 'tech_from_task',
-            'password'     => 'tech_from_task',
-            'password2'    => 'tech_from_task',
-            '_profiles_id' => 4,
-        ]);
-        $this->assertGreaterThan(0, $tech_id);
+        $tech = $this->createItem(
+            \User::class,
+            [
+                'name'         => 'tech_from_task',
+                'password'     => 'tech_from_task',
+                'password2'    => 'tech_from_task',
+                '_profiles_id' => 4,
+            ],
+            ['password', 'password2'],
+        );
+        $tech_id = $tech->getID();
 
-        $ticket = new \Ticket();
-        $ticket_id = $ticket->add([
-            'name'    => 'Test ticket for task assignment',
-            'content' => 'Test content',
-        ]);
-        $this->assertGreaterThan(0, $ticket_id);
+        $ticket = $this->createItem(
+            \Ticket::class,
+            [
+                'name'    => 'Test ticket for task assignment',
+                'content' => 'Test content',
+            ],
+        );
+        $ticket_id = $ticket->getID();
 
         $ticket_user = new \Ticket_User();
         $assigned_users_before = $ticket_user->find([
@@ -1722,15 +1733,17 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertCount(0, $assigned_users_before);
 
-        $task = new \TicketTask();
-        $task_id = $task->add([
-            'tickets_id'    => $ticket_id,
-            'content'       => 'Test task',
-            'users_id_tech' => $tech_id,
-            'actiontime'    => 3600,
-            'state'         => \Planning::TODO,
-        ]);
-        $this->assertGreaterThan(0, $task_id);
+        $task = $this->createItem(
+            \TicketTask::class,
+            [
+                'tickets_id'    => $ticket_id,
+                'content'       => 'Test task',
+                'users_id_tech' => $tech_id,
+                'actiontime'    => 3600,
+                'state'         => \Planning::TODO,
+            ],
+        );
+        $task_id = $task->getID();
 
         $assigned_users_after = $ticket_user->find([
             'tickets_id' => $ticket_id,
@@ -1756,21 +1769,26 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertTrue($result);
 
-        $tech = new \User();
-        $tech_id = $tech->add([
-            'name'         => 'tech_from_change_task',
-            'password'     => 'tech_from_change_task',
-            'password2'    => 'tech_from_change_task',
-            '_profiles_id' => 4,
-        ]);
-        $this->assertGreaterThan(0, $tech_id);
+        $tech = $this->createItem(
+            \User::class,
+            [
+                'name'         => 'tech_from_change_task',
+                'password'     => 'tech_from_change_task',
+                'password2'    => 'tech_from_change_task',
+                '_profiles_id' => 4,
+            ],
+            ['password', 'password2'],
+        );
+        $tech_id = $tech->getID();
 
-        $change = new \Change();
-        $change_id = $change->add([
-            'name'    => 'Test change for task assignment',
-            'content' => 'Test content',
-        ]);
-        $this->assertGreaterThan(0, $change_id);
+        $change = $this->createItem(
+            \Change::class,
+            [
+                'name'    => 'Test change for task assignment',
+                'content' => 'Test content',
+            ],
+        );
+        $change_id = $change->getID();
 
         $change_user = new \Change_User();
         $assigned_users_before = $change_user->find([
@@ -1780,15 +1798,17 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertCount(0, $assigned_users_before);
 
-        $task = new \ChangeTask();
-        $task_id = $task->add([
-            'changes_id'    => $change_id,
-            'content'       => 'Test change task',
-            'users_id_tech' => $tech_id,
-            'actiontime'    => 3600,
-            'state'         => \Planning::TODO,
-        ]);
-        $this->assertGreaterThan(0, $task_id);
+        $task = $this->createItem(
+            \ChangeTask::class,
+            [
+                'changes_id'    => $change_id,
+                'content'       => 'Test change task',
+                'users_id_tech' => $tech_id,
+                'actiontime'    => 3600,
+                'state'         => \Planning::TODO,
+            ],
+        );
+        $task_id = $task->getID();
 
         $assigned_users_after = $change_user->find([
             'changes_id' => $change_id,
@@ -1814,21 +1834,26 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertTrue($result);
 
-        $tech = new \User();
-        $tech_id = $tech->add([
-            'name'         => 'tech_from_problem_task',
-            'password'     => 'tech_from_problem_task',
-            'password2'    => 'tech_from_problem_task',
-            '_profiles_id' => 4,
-        ]);
-        $this->assertGreaterThan(0, $tech_id);
+        $tech = $this->createItem(
+            \User::class,
+            [
+                'name'         => 'tech_from_problem_task',
+                'password'     => 'tech_from_problem_task',
+                'password2'    => 'tech_from_problem_task',
+                '_profiles_id' => 4,
+            ],
+            ['password', 'password2'],
+        );
+        $tech_id = $tech->getID();
 
-        $problem = new \Problem();
-        $problem_id = $problem->add([
-            'name'    => 'Test problem for task assignment',
-            'content' => 'Test content',
-        ]);
-        $this->assertGreaterThan(0, $problem_id);
+        $problem = $this->createItem(
+            \Problem::class,
+            [
+                'name'    => 'Test problem for task assignment',
+                'content' => 'Test content',
+            ],
+        );
+        $problem_id = $problem->getID();
 
         $problem_user = new \Problem_User();
         $assigned_users_before = $problem_user->find([
@@ -1838,15 +1863,17 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertCount(0, $assigned_users_before);
 
-        $task = new \ProblemTask();
-        $task_id = $task->add([
-            'problems_id'   => $problem_id,
-            'content'       => 'Test problem task',
-            'users_id_tech' => $tech_id,
-            'actiontime'    => 3600,
-            'state'         => \Planning::TODO,
-        ]);
-        $this->assertGreaterThan(0, $task_id);
+        $task = $this->createItem(
+            \ProblemTask::class,
+            [
+                'problems_id'   => $problem_id,
+                'content'       => 'Test problem task',
+                'users_id_tech' => $tech_id,
+                'actiontime'    => 3600,
+                'state'         => \Planning::TODO,
+            ],
+        );
+        $task_id = $task->getID();
 
         $assigned_users_after = $problem_user->find([
             'problems_id' => $problem_id,
