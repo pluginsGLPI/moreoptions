@@ -121,6 +121,7 @@ class Config extends CommonDBTM
     public static function getItilConfigFields(): array
     {
         return [
+            'use_parent_entity',
             'take_item_group_ticket',
             'take_item_group_change',
             'take_item_group_problem',
@@ -169,31 +170,28 @@ class Config extends CommonDBTM
 
     public static function showForEntity(Entity $item): void
     {
-        // $parents = getAncestorsOf(Entity::getTable(), $item->getID());
-        // if (!empty($parents)) {
-        //     foreach ($parents as $parent) {
-        //         $pconfig = new Config();
-        //         $pconfig->getFromDBByCrit([
-        //             'entities_id' => $parent,
-        //         ]);
-        //         if ($pconfig->getField('is_active') == 1) {
-        //             $pentity = $parent;
-        //         }
-        //     }
-        //     $csconfig = new self();
-        //     $csconfig->getFromDBByCrit([
-        //         'entities_id' => $pentity ?? 0,
-        //     ]);
-        // }
         $moconfig = new self();
         $moconfig->getFromDBByCrit([
             'entities_id' => $item->getID(),
         ]);
+
+        // Get effective configuration to show which entity's config is actually used
+        $effectiveConfig = self::getConfig($item->getID(), true);
+        $parentEntityInfo = null;
+
+        if (($moconfig->fields['use_parent_entity'] ?? false) && ($effectiveConfig->fields['entities_id'] != $item->getID())) {
+            $parentEntity = new Entity();
+            if ($parentEntity->getFromDB($effectiveConfig->fields['entities_id'])) {
+                $parentEntityInfo = $parentEntity->getName();
+            }
+        }
+
         TemplateRenderer::getInstance()->display(
             '@moreoptions/config.html.twig',
             [
                 'item' => $moconfig,
                 'dropdown_options' => self::getSelectableActorGroup(),
+                'parent_entity_info' => $parentEntityInfo,
                 'params' => [
                     'canedit' => true,
                 ],
@@ -215,12 +213,34 @@ class Config extends CommonDBTM
         ]);
     }
 
-    public static function getCurrentConfig(): self
+    /**
+     * Get configuration for an entity
+     *
+     * @param int|null $entityId Entity ID (null = current active entity)
+     * @param bool $useInheritance Whether to follow parent entity inheritance (default: true)
+     * @return self
+     */
+    public static function getConfig(?int $entityId = null, bool $useInheritance = true): self
     {
+        // Use current entity if not specified
+        if ($entityId === null) {
+            $entityId = Session::getActiveEntity();
+        }
+
         $moconfig = new self();
         $moconfig->getFromDBByCrit([
-            'entities_id' => Session::getActiveEntity(),
+            'entities_id' => $entityId,
         ]);
+
+        // If inheritance is enabled, use_parent_entity is set, and we're not at root entity
+        if ($useInheritance && ($moconfig->fields['use_parent_entity'] ?? false) && $entityId > 0) {
+            $entity = new Entity();
+            if ($entity->getFromDB($entityId)) {
+                $parentId = $entity->fields['entities_id'];
+                return self::getConfig($parentId, true);
+            }
+        }
+
         return $moconfig;
     }
 
@@ -235,7 +255,8 @@ class Config extends CommonDBTM
                 `id` int unsigned NOT NULL AUTO_INCREMENT,
                 `is_active`  tinyint NOT NULL DEFAULT '1',
                 `entities_id` int unsigned NOT NULL DEFAULT '0',
-                `take_item_group_ticket` tinyint NOT NULL DEFAULT '0',
+                `use_parent_entity` tinyint NOT NULL DEFAULT '0',
+                `take_item_group_ticket` tinyint NOT NULL DEFAULT '-2',
                 `take_item_group_change` tinyint NOT NULL DEFAULT '0',
                 `take_item_group_problem` tinyint NOT NULL DEFAULT '0',
                 `take_requester_group_ticket` int unsigned NOT NULL DEFAULT '0',
@@ -278,6 +299,16 @@ class Config extends CommonDBTM
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
               ";
             $DB->doQuery($query);
+        }
+
+        // Migration: Add use_parent_entity column if it doesn't exist
+        if (!$DB->fieldExists($table, 'use_parent_entity')) {
+            $migration->displayMessage("Adding use_parent_entity field to $table");
+            $migration->addField($table, 'use_parent_entity', 'tinyint', [
+                'after' => 'entities_id',
+                'value' => 0,
+                'nodefault' => false,
+            ]);
         }
 
         $entities = new Entity();
