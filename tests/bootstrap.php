@@ -31,10 +31,6 @@
  * -------------------------------------------------------------------------
  */
 
-use function Safe\define;
-
-define('GLPI_LOG_DIR', __DIR__ . '/files/_logs');
-
 require_once __DIR__ . '/../../../tests/bootstrap.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
