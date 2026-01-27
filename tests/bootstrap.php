@@ -31,9 +31,11 @@
  * -------------------------------------------------------------------------
  */
 
-if (!defined('GLPI_LOG_DIR')) {
-    define('GLPI_LOG_DIR', __DIR__ . '/files/_logs');
-}
+use function Safe\define;
+
+define('TU_USER', 'glpi');
+define('TU_PASS', 'glpi');
+define('GLPI_LOG_DIR', __DIR__ . '/files/_logs');
 
 require_once __DIR__ . '/../../../tests/src/GLPITestCase.php';
 require_once __DIR__ . '/../../../tests/src/DbTestCase.php';
