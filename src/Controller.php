@@ -324,7 +324,7 @@ class Controller extends CommonDBTM
         }
     }
 
-    public static function requireFieldsToClose(CommonITILObject $item): void
+    public static function requireFieldsToClose($item): void
     {
         $conf = Config::getConfig();
         if ($conf->fields['is_active'] != 1) {
