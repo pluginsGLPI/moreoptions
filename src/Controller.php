@@ -38,6 +38,7 @@
 
 namespace GlpiPlugin\Moreoptions;
 
+use AltchaOrg\Altcha\Solution;
 use Change;
 use Change_Group;
 use Change_Item;
@@ -324,7 +325,7 @@ class Controller extends CommonDBTM
         }
     }
 
-    public static function requireFieldsToClose(CommonITILObject $item): void
+    public static function requireFieldsToClose(CommonDBTM $item): void
     {
         $conf = Config::getConfig();
         if ($conf->fields['is_active'] != 1) {
@@ -336,8 +337,8 @@ class Controller extends CommonDBTM
 
         // Determine the configuration suffix and actor classes based on item type
         $configSuffix = '_' . strtolower($itemtype);
-        $userClass = $item->userlinkclass;
-        $groupClass = $item->grouplinkclass;
+        $userClass = $item->userlinkclass ?? '';
+        $groupClass = $item->grouplinkclass ?? '';
         $itemIdField = $item->getForeignKeyField();
 
         // Check for required technician
