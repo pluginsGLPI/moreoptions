@@ -38,7 +38,6 @@
 
 namespace GlpiPlugin\Moreoptions;
 
-use AltchaOrg\Altcha\Solution;
 use Change;
 use Change_Group;
 use Change_Item;
