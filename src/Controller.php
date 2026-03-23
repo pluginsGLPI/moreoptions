@@ -281,7 +281,22 @@ class Controller extends CommonDBTM
         $closed = true;
 
         if ($item instanceof ITILSolution) {
-            $parent_item = new $item->input['itemtype']();
+            $itemtype = $item->input['itemtype'] ?? null;
+
+            switch ($itemtype) {
+                case 'Ticket':
+                    $parent_item = new Ticket();
+                    break;
+                case 'Change':
+                    $parent_item = new Change();
+                    break;
+                case 'Problem':
+                    $parent_item = new Problem();
+                    break;
+                default:
+                    return;
+            }
+
             if (!$parent_item->getFromDB($item->input['items_id'])) {
                 return;
             }
