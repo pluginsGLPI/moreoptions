@@ -48,6 +48,7 @@ use CommonITILActor;
 use CommonITILObject;
 use CommonITILValidation;
 use Glpi\Form\Category;
+use GlpiPlugin\Behaviors\Common;
 use GlpiPlugin\Moreoptions\Config;
 use Group_Item;
 use Group_Problem;
@@ -56,6 +57,7 @@ use Item_Problem;
 use Item_Ticket;
 use ITILCategory;
 use ITILSolution;
+use phpDocumentor\Reflection\Types\Boolean;
 use Planning;
 use Problem;
 use Problem_User;
@@ -271,16 +273,23 @@ class Controller extends CommonDBTM
         }
     }
 
-    public static function beforeCloseITILObject(CommonITILObject $item): void
+    public static function beforeCloseITILObject(CommonDBTM $item): void
     {
         if (!is_array($item->input)) {
             return;
         }
 
+        if ($item instanceof ITILSolution) {
+            self::requireFieldsAddSolution($item);
+        }
+
         if (
-            (isset($item->input['status']) && ($item->input['status'] == CommonITILObject::CLOSED || $item->input['status'] == CommonITILObject::SOLVED))
-            || $item->fields['status'] == CommonITILObject::CLOSED
-            || $item->fields['status'] == CommonITILObject::SOLVED
+            $item instanceof CommonITILObject
+            && (
+                (isset($item->input['status']) && ($item->input['status'] == CommonITILObject::CLOSED || $item->input['status'] == CommonITILObject::SOLVED))
+                || $item->fields['status'] == CommonITILObject::CLOSED
+                || $item->fields['status'] == CommonITILObject::SOLVED
+            )
         ) {
             self::requireFieldsToClose($item);
             self::preventClosure($item);
@@ -324,6 +333,66 @@ class Controller extends CommonDBTM
         }
     }
 
+    /**
+     * Check required fields to close a ticket/change/problem and return a message listing missing fields
+     *
+     * @param false|array<string,mixed> $input The input data of the item being closed
+     * @param string $configSuffix The suffix to use for configuration fields (e.g. '_ticket', '_change', '_problem')
+     * @param string $userClass The user link class of the item (e.g. Ticket_User, Change_User, Problem_User)
+     * @param string $groupClass The group link class of the item (e.g. Group_Ticket, Group_Change, Group_Problem)
+     */
+    public static function checkFieldsToClose(false|array $input, string $configSuffix, string $userClass, string $groupClass, string $itemIdField): string
+    {
+        $conf = Config::getConfig();
+        if (
+            $conf->fields['is_active'] != 1
+            || !is_array($input)
+        ) {
+            return '';
+        }
+
+        $message = '';
+        $id = $input['id'] ?? 0;
+
+        if (!$id) {
+            return '';
+        }
+
+        // Check for required technician
+        if ($conf->fields['require_technician_to_close' . $configSuffix] == 1 && is_a($userClass, CommonDBTM::class, true)) {
+            /** @var CommonDBTM $tech */
+            $tech = new $userClass();
+            if (count($tech->find([$itemIdField => $id, 'type' => CommonITILActor::ASSIGN])) == 0) {
+                $message .= '- ' . __s('Technician') . '<br>';
+            }
+        }
+
+        // Check for required technician group
+        if ($conf->fields['require_technicians_group_to_close' . $configSuffix] == 1 && is_a($groupClass, CommonDBTM::class, true)) {
+            /** @var CommonDBTM $group */
+            $group = new $groupClass();
+            if (count($group->find([$itemIdField => $id, 'type' => CommonITILActor::ASSIGN])) == 0) {
+                $message .= '- ' . __s('Technician group') . '<br>';
+            }
+        }
+
+        // Check for required category
+        if ($conf->fields['require_category_to_close' . $configSuffix] == 1) {
+            if (empty($input['itilcategories_id'] ?? 0)) {
+                $message .= '- ' . __s('Category') . '<br>';
+            }
+        }
+
+        // Check for required location
+        if ($conf->fields['require_location_to_close' . $configSuffix] == 1) {
+            if (empty($input['locations_id'] ?? 0)) {
+                $message .= '- ' . __s('Location') . '<br>';
+            }
+        }
+
+        return $message;
+    }
+
     public static function requireFieldsToClose(CommonDBTM $item): void
     {
         $conf = Config::getConfig();
@@ -331,77 +400,30 @@ class Controller extends CommonDBTM
             return;
         }
 
-        $message = '';
         $itemtype = get_class($item);
-
-        // Determine the configuration suffix and actor classes based on item type
         $configSuffix = '_' . strtolower($itemtype);
-        $userClass = $item->userlinkclass ?? '';
-        $groupClass = $item->grouplinkclass ?? '';
-        $itemIdField = $item->getForeignKeyField();
 
-        // Check for required technician
-        if ($conf->fields['require_technician_to_close' . $configSuffix] == 1) {
-            if (is_a($userClass, CommonDBTM::class, true)) {
-                $tech = new $userClass();
-            } else {
-                // If the user class is not valid, skip this check
-                return;
-            }
-            $techs = $tech->find([
-                $itemIdField => $item->fields['id'],
-                'type'       => CommonITILActor::ASSIGN,
-            ]);
-            if (count($techs) == 0) {
-                $message .= '- ' . __s('Technician') . '<br>';
-            }
-        }
-
-        // Check for required technician group
-        if ($conf->fields['require_technicians_group_to_close' . $configSuffix] == 1) {
-            if (is_a($groupClass, CommonDBTM::class, true)) {
-                $group = new $groupClass();
-            } else {
-                // If the group class is not valid, skip this check
-                return;
-            }
-            $groups = $group->find([
-                $itemIdField => $item->fields['id'],
-                'type'       => CommonITILActor::ASSIGN,
-            ]);
-            if (count($groups) == 0) {
-                $message .= '- ' . __s('Technician group') . '<br>';
-            }
-        }
-
-        // Check for required category
-        if ($conf->fields['require_category_to_close' . $configSuffix] == 1) {
-            if ((!isset($item->input['itilcategories_id']) || empty($item->input['itilcategories_id']))) {
-                $message .= '- ' . __s('Category') . '<br>';
-            }
-        }
-
-        // Check for required location
-        if ($conf->fields['require_location_to_close' . $configSuffix] == 1) {
-            if ((!isset($item->input['locations_id']) || empty($item->input['locations_id']))) {
-                $message .= '- ' . __s('Location') . '<br>';
-            }
-        }
+        $message = self::checkFieldsToClose(
+            is_array($item->input) ? $item->input : [],
+            $configSuffix,
+            $item->userlinkclass ?? '',
+            $item->grouplinkclass ?? '',
+            $item->getForeignKeyField()
+        );
 
         // Check if solution exists before closing
         if ($conf->fields['require_solution_to_close' . $configSuffix] == 1
-            && is_array($item->input)
             && isset($item->input['status'])
-            && $item->input['status'] == CommonITILObject::CLOSED) {
+            && $item->input['status'] == CommonITILObject::CLOSED
+        ) {
             $solution = new ITILSolution();
-            $solutions = $solution->find([
-                'itemtype' => $itemtype,
-                'items_id' => $item->fields['id'],
-                'NOT' => [
-                    'status' => CommonITILValidation::REFUSED,
-                ],
-            ]);
-            if (count($solutions) == 0) {
+            if (count(
+                $solution->find([
+                    'itemtype' => $itemtype,
+                    'items_id' => $item->fields['id'] ?? 0,
+                    'NOT'      => ['status' => CommonITILValidation::REFUSED],
+                ])
+            ) == 0) {
                 $message .= '- ' . __s('Solution') . '<br>';
             }
         }
@@ -412,7 +434,41 @@ class Controller extends CommonDBTM
             $message = sprintf(__s('To close this %s, you must fill in the following fields:', 'moreoptions'), $itemTypeLabel) . '<br>' . $message;
             Session::addMessageAfterRedirect($message, false, ERROR);
             $item->input = false;
+        }
+    }
+
+    public static function requireFieldsAddSolution(ITILSolution $item): void
+    {
+        $conf = Config::getConfig();
+        if ($conf->fields['is_active'] != 1 || !is_array($item->input)) {
             return;
+        }
+
+        $itemtype = $item->fields['itemtype'] ?? $item->input['itemtype'] ?? '';
+        $items_id = $item->fields['items_id'] ?? $item->input['items_id'] ?? 0;
+
+        if (empty($itemtype) || empty($items_id) || !class_exists($itemtype) || !is_a($itemtype, CommonITILObject::class, true)) {
+            return;
+        }
+
+        /** @var CommonITILObject $parentItem */
+        $parentItem = new $itemtype();
+        if (!$parentItem->getFromDB($items_id)) {
+            return;
+        }
+
+        $message = self::checkFieldsToClose(
+            is_array($parentItem->fields) ? $parentItem->fields : [],
+            '_' . strtolower($itemtype),
+            $parentItem->userlinkclass,
+            $parentItem->grouplinkclass,
+            $parentItem->getForeignKeyField()
+        );
+
+        if (!empty($message)) {
+            $message = __s('To add a solution to this item, you must fill in the following fields:', 'moreoptions') . '<br>' . $message;
+            Session::addMessageAfterRedirect($message, false, ERROR);
+            $item->input = false;
         }
     }
 
