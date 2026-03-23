@@ -343,8 +343,8 @@ class ConfigTest extends MoreOptionsTestCase
             'status'   => \CommonITILObject::SOLVED,
         ]);
 
-        $this->assertFalse($resultFields);
         $this->clearSessionMessages();
+        $this->assertFalse($resultFields);
 
         // Add technician to the ticket
         $user = new \User();
