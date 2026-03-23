@@ -408,7 +408,7 @@ class Controller extends CommonDBTM
             $configSuffix,
             $item->userlinkclass ?? '',
             $item->grouplinkclass ?? '',
-            $item->getForeignKeyField()
+            $item->getForeignKeyField(),
         );
 
         // Check if solution exists before closing
@@ -422,7 +422,7 @@ class Controller extends CommonDBTM
                     'itemtype' => $itemtype,
                     'items_id' => $item->fields['id'] ?? 0,
                     'NOT'      => ['status' => CommonITILValidation::REFUSED],
-                ])
+                ]),
             ) == 0) {
                 $message .= '- ' . __s('Solution') . '<br>';
             }
@@ -462,7 +462,7 @@ class Controller extends CommonDBTM
             '_' . strtolower($itemtype),
             $parentItem->userlinkclass,
             $parentItem->grouplinkclass,
-            $parentItem->getForeignKeyField()
+            $parentItem->getForeignKeyField(),
         );
 
         if (!empty($message)) {
