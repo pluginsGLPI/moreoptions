@@ -300,7 +300,7 @@ class Controller extends CommonDBTM
             if (!$parent_item->getFromDB($item->input['items_id'])) {
                 return;
             }
-            $closed = self::requireFieldsToClose($parent_item);
+            $closed = self::requireFieldsToClose($parent_item, true);
             $closed = self::preventClosure($parent_item) && $closed;
         }
 
