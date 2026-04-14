@@ -302,9 +302,7 @@ class Controller extends CommonDBTM
             }
             $closed = self::requireFieldsToClose($parent_item, true);
             $closed = self::preventClosure($parent_item) && $closed;
-        }
-
-        if (
+        } elseif (
             $item instanceof CommonITILObject
             && (
                 (isset($item->input['status']) && ($item->input['status'] == CommonITILObject::CLOSED || $item->input['status'] == CommonITILObject::SOLVED))
