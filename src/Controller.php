@@ -47,8 +47,6 @@ use CommonDBTM;
 use CommonITILActor;
 use CommonITILObject;
 use CommonITILValidation;
-use Glpi\Form\Category;
-use GlpiPlugin\Behaviors\Common;
 use GlpiPlugin\Moreoptions\Config;
 use Group_Item;
 use Group_Problem;
