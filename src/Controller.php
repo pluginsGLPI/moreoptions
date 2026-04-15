@@ -366,18 +366,20 @@ class Controller extends CommonDBTM
 
         // Check for required technician
         if ($conf->fields['require_technician_to_close' . $configSuffix] == 1) {
-            if (is_a($userClass, CommonDBTM::class, true)) {
+            if ($is_solution && $itemtype === 'Ticket' && !empty($_SESSION['glpiset_solution_tech'])) {
+                // GLPI will auto-assign the solution author as technician in post_addItem
+            } elseif (is_a($userClass, CommonDBTM::class, true)) {
                 $tech = new $userClass();
+                $techs = $tech->find([
+                $itemIdField => $data['id'],
+                    'type'       => CommonITILActor::ASSIGN,
+                ]);
+                if (count($techs) == 0) {
+                    $message .= '- ' . __s('Technician') . '<br>';
+                }
             } else {
                 // If the user class is not valid, skip this check
                 return false;
-            }
-            $techs = $tech->find([
-                $itemIdField => $data['id'],
-                'type'       => CommonITILActor::ASSIGN,
-            ]);
-            if (count($techs) == 0) {
-                $message .= '- ' . __s('Technician') . '<br>';
             }
         }
 
