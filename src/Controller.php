@@ -418,7 +418,6 @@ class Controller extends CommonDBTM
         if (
             !$is_solution
             && $conf->fields['require_solution_to_close' . $configSuffix] == 1
-            && is_array($data)
             && isset($data['status'])
             && $data['status'] == CommonITILObject::CLOSED
         ) {
