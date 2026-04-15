@@ -371,7 +371,7 @@ class Controller extends CommonDBTM
             } elseif (is_a($userClass, CommonDBTM::class, true)) {
                 $tech = new $userClass();
                 $techs = $tech->find([
-                $itemIdField => $data['id'],
+                    $itemIdField => $data['id'],
                     'type'       => CommonITILActor::ASSIGN,
                 ]);
                 if (count($techs) == 0) {
