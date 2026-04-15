@@ -69,6 +69,7 @@ class Controller extends CommonDBTM
 {
     public $dohistory = true;
     public static $rightname = 'config';
+    private static bool $solution_check_done = false;
     public static function getTypeName($nb = 0): string
     {
         return __s("Controller", "moreoptions");
@@ -281,33 +282,23 @@ class Controller extends CommonDBTM
         if ($item instanceof ITILSolution) {
             $itemtype = $item->input['itemtype'] ?? null;
 
-            switch ($itemtype) {
-                case 'Ticket':
-                    $parent_item = new Ticket();
-                    break;
-                case 'Change':
-                    $parent_item = new Change();
-                    break;
-                case 'Problem':
-                    $parent_item = new Problem();
-                    break;
-                default:
-                    return;
-            }
+            $parent_item = getItemForItemType($itemtype);
 
-            if (!$parent_item->getFromDB($item->input['items_id'])) {
+            if (!$parent_item || !$parent_item->getFromDB($item->input['items_id'])) {
                 return;
             }
+
             $closed = self::requireFieldsToClose($parent_item, true);
             $closed = self::preventClosure($parent_item) && $closed;
+            self::$solution_check_done = true;
         } elseif (
             $item instanceof CommonITILObject
-            && (
-                (isset($item->input['status']) && ($item->input['status'] == CommonITILObject::CLOSED || $item->input['status'] == CommonITILObject::SOLVED))
-                || $item->fields['status'] == CommonITILObject::CLOSED
-                || $item->fields['status'] == CommonITILObject::SOLVED
-            )
+            && isset($item->input['status'])
+            && ($item->input['status'] == CommonITILObject::CLOSED || $item->input['status'] == CommonITILObject::SOLVED)
         ) {
+            if (self::$solution_check_done && $item->input['status'] == CommonITILObject::SOLVED) {
+                return;
+            }
             $closed = self::requireFieldsToClose($item);
             $closed = self::preventClosure($item) && $closed;
         }
@@ -365,7 +356,7 @@ class Controller extends CommonDBTM
         $message = '';
         $itemtype = get_class($item);
 
-        $data = empty($item->input) ? $item->fields : $item->input;
+        $data = array_merge($item->fields, is_array($item->input) ? $item->input : []);
 
         // Determine the configuration suffix and actor classes based on item type
         $configSuffix = '_' . strtolower($itemtype);
