@@ -307,6 +307,94 @@ class ConfigTest extends MoreOptionsTestCase
     }
 
     /**
+     * Test mandatory fields before adding a solution
+     */
+    public function testCannotAddSolutionWhenMissingMandatoryFields(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        // Configure mandatory fields before closing (which impacts solutions too)
+        $result = $this->updateTestConfig($conf, [
+            'is_active'                          => 1,
+            'entities_id'                        => 0,
+            'require_technician_to_close_ticket' => 1,
+            'require_category_to_close_ticket'   => 1,
+        ]);
+        $this->assertTrue($result);
+
+        // Create a ticket without mandatory fields
+        $ticket = $this->createItem(
+            \Ticket::class,
+            [
+                'name'    => 'Test ticket solution',
+                'content' => 'Test content',
+            ],
+        );
+        $tid = $ticket->getID();
+
+        // Attempt to add a solution (Expected to fail because missing tech and category)
+        $solution = new \ITILSolution();
+        $resultFields = $solution->add([
+            'itemtype' => \Ticket::class,
+            'items_id' => $tid,
+            'content'  => 'My test solution',
+            'status'   => \CommonITILObject::SOLVED,
+        ]);
+
+        $this->clearSessionMessages();
+        $this->assertFalse($resultFields);
+
+        // Add technician to the ticket
+        $user = new \User();
+        $this->assertTrue($user->getFromDBByCrit(['name' => 'glpi']));
+
+        $this->createItem(
+            \Ticket_User::class,
+            [
+                'tickets_id' => $tid,
+                'users_id'   => $user->getID(),
+                'type'       => \Ticket_User::ASSIGN,
+            ],
+        );
+
+        // Create category and update ticket
+        $category = $this->createItem(
+            \ITILCategory::class,
+            [
+                'name' => 'Test category for solution test',
+            ],
+        );
+        $this->updateItem(
+            \Ticket::class,
+            $tid,
+            [
+                'itilcategories_id' => $category->getID(),
+            ],
+        );
+
+        // Attempt to add solution with all mandatory fields present (Expected to succeed)
+        $solution2 = new \ITILSolution();
+        $resultOk = $solution2->add([
+            'itemtype'   => \Ticket::class,
+            'items_id'   => $tid,
+            'solutiontypes_id' => 0,
+            'content'    => 'My test solution with fields ok',
+            'status'     => \CommonITILObject::SOLVED,
+        ]);
+        $this->assertIsInt($resultOk);
+        $this->clearSessionMessages();
+
+        // Reset config
+        $resetResult = $this->updateTestConfig($conf, [
+            'require_technician_to_close_ticket' => 0,
+            'require_category_to_close_ticket'   => 0,
+        ]);
+        $this->assertTrue($resetResult);
+    }
+
+    /**
      * Test mandatory fields before closing a change
      */
     public function testChangeMandatoryFieldsBeforeCloseChange(): void

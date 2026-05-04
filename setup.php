@@ -96,6 +96,13 @@ function plugin_init_moreoptions(): void
         Controller::class, 'beforeCloseITILObject',
     ];
 
+    $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['moreoptions'][ITILSolution::class] = [
+        Controller::class, 'beforeCloseITILObject',
+    ];
+    $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][ITILSolution::class] = [
+        Controller::class, 'beforeCloseITILObject',
+    ];
+
     $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Config::class] = [
         Config::class, 'preItemUpdate',
     ];

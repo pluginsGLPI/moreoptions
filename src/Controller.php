@@ -47,7 +47,6 @@ use CommonDBTM;
 use CommonITILActor;
 use CommonITILObject;
 use CommonITILValidation;
-use Glpi\Form\Category;
 use GlpiPlugin\Moreoptions\Config;
 use Group_Item;
 use Group_Problem;
@@ -70,6 +69,7 @@ class Controller extends CommonDBTM
 {
     public $dohistory = true;
     public static $rightname = 'config';
+    private static bool $solution_check_done = false;
     public static function getTypeName($nb = 0): string
     {
         return __s("Controller", "moreoptions");
@@ -271,27 +271,48 @@ class Controller extends CommonDBTM
         }
     }
 
-    public static function beforeCloseITILObject(CommonITILObject $item): void
+    public static function beforeCloseITILObject(CommonDBTM $item): void
     {
         if (!is_array($item->input)) {
             return;
         }
 
-        if (
-            (isset($item->input['status']) && ($item->input['status'] == CommonITILObject::CLOSED || $item->input['status'] == CommonITILObject::SOLVED))
-            || $item->fields['status'] == CommonITILObject::CLOSED
-            || $item->fields['status'] == CommonITILObject::SOLVED
+        $closed = true;
+
+        if ($item instanceof ITILSolution) {
+            $itemtype = $item->input['itemtype'] ?? null;
+
+            $parent_item = getItemForItemType($itemtype);
+
+            if (!$parent_item || !$parent_item->getFromDB($item->input['items_id'])) {
+                return;
+            }
+
+            $closed = self::requireFieldsToClose($parent_item, true);
+            $closed = self::preventClosure($parent_item) && $closed;
+            self::$solution_check_done = true;
+        } elseif (
+            $item instanceof CommonITILObject
+            && isset($item->input['status'])
+            && ($item->input['status'] == CommonITILObject::CLOSED || $item->input['status'] == CommonITILObject::SOLVED)
         ) {
-            self::requireFieldsToClose($item);
-            self::preventClosure($item);
+            if (self::$solution_check_done && $item->input['status'] == CommonITILObject::SOLVED) {
+                return;
+            }
+            $closed = self::requireFieldsToClose($item);
+            $closed = self::preventClosure($item) && $closed;
+        }
+
+        if (!$closed) {
+            $item->input = false;
         }
     }
 
-    public static function preventClosure(CommonDBTM $item): void
+    public static function preventClosure(CommonDBTM $item): bool
     {
         $conf = Config::getConfig();
         if ($conf->fields['is_active'] != 1) {
-            return;
+            return true;
         }
 
         $tasks = [];
@@ -319,20 +340,23 @@ class Controller extends CommonDBTM
             if (is_array($t) && isset($t['state']) && $t['state'] == Planning::TODO) {
                 Session::addMessageAfterRedirect(__s('The ticket you wish to close has tasks that need to be completed.', 'moreoptions'), false, ERROR);
                 $item->input = false;
-                return;
+                return false;
             }
         }
+        return true;
     }
 
-    public static function requireFieldsToClose(CommonDBTM $item): void
+    public static function requireFieldsToClose(CommonDBTM $item, bool $is_solution = false): bool
     {
         $conf = Config::getConfig();
         if ($conf->fields['is_active'] != 1) {
-            return;
+            return true;
         }
 
         $message = '';
         $itemtype = get_class($item);
+
+        $data = array_merge($item->fields, is_array($item->input) ? $item->input : []);
 
         // Determine the configuration suffix and actor classes based on item type
         $configSuffix = '_' . strtolower($itemtype);
@@ -342,18 +366,20 @@ class Controller extends CommonDBTM
 
         // Check for required technician
         if ($conf->fields['require_technician_to_close' . $configSuffix] == 1) {
-            if (is_a($userClass, CommonDBTM::class, true)) {
+            if ($is_solution && $itemtype === 'Ticket' && !empty($_SESSION['glpiset_solution_tech'])) {
+                // GLPI will auto-assign the solution author as technician in post_addItem
+            } elseif (is_a($userClass, CommonDBTM::class, true)) {
                 $tech = new $userClass();
+                $techs = $tech->find([
+                    $itemIdField => $data['id'],
+                    'type'       => CommonITILActor::ASSIGN,
+                ]);
+                if (count($techs) == 0) {
+                    $message .= '- ' . __s('Technician') . '<br>';
+                }
             } else {
                 // If the user class is not valid, skip this check
-                return;
-            }
-            $techs = $tech->find([
-                $itemIdField => $item->fields['id'],
-                'type'       => CommonITILActor::ASSIGN,
-            ]);
-            if (count($techs) == 0) {
-                $message .= '- ' . __s('Technician') . '<br>';
+                return false;
             }
         }
 
@@ -363,10 +389,10 @@ class Controller extends CommonDBTM
                 $group = new $groupClass();
             } else {
                 // If the group class is not valid, skip this check
-                return;
+                return false;
             }
             $groups = $group->find([
-                $itemIdField => $item->fields['id'],
+                $itemIdField => $data['id'],
                 'type'       => CommonITILActor::ASSIGN,
             ]);
             if (count($groups) == 0) {
@@ -376,27 +402,29 @@ class Controller extends CommonDBTM
 
         // Check for required category
         if ($conf->fields['require_category_to_close' . $configSuffix] == 1) {
-            if ((!isset($item->input['itilcategories_id']) || empty($item->input['itilcategories_id']))) {
+            if ((!isset($data['itilcategories_id']) || empty($data['itilcategories_id']))) {
                 $message .= '- ' . __s('Category') . '<br>';
             }
         }
 
         // Check for required location
         if ($conf->fields['require_location_to_close' . $configSuffix] == 1) {
-            if ((!isset($item->input['locations_id']) || empty($item->input['locations_id']))) {
+            if ((!isset($data['locations_id']) || empty($data['locations_id']))) {
                 $message .= '- ' . __s('Location') . '<br>';
             }
         }
 
         // Check if solution exists before closing
-        if ($conf->fields['require_solution_to_close' . $configSuffix] == 1
-            && is_array($item->input)
-            && isset($item->input['status'])
-            && $item->input['status'] == CommonITILObject::CLOSED) {
+        if (
+            !$is_solution
+            && $conf->fields['require_solution_to_close' . $configSuffix] == 1
+            && isset($data['status'])
+            && $data['status'] == CommonITILObject::CLOSED
+        ) {
             $solution = new ITILSolution();
             $solutions = $solution->find([
                 'itemtype' => $itemtype,
-                'items_id' => $item->fields['id'],
+                'items_id' => $data['id'],
                 'NOT' => [
                     'status' => CommonITILValidation::REFUSED,
                 ],
@@ -411,9 +439,9 @@ class Controller extends CommonDBTM
 
             $message = sprintf(__s('To close this %s, you must fill in the following fields:', 'moreoptions'), $itemTypeLabel) . '<br>' . $message;
             Session::addMessageAfterRedirect($message, false, ERROR);
-            $item->input = false;
-            return;
+            return false;
         }
+        return true;
     }
 
     public static function checkTaskRequirements(CommonDBTM $item): CommonDBTM
