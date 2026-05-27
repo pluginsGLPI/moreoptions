@@ -234,9 +234,14 @@ class Config extends CommonDBTM
     public static function addConfig(CommonDBTM $item): void
     {
         $moconfig = new self();
-        $moconfig->add([
-            'entities_id' => $item->getID(),
-        ]);
+        $entity_id = $item->getID();
+        $data = ['entities_id' => $entity_id];
+        if ($entity_id > 0) {
+            foreach (self::getItilConfigFields() as $field) {
+                $data[$field] = self::CONFIG_PARENT;
+            }
+        }
+        $moconfig->add($data);
     }
 
     /**
@@ -262,7 +267,9 @@ class Config extends CommonDBTM
             if ($entity->getFromDB($entityId)) {
                 $parentConfig = self::getConfig($entity->fields['entities_id'], true);
                 foreach (self::getItilConfigFields() as $field) {
-                    $moconfig->fields[$field] = $parentConfig->fields[$field] ?? 0;
+                    if (($moconfig->fields[$field] ?? 0) == self::CONFIG_PARENT) {
+                        $moconfig->fields[$field] = $parentConfig->fields[$field] ?? 0;
+                    }
                 }
             }
         }
@@ -334,14 +341,20 @@ class Config extends CommonDBTM
         ] as $field) {
             $migration->changeField($table, $field, $field, 'tinyint', ['value' => 0]);
         }
-        $migration->executeMigration();
 
         $entities = new Entity();
         foreach ($entities->find() as $entity) {
             if (is_array($entity) && isset($entity['id'])) {
-                $data = [
-                    'entities_id' => $entity['id'],
-                ];
+                $entity_id = (int) $entity['id'];
+                if ($DB->numrows($DB->request(['FROM' => self::getTable(), 'WHERE' => ['entities_id' => $entity_id]])) > 0) {
+                    continue;
+                }
+                $data = ['entities_id' => $entity_id];
+                if ($entity_id > 0) {
+                    foreach (self::getItilConfigFields() as $field) {
+                        $data[$field] = self::CONFIG_PARENT;
+                    }
+                }
                 $DB->insert(
                     self::getTable(),
                     $data,

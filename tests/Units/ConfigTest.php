@@ -1974,4 +1974,88 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertEquals($tech_id, $assignedUser['users_id']);
         $this->assertEquals(\CommonITILActor::ASSIGN, $assignedUser['type']);
     }
+
+    /**
+     * Test that CONFIG_PARENT values are resolved through multiple entity levels.
+     *
+     * Hierarchy: Root(0) → A → B → C
+     *
+     * Root : take_item_group_ticket=1,  take_requester_group_ticket=2
+     * A    : take_item_group_ticket=CONFIG_PARENT, take_requester_group_ticket=1 (own)
+     * B    : take_item_group_ticket=0 (own),       take_requester_group_ticket=CONFIG_PARENT
+     * C    : take_item_group_ticket=CONFIG_PARENT, take_requester_group_ticket=CONFIG_PARENT
+     *
+     * Expected resolved values:
+     * A effective: take_item_group_ticket=1 (from root), take_requester_group_ticket=1 (own)
+     * B effective: take_item_group_ticket=0 (own),       take_requester_group_ticket=1 (from A)
+     * C effective: take_item_group_ticket=0 (from B),    take_requester_group_ticket=1 (from B→A)
+     */
+    public function testMultiLevelInheritanceResolvesConfigParentThroughChain(): void
+    {
+        $this->initEntitySession();
+
+        $entity_a = $this->createItem(
+            \Entity::class,
+            ['name' => 'Inheritance Test A', 'entities_id' => 0],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $entity_b = $this->createItem(
+            \Entity::class,
+            ['name' => 'Inheritance Test B', 'entities_id' => $entity_a->getID()],
+            ['name', 'entities_id'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $entity_c = $this->createItem(
+            \Entity::class,
+            ['name' => 'Inheritance Test C', 'entities_id' => $entity_b->getID()],
+            ['name', 'entities_id'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        // Root: explicit values
+        $root_conf = Config::getConfig(0, false);
+        $this->updateItem(Config::class, $root_conf->getID(), [
+            'take_item_group_ticket'      => 1,
+            'take_requester_group_ticket' => 2,
+        ]);
+
+        // A: inherit take_item_group_ticket from root, own take_requester_group_ticket=1
+        $conf_a = Config::getConfig($entity_a->getID(), false);
+        $this->updateItem(Config::class, $conf_a->getID(), [
+            'take_item_group_ticket'      => Config::CONFIG_PARENT,
+            'take_requester_group_ticket' => 1,
+        ]);
+
+        // B: own take_item_group_ticket=0, inherit take_requester_group_ticket from A
+        $conf_b = Config::getConfig($entity_b->getID(), false);
+        $this->updateItem(Config::class, $conf_b->getID(), [
+            'take_item_group_ticket'      => 0,
+            'take_requester_group_ticket' => Config::CONFIG_PARENT,
+        ]);
+
+        // C: inherit everything
+        $conf_c = Config::getConfig($entity_c->getID(), false);
+        $this->updateItem(Config::class, $conf_c->getID(), [
+            'take_item_group_ticket'      => Config::CONFIG_PARENT,
+            'take_requester_group_ticket' => Config::CONFIG_PARENT,
+        ]);
+
+        // Entity A: CONFIG_PARENT resolves to root's value
+        $resolved_a = Config::getConfig($entity_a->getID());
+        $this->assertEquals(1, $resolved_a->fields['take_item_group_ticket'], 'A should inherit take_item_group_ticket=1 from root');
+        $this->assertEquals(1, $resolved_a->fields['take_requester_group_ticket'], 'A should keep its own take_requester_group_ticket=1');
+
+        // Entity B: own value wins over parent, CONFIG_PARENT resolves through A
+        $resolved_b = Config::getConfig($entity_b->getID());
+        $this->assertEquals(0, $resolved_b->fields['take_item_group_ticket'], 'B should keep its own take_item_group_ticket=0');
+        $this->assertEquals(1, $resolved_b->fields['take_requester_group_ticket'], 'B should inherit take_requester_group_ticket=1 from A');
+
+        // Entity C: CONFIG_PARENT resolves to B's effective values (not root's)
+        $resolved_c = Config::getConfig($entity_c->getID());
+        $this->assertEquals(0, $resolved_c->fields['take_item_group_ticket'], 'C should inherit take_item_group_ticket=0 from B (not root=1)');
+        $this->assertEquals(1, $resolved_c->fields['take_requester_group_ticket'], 'C should inherit take_requester_group_ticket=1 through B→A');
+    }
 }
