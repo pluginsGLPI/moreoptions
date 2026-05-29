@@ -350,7 +350,7 @@ class Config extends CommonDBTM
         foreach ($entities->find() as $entity) {
             if (is_array($entity) && isset($entity['id'])) {
                 $entity_id = (int) $entity['id'];
-                if ($DB->numrows($DB->request(['FROM' => self::getTable(), 'WHERE' => ['entities_id' => $entity_id]])) > 0) {
+                if (countElementsInTable(self::getTable(), ['entities_id' => $entity_id]) > 0) {
                     continue;
                 }
                 $data = ['entities_id' => $entity_id];
