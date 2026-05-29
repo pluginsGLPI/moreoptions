@@ -265,7 +265,7 @@ class Config extends CommonDBTM
         if ($useInheritance && $entityId > 0) {
             $entity = new Entity();
             if ($entity->getFromDB($entityId)) {
-                $parentConfig = self::getConfig($entity->fields['entities_id'], true);
+                $parentConfig = self::getConfig((int) $entity->fields['entities_id'], true);
                 foreach (self::getItilConfigFields() as $field) {
                     if (($moconfig->fields[$field] ?? 0) == self::CONFIG_PARENT) {
                         $moconfig->fields[$field] = $parentConfig->fields[$field] ?? 0;
@@ -287,7 +287,7 @@ class Config extends CommonDBTM
             $query = "CREATE TABLE IF NOT EXISTS `$table` (
                 `id` int unsigned NOT NULL AUTO_INCREMENT,
                 `entities_id` int unsigned NOT NULL DEFAULT '0',
-                `take_item_group_ticket` tinyint NOT NULL DEFAULT '-2',
+                `take_item_group_ticket` tinyint NOT NULL DEFAULT '0',
                 `take_item_group_change` tinyint NOT NULL DEFAULT '0',
                 `take_item_group_problem` tinyint NOT NULL DEFAULT '0',
                 `take_requester_group_ticket` tinyint NOT NULL DEFAULT '0',
@@ -339,8 +339,12 @@ class Config extends CommonDBTM
             'take_technician_group_change',
             'take_technician_group_problem',
         ] as $field) {
-            $migration->changeField($table, $field, $field, 'tinyint', ['value' => 0]);
+            if ($DB->fieldExists($table, $field)) {
+                $migration->changeField($table, $field, $field, 'bool', ['value' => '0']);
+            }
         }
+
+        $migration->executeMigration();
 
         $entities = new Entity();
         foreach ($entities->find() as $entity) {
