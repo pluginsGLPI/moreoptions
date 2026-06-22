@@ -151,6 +151,15 @@ class Config extends CommonDBTM
             'mandatory_task_duration',
             'mandatory_task_user',
             'mandatory_task_group',
+        ];
+    }
+
+    /**
+     * @return array<string>
+     */
+    private static function getActorGroupConfigFields(): array
+    {
+        return [
             'take_requester_group_ticket',
             'take_requester_group_change',
             'take_requester_group_problem',
@@ -266,7 +275,11 @@ class Config extends CommonDBTM
             $entity = new Entity();
             if ($entity->getFromDB($entityId)) {
                 $parentConfig = self::getConfig((int) $entity->fields['entities_id'], true);
-                foreach (self::getItilConfigFields() as $field) {
+                $allFields = array_merge(
+                    self::getItilConfigFields(),
+                    self::getActorGroupConfigFields(),
+                );
+                foreach ($allFields as $field) {
                     if (($moconfig->fields[$field] ?? 0) == self::CONFIG_PARENT) {
                         $moconfig->fields[$field] = $parentConfig->fields[$field] ?? 0;
                     }
