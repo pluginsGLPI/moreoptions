@@ -2065,12 +2065,21 @@ class ConfigTest extends MoreOptionsTestCase
 
         $resolved = Config::getConfig($child->getID());
 
-        $this->assertEquals(1, $resolved->fields['take_item_group_ticket'],
-            'Child should resolve to grandparent value (1) through the full CONFIG_PARENT chain');
-        $this->assertEquals(1, $resolved->fields['prevent_closure_ticket'],
-            'Child should resolve to grandparent value (1) through the full CONFIG_PARENT chain');
-        $this->assertEquals(1, $resolved->fields['mandatory_task_category'],
-            'Child should resolve to grandparent value (1) through the full CONFIG_PARENT chain');
+        $this->assertEquals(
+            1,
+            $resolved->fields['take_item_group_ticket'],
+            'Child should resolve to grandparent value (1) through the full CONFIG_PARENT chain',
+        );
+        $this->assertEquals(
+            1,
+            $resolved->fields['prevent_closure_ticket'],
+            'Child should resolve to grandparent value (1) through the full CONFIG_PARENT chain',
+        );
+        $this->assertEquals(
+            1,
+            $resolved->fields['mandatory_task_category'],
+            'Child should resolve to grandparent value (1) through the full CONFIG_PARENT chain',
+        );
     }
 
     /**
@@ -2126,10 +2135,16 @@ class ConfigTest extends MoreOptionsTestCase
 
         $resolved = Config::getConfig($child->getID());
 
-        $this->assertEquals(2, $resolved->fields['take_item_group_ticket'],
-            'Child should inherit parent override (2), not grandparent value (1)');
-        $this->assertEquals(0, $resolved->fields['take_requester_group_ticket'],
-            'Child should inherit parent override (0), not grandparent value (1)');
+        $this->assertEquals(
+            2,
+            $resolved->fields['take_item_group_ticket'],
+            'Child should inherit parent override (2), not grandparent value (1)',
+        );
+        $this->assertEquals(
+            0,
+            $resolved->fields['take_requester_group_ticket'],
+            'Child should inherit parent override (0), not grandparent value (1)',
+        );
     }
 
     /**
@@ -2191,11 +2206,20 @@ class ConfigTest extends MoreOptionsTestCase
 
         $resolved = Config::getConfig($child->getID());
 
-        $this->assertEquals(1, $resolved->fields['take_item_group_ticket'],
-            'Child should resolve to 1 from grandparent (parent also inherits this field)');
-        $this->assertEquals(0, $resolved->fields['take_requester_group_ticket'],
-            'Child should get parent override (0), not grandparent value (2)');
-        $this->assertEquals(0, $resolved->fields['prevent_closure_ticket'],
-            'Child should keep its own explicit value (0), ignoring parent and grandparent');
+        $this->assertEquals(
+            1,
+            $resolved->fields['take_item_group_ticket'],
+            'Child should resolve to 1 from grandparent (parent also inherits this field)',
+        );
+        $this->assertEquals(
+            0,
+            $resolved->fields['take_requester_group_ticket'],
+            'Child should get parent override (0), not grandparent value (2)',
+        );
+        $this->assertEquals(
+            0,
+            $resolved->fields['prevent_closure_ticket'],
+            'Child should keep its own explicit value (0), ignoring parent and grandparent',
+        );
     }
 }
