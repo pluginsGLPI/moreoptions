@@ -2174,7 +2174,7 @@ class ConfigTest extends MoreOptionsTestCase
         // addConfig() must have stored CONFIG_PARENT for actor group fields on the child — verify raw DB value
         $child_conf_raw = Config::getConfig($child_entity->getID(), false);
         foreach (['take_requester_group_ticket', 'take_requester_group_change', 'take_requester_group_problem',
-                  'take_technician_group_ticket', 'take_technician_group_change', 'take_technician_group_problem'] as $field) {
+            'take_technician_group_ticket', 'take_technician_group_change', 'take_technician_group_problem'] as $field) {
             $this->assertEquals(
                 Config::CONFIG_PARENT,
                 $child_conf_raw->fields[$field],
