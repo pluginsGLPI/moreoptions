@@ -246,7 +246,7 @@ class Config extends CommonDBTM
         $entity_id = $item->getID();
         $data = ['entities_id' => $entity_id];
         if ($entity_id > 0) {
-            foreach (self::getItilConfigFields() as $field) {
+            foreach (array_merge(self::getItilConfigFields(), self::getActorGroupConfigFields()) as $field) {
                 $data[$field] = self::CONFIG_PARENT;
             }
         }
@@ -368,7 +368,7 @@ class Config extends CommonDBTM
                 }
                 $data = ['entities_id' => $entity_id];
                 if ($entity_id > 0) {
-                    foreach (self::getItilConfigFields() as $field) {
+                    foreach (array_merge(self::getItilConfigFields(), self::getActorGroupConfigFields()) as $field) {
                         $data[$field] = self::CONFIG_PARENT;
                     }
                 }

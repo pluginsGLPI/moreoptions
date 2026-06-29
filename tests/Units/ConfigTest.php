@@ -2148,6 +2148,129 @@ class ConfigTest extends MoreOptionsTestCase
     }
 
     /**
+     * Test that addConfig() initializes actor group fields to CONFIG_PARENT for non-root entities,
+     * and that those values are then resolved correctly through the inheritance chain.
+     *
+     * This test will FAIL if getActorGroupConfigFields() is missing from addConfig().
+     */
+    public function testActorGroupFieldsInheritFromParent(): void
+    {
+        $this->login();
+
+        $parent_entity = $this->createItem(
+            \Entity::class,
+            ['name' => 'Actor Group Parent Entity', 'entities_id' => 0],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $child_entity = $this->createItem(
+            \Entity::class,
+            ['name' => 'Actor Group Child Entity', 'entities_id' => $parent_entity->getID()],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        // addConfig() must have stored CONFIG_PARENT for actor group fields on the child — verify raw DB value
+        $child_conf_raw = Config::getConfig($child_entity->getID(), false);
+        foreach (['take_requester_group_ticket', 'take_requester_group_change', 'take_requester_group_problem',
+                  'take_technician_group_ticket', 'take_technician_group_change', 'take_technician_group_problem'] as $field) {
+            $this->assertEquals(
+                Config::CONFIG_PARENT,
+                $child_conf_raw->fields[$field],
+                "addConfig() must initialize $field to CONFIG_PARENT for non-root entities",
+            );
+        }
+
+        // Configure parent with explicit actor group values
+        $parent_conf = Config::getConfig($parent_entity->getID(), false);
+        $this->updateItem(Config::class, $parent_conf->getID(), [
+            'take_requester_group_ticket'   => 2,
+            'take_technician_group_ticket'  => 1,
+            'take_requester_group_change'   => 1,
+            'take_technician_group_change'  => 2,
+            'take_requester_group_problem'  => 2,
+            'take_technician_group_problem' => 1,
+        ]);
+
+        // With inheritance, child must resolve to parent's values
+        $resolved = Config::getConfig($child_entity->getID(), true);
+
+        $this->assertEquals(2, $resolved->fields['take_requester_group_ticket'], 'Child should inherit take_requester_group_ticket=2 from parent');
+        $this->assertEquals(1, $resolved->fields['take_technician_group_ticket'], 'Child should inherit take_technician_group_ticket=1 from parent');
+        $this->assertEquals(1, $resolved->fields['take_requester_group_change'], 'Child should inherit take_requester_group_change=1 from parent');
+        $this->assertEquals(2, $resolved->fields['take_technician_group_change'], 'Child should inherit take_technician_group_change=2 from parent');
+        $this->assertEquals(2, $resolved->fields['take_requester_group_problem'], 'Child should inherit take_requester_group_problem=2 from parent');
+        $this->assertEquals(1, $resolved->fields['take_technician_group_problem'], 'Child should inherit take_technician_group_problem=1 from parent');
+    }
+
+    /**
+     * Test that child entity fields set to CONFIG_PARENT propagate correctly to
+     * Controller::checkTaskRequirements, asserting both the blocked outcome (empty
+     * mandatory fields) and the unblocked outcome (filled mandatory fields).
+     */
+    public function testCheckTaskRequirementsWithInheritedConfig(): void
+    {
+        $this->login();
+
+        $parent_entity = $this->createItem(
+            \Entity::class,
+            ['name' => 'Task Requirements Parent', 'entities_id' => 0],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $child_entity = $this->createItem(
+            \Entity::class,
+            ['name' => 'Task Requirements Child', 'entities_id' => $parent_entity->getID()],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        // Parent enables all mandatory task fields
+        $parent_conf = Config::getConfig($parent_entity->getID(), false);
+        $this->updateItem(Config::class, $parent_conf->getID(), [
+            'mandatory_task_category' => 1,
+            'mandatory_task_duration' => 1,
+            'mandatory_task_user'     => 1,
+            'mandatory_task_group'    => 1,
+        ]);
+
+        // Child inherits all mandatory task fields from parent via CONFIG_PARENT
+        $child_conf = Config::getConfig($child_entity->getID(), false);
+        $this->updateItem(Config::class, $child_conf->getID(), [
+            'mandatory_task_category' => Config::CONFIG_PARENT,
+            'mandatory_task_duration' => Config::CONFIG_PARENT,
+            'mandatory_task_user'     => Config::CONFIG_PARENT,
+            'mandatory_task_group'    => Config::CONFIG_PARENT,
+        ]);
+
+        $original_entity = $_SESSION['glpiactive_entity'];
+        $_SESSION['glpiactive_entity'] = $child_entity->getID();
+
+        // Blocked: missing all mandatory fields — inherited config from parent must block creation
+        $task_empty = new \TicketTask();
+        $task_empty->input = ['content' => 'Test task missing fields'];
+        \GlpiPlugin\Moreoptions\Controller::checkTaskRequirements($task_empty);
+        $this->assertFalse($task_empty->input, 'Task with missing mandatory fields should be blocked (input=false) via inherited config');
+        $this->clearSessionMessages();
+
+        // Unblocked: all mandatory fields filled — inherited config must allow creation
+        $task_filled = new \TicketTask();
+        $task_filled->input = [
+            'content'           => 'Test task with all fields',
+            'taskcategories_id' => 1,
+            'actiontime'        => 3600,
+            'users_id_tech'     => 1,
+            'groups_id_tech'    => 1,
+        ];
+        \GlpiPlugin\Moreoptions\Controller::checkTaskRequirements($task_filled);
+        $this->assertNotFalse($task_filled->input, 'Task with all mandatory fields filled should not be blocked');
+
+        $_SESSION['glpiactive_entity'] = $original_entity;
+    }
+
+    /**
      * Test that different fields in the same entity can be resolved at different levels
      * of a three-level hierarchy.
      *
