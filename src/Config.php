@@ -345,12 +345,7 @@ class Config extends CommonDBTM
         }
 
         foreach ([
-            'take_requester_group_ticket',
-            'take_requester_group_change',
-            'take_requester_group_problem',
-            'take_technician_group_ticket',
-            'take_technician_group_change',
-            'take_technician_group_problem',
+            self::getActorGroupConfigFields()
         ] as $field) {
             if ($DB->fieldExists($table, $field)) {
                 $migration->changeField($table, $field, $field, 'bool', ['value' => '0']);
