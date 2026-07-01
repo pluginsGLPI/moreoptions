@@ -537,7 +537,7 @@ class Controller extends CommonDBTM
      */
     public static function assignTechnicianFromTask(\CommonITILTask $item): void
     {
-        $conf = Config::getConfig(Session::getActiveEntity());
+        $conf = Config::getConfig();
 
         // Check if a technician is assigned to the task
         if (empty($item->fields['users_id_tech'])) {
