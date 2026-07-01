@@ -105,7 +105,7 @@ class Config extends CommonDBTM
             return $item;
         }
 
-        foreach (self::getItilConfigFields() as $field) {
+        foreach (array_merge(self::getItilConfigFields(), self::getActorGroupConfigFields()) as $field) {
             if (isset($item->input[$field])) {
                 $item->input[$field] = (int) $item->input[$field];
             }
