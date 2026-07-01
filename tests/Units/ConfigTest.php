@@ -1743,6 +1743,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         $result = $this->updateTestConfig($conf, [
             'entities_id' => 0,
+            'assign_technician_from_task_ticket' => 1,
         ]);
         $this->assertTrue($result);
 
@@ -1807,6 +1808,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         $result = $this->updateTestConfig($conf, [
             'entities_id' => 0,
+            'assign_technician_from_task_change' => 1,
         ]);
         $this->assertTrue($result);
 
@@ -1871,6 +1873,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         $result = $this->updateTestConfig($conf, [
             'entities_id' => 0,
+            'assign_technician_from_task_problem' => 1,
         ]);
         $this->assertTrue($result);
 
@@ -1925,6 +1928,59 @@ class ConfigTest extends MoreOptionsTestCase
         $assignedUser = reset($assigned_users_after);
         $this->assertEquals($tech_id, $assignedUser['users_id']);
         $this->assertEquals(\CommonITILActor::ASSIGN, $assignedUser['type']);
+    }
+
+    public function testAssignTechnicianFromTaskDisabledByConfig(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        $result = $this->updateTestConfig($conf, [
+            'entities_id' => 0,
+            'assign_technician_from_task_ticket' => 0,
+        ]);
+        $this->assertTrue($result);
+
+        $tech = $this->createItem(
+            \User::class,
+            [
+                'name'         => 'tech_from_task_disabled',
+                'password'     => 'tech_from_task_disabled',
+                'password2'    => 'tech_from_task_disabled',
+                '_profiles_id' => 4,
+            ],
+            ['password', 'password2'],
+        );
+        $tech_id = $tech->getID();
+
+        $ticket = $this->createItem(
+            \Ticket::class,
+            [
+                'name'    => 'Test ticket for disabled task assignment',
+                'content' => 'Test content',
+            ],
+        );
+        $ticket_id = $ticket->getID();
+
+        $this->createItem(
+            \TicketTask::class,
+            [
+                'tickets_id'    => $ticket_id,
+                'content'       => 'Test task',
+                'users_id_tech' => $tech_id,
+                'actiontime'    => 3600,
+                'state'         => \Planning::TODO,
+            ],
+        );
+
+        $ticket_user = new \Ticket_User();
+        $assigned_users = $ticket_user->find([
+            'tickets_id' => $ticket_id,
+            'users_id'   => $tech_id,
+            'type'       => \CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(0, $assigned_users);
     }
 
     /**

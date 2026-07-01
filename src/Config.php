@@ -151,6 +151,9 @@ class Config extends CommonDBTM
             'mandatory_task_duration',
             'mandatory_task_user',
             'mandatory_task_group',
+            'assign_technician_from_task_ticket',
+            'assign_technician_from_task_change',
+            'assign_technician_from_task_problem',
         ];
     }
 
@@ -194,14 +197,7 @@ class Config extends CommonDBTM
             foreach (self::getItilConfigFields() as $field) {
                 $inheritance_labels[$field] = self::getInheritedValueBadge($parentConfig->fields[$field] ?? 0);
             }
-            foreach ([
-                'take_requester_group_ticket',
-                'take_requester_group_change',
-                'take_requester_group_problem',
-                'take_technician_group_ticket',
-                'take_technician_group_change',
-                'take_technician_group_problem',
-            ] as $field) {
+            foreach (self::getActorGroupConfigFields() as $field) {
                 $inheritance_labels[$field] = self::getInheritedValueBadgeForActorGroup($parentConfig->fields[$field] ?? 0);
             }
         }
@@ -337,6 +333,9 @@ class Config extends CommonDBTM
                 `mandatory_task_duration` tinyint NOT NULL DEFAULT '0',
                 `mandatory_task_user` tinyint NOT NULL DEFAULT '0',
                 `mandatory_task_group` tinyint NOT NULL DEFAULT '0',
+                `assign_technician_from_task_ticket` tinyint NOT NULL DEFAULT '0',
+                `assign_technician_from_task_change` tinyint NOT NULL DEFAULT '0',
+                `assign_technician_from_task_problem` tinyint NOT NULL DEFAULT '0',
                 PRIMARY KEY (`id`),
                 KEY `entities_id` (`entities_id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
@@ -347,6 +346,18 @@ class Config extends CommonDBTM
         foreach (self::getActorGroupConfigFields() as $field) {
             if ($DB->fieldExists($table, $field)) {
                 $migration->changeField($table, $field, $field, 'bool', ['value' => '0']);
+            }
+        }
+
+        foreach (
+            [
+                'assign_technician_from_task_ticket',
+                'assign_technician_from_task_change',
+                'assign_technician_from_task_problem',
+            ] as $field
+        ) {
+            if (!$DB->fieldExists($table, $field)) {
+                $migration->addField($table, $field, 'bool', ['value' => '0']);
             }
         }
 

@@ -549,7 +549,7 @@ class Controller extends CommonDBTM
         // Determine the parent ITIL object and user link class based on task type
         switch ($item::class) {
             case TicketTask::class:
-                if (empty($item->fields['tickets_id'])) {
+                if ($conf->fields['assign_technician_from_task_ticket'] != 1 || empty($item->fields['tickets_id'])) {
                     return;
                 }
                 $itilObject = new Ticket();
@@ -559,7 +559,7 @@ class Controller extends CommonDBTM
                 break;
 
             case ChangeTask::class:
-                if (empty($item->fields['changes_id'])) {
+                if ($conf->fields['assign_technician_from_task_change'] != 1 || empty($item->fields['changes_id'])) {
                     return;
                 }
                 $itilObject = new Change();
@@ -569,7 +569,7 @@ class Controller extends CommonDBTM
                 break;
 
             case ProblemTask::class:
-                if (empty($item->fields['problems_id'])) {
+                if ($conf->fields['assign_technician_from_task_problem'] != 1 || empty($item->fields['problems_id'])) {
                     return;
                 }
                 $itilObject = new Problem();

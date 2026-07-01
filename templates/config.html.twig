@@ -103,6 +103,12 @@
                                         <td>{{ fields.dropdownArrayField('assign_technical_group_when_changing_category_change', item.fields['assign_technical_group_when_changing_category_change'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['assign_technical_group_when_changing_category_change']|default(null)})) }}</td>
                                         <td>{{ fields.dropdownArrayField('assign_technical_group_when_changing_category_problem', item.fields['assign_technical_group_when_changing_category_problem'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['assign_technical_group_when_changing_category_problem']|default(null)})) }}</td>
                                     </tr>
+                                    <tr>
+                                        <td>{{ __('Assign technician from task to parent item', 'moreoptions') }}</td>
+                                        <td>{{ fields.dropdownArrayField('assign_technician_from_task_ticket', item.fields['assign_technician_from_task_ticket'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['assign_technician_from_task_ticket']|default(null)})) }}</td>
+                                        <td>{{ fields.dropdownArrayField('assign_technician_from_task_change', item.fields['assign_technician_from_task_change'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['assign_technician_from_task_change']|default(null)})) }}</td>
+                                        <td>{{ fields.dropdownArrayField('assign_technician_from_task_problem', item.fields['assign_technician_from_task_problem'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['assign_technician_from_task_problem']|default(null)})) }}</td>
+                                    </tr>
                                 </tbody>
                             </table>
 
