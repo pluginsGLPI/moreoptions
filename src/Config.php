@@ -105,7 +105,7 @@ class Config extends CommonDBTM
             return $item;
         }
 
-        foreach (array_merge(self::getItilConfigFields(), self::getActorGroupConfigFields()) as $field) {
+        foreach (self::getAllConfigFields() as $field) {
             if (isset($item->input[$field])) {
                 $item->input[$field] = (int) $item->input[$field];
             }
@@ -170,6 +170,14 @@ class Config extends CommonDBTM
             'take_technician_group_change',
             'take_technician_group_problem',
         ];
+    }
+
+    /**
+     * @return array<string>
+     */
+    private static function getAllConfigFields(): array
+    {
+        return array_merge(self::getItilConfigFields(), self::getActorGroupConfigFields());
     }
 
     /**
@@ -242,7 +250,7 @@ class Config extends CommonDBTM
         $entity_id = $item->getID();
         $data = ['entities_id' => $entity_id];
         if ($entity_id > 0) {
-            foreach (array_merge(self::getItilConfigFields(), self::getActorGroupConfigFields()) as $field) {
+            foreach (self::getAllConfigFields() as $field) {
                 $data[$field] = self::CONFIG_PARENT;
             }
         }
@@ -271,11 +279,7 @@ class Config extends CommonDBTM
             $entity = new Entity();
             if ($entity->getFromDB($entityId)) {
                 $parentConfig = self::getConfig((int) $entity->fields['entities_id'], true);
-                $allFields = array_merge(
-                    self::getItilConfigFields(),
-                    self::getActorGroupConfigFields(),
-                );
-                foreach ($allFields as $field) {
+                foreach (self::getAllConfigFields() as $field) {
                     if (($moconfig->fields[$field] ?? 0) == self::CONFIG_PARENT) {
                         $moconfig->fields[$field] = $parentConfig->fields[$field] ?? 0;
                     }
@@ -372,7 +376,7 @@ class Config extends CommonDBTM
                 }
                 $data = ['entities_id' => $entity_id];
                 if ($entity_id > 0) {
-                    foreach (array_merge(self::getItilConfigFields(), self::getActorGroupConfigFields()) as $field) {
+                    foreach (self::getAllConfigFields() as $field) {
                         $data[$field] = self::CONFIG_PARENT;
                     }
                 }
