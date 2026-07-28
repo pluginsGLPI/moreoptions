@@ -36,7 +36,7 @@
 
 {# Layout options for fields #}
 {% set field_options = {'label_class': 'col-8', 'input_class': 'col-4', 'field_class': 'col-6', 'full_width': false} %}
-{% set inherit_option = item.fields['entities_id'] != 0 ? {(constant('Entity::CONFIG_PARENT')): __('Inheritance of the parent entity')} : {} %}
+{% set inherit_option = item.fields['entities_id'] != 0 ? {(config_parent): __('Inheritance of the parent entity')} : {} %}
 {% set yes_no_options = inherit_option + {0: __('No'), 1: __('Yes')} %}
 {% set dropdown_options_with_inherit = inherit_option + dropdown_options %}
 {% set cell_options = {'no_label': true, 'field_class': 'col-12'} %}
