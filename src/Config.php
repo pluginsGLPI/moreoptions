@@ -348,7 +348,7 @@ class Config extends CommonDBTM
         }
 
         foreach (self::getActorGroupConfigFields() as $field) {
-            if ($DB->fieldExists($table, $field)) {
+            if (!$DB->fieldExists($table, $field)) {
                 $migration->changeField($table, $field, $field, 'bool', ['value' => '0']);
             }
         }
