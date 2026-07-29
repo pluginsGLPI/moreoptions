@@ -1715,13 +1715,15 @@ class ConfigTest extends MoreOptionsTestCase
         ];
 
         // Test Controller::checkTaskRequirements with inherited config
+        $this->updateItem(
+            Config::class,
+            $child_conf->getID(),
             [
                 'entities_id'            => $child_entity_id,
                 'mandatory_task_category' => Config::CONFIG_PARENT,
                 'mandatory_task_duration' => Config::CONFIG_PARENT,
             ],
         );
-        // …
         $result_task = \GlpiPlugin\Moreoptions\Controller::checkTaskRequirements($task);
         $this->assertFalse($result_task->input, 'Child entity should block task via inherited mandatory config');
         $this->clearSessionMessages();
