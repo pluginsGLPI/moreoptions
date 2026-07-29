@@ -1651,6 +1651,7 @@ class ConfigTest extends MoreOptionsTestCase
      */
     public function testControllerUsesEffectiveConfigWithInheritance(): void
     {
+        $this->login();
         $this->initEntitySession();
         // Create parent entity
         $parent_entity = $this->createItem(
