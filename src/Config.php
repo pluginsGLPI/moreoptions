@@ -216,6 +216,7 @@ class Config extends CommonDBTM
                 'item'               => $moconfig,
                 'dropdown_options'   => self::getSelectableActorGroup(),
                 'inheritance_labels' => $inheritance_labels,
+                'config_parent'      => self::CONFIG_PARENT,
                 'params'             => [
                     'canedit' => true,
                 ],
