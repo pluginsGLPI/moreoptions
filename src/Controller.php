@@ -250,13 +250,7 @@ class Controller extends CommonDBTM
                         ];
 
                         if (!$t_group->getFromDBByCrit($criteria)) {
-                            $groupData = [
-                                'groups_id' => $ug['groups_id'],
-                                $idField => $object->fields['id'],
-                                'type' => $actorType,
-                            ];
-
-                            $t_group->add($groupData);
+                            $t_group->add($criteria);
                         }
                     }
                 }
