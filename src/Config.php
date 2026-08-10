@@ -70,12 +70,12 @@ class Config extends CommonDBTM
 
     public static function canView(): bool
     {
-        return Session::haveRight(self::$rightname, READ);
+        return (bool) Session::haveRight(self::$rightname, READ);
     }
 
     public function canEdit($ID): bool
     {
-        return Session::haveRight(self::$rightname, UPDATE);
+        return (bool) Session::haveRight(self::$rightname, UPDATE);
     }
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0): string
