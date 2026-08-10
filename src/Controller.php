@@ -232,7 +232,7 @@ class Controller extends CommonDBTM
                     $t_group->add($criteria);
                 }
             } else {
-                // USe all groups of the user
+                // Use all groups of the user
                 $users_groups = new \Group_User();
                 if (isset($actor['items_id'])) {
                     $u_groups = $users_groups->find([

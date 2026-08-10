@@ -76,6 +76,14 @@ class Config extends CommonDBTM
     public function canEdit($ID): bool
     {
         return true;
+    public static function canView(): bool
+    {
+        return Session::haveRight(self::$rightname, READ);
+    }
+
+    public function canEdit($ID): bool
+    {
+        return Session::haveRight(self::$rightname, UPDATE);
     }
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0): string
@@ -218,7 +226,7 @@ class Config extends CommonDBTM
                 'inheritance_labels' => $inheritance_labels,
                 'config_parent'      => self::CONFIG_PARENT,
                 'params'             => [
-                    'canedit' => true,
+                    'canedit' => self::canUpdate(),
                 ],
             ],
         );
