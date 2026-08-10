@@ -49,7 +49,6 @@ class ConfigTest extends MoreOptionsTestCase
         $conf = $this->getCurrentConfig();
 
         $result = $this->updateTestConfig($conf, [
-            'is_active'               => 1,
             'entities_id'             => 0,
             'mandatory_task_category' => 1,
             'mandatory_task_duration' => 1,
@@ -189,7 +188,6 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Configure mandatory fields before closing
         $result = $this->updateTestConfig($conf, [
-            'is_active'                              => 1,
             'entities_id'                            => 0,
             'require_technician_to_close_ticket'    => 1,
             'require_technicians_group_to_close_ticket' => 1,
@@ -317,7 +315,6 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Configure mandatory fields before closing (which impacts solutions too)
         $result = $this->updateTestConfig($conf, [
-            'is_active'                          => 1,
             'entities_id'                        => 0,
             'require_technician_to_close_ticket' => 1,
             'require_category_to_close_ticket'   => 1,
@@ -405,7 +402,6 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Configure mandatory fields before closing
         $result = $this->updateTestConfig($conf, [
-            'is_active'                              => 1,
             'entities_id'                            => 0,
             'require_technician_to_close_change'    => 1,
             'require_technicians_group_to_close_change' => 1,
@@ -534,7 +530,6 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Configure mandatory fields before closing
         $result = $this->updateTestConfig($conf, [
-            'is_active'                              => 1,
             'entities_id'                            => 0,
             'require_technician_to_close_problem'    => 1,
             'require_technicians_group_to_close_problem' => 1,
@@ -661,7 +656,6 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Configure to take all groups of the requester
         $result = $this->updateTestConfig($conf, [
-            'is_active'                   => 1,
             'entities_id'                 => 0,
             'take_requester_group_ticket' => 2, // All
         ]);
@@ -736,7 +730,6 @@ class ConfigTest extends MoreOptionsTestCase
         $config = new Config();
         // Configurer pour ne prendre que le groupe principal du demandeur
         $result = $this->updateTestConfig($conf, [
-            'is_active'                   => 1,
             'entities_id'                 => 0,
             'take_requester_group_ticket' => 1, // Default
         ]);
@@ -783,7 +776,6 @@ class ConfigTest extends MoreOptionsTestCase
         // Reset config
         // Réinitialiser la configuration
         $resetResult = $this->updateTestConfig($conf, [
-            'is_active'                   => 1,
             'entities_id'                 => 0,
             'take_requester_group_ticket' => 0, // Default
         ]);
@@ -799,7 +791,6 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Setup to take all groups of the technician
         $result = $this->updateTestConfig($conf, [
-            'is_active'                    => 1,
             'entities_id'                  => 0,
             'take_technician_group_ticket' => 2, // All
         ]);
@@ -873,7 +864,6 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Setup to take only the main group of the technician
         $result = $this->updateTestConfig($conf, [
-            'is_active'                    => 1,
             'entities_id'                  => 0,
             'take_technician_group_ticket' => 1, // Default
         ]);
@@ -927,7 +917,6 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Setup to take the groups of the items
         $result = $this->updateTestConfig($conf, [
-            'is_active'              => 1,
             'entities_id'            => 0,
             'take_item_group_ticket' => 1,
         ]);
@@ -1006,7 +995,6 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Configure to assign technical manager and group when changing category
         $result = $this->updateTestConfig($conf, [
-            'is_active' => 1,
             'entities_id' => 0,
             'assign_technical_manager_when_changing_category_ticket' => 1,
             'assign_technical_group_when_changing_category_ticket' => 1,
@@ -1100,7 +1088,6 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Configure to assign technical manager and group when changing category
         $result = $this->updateTestConfig($conf, [
-            'is_active' => 1,
             'entities_id' => 0,
             'assign_technical_manager_when_changing_category_change' => 1,
             'assign_technical_group_when_changing_category_change' => 1,
@@ -1194,7 +1181,6 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Configure to assign technical manager and group when changing category
         $result = $this->updateTestConfig($conf, [
-            'is_active' => 1,
             'entities_id' => 0,
             'assign_technical_manager_when_changing_category_problem' => 1,
             'assign_technical_group_when_changing_category_problem' => 1,
@@ -1288,7 +1274,6 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Ensure configuration is disabled
         $result = $this->updateTestConfig($conf, [
-            'is_active' => 1,
             'entities_id' => 0,
             'assign_technical_manager_when_changing_category_ticket' => 0,
             'assign_technical_group_when_changing_category_ticket' => 0,
@@ -1365,59 +1350,50 @@ class ConfigTest extends MoreOptionsTestCase
      */
     public function testParentEntityConfigInheritance(): void
     {
-        $this->initEntitySession();
+        $this->login();
 
-        $parent_entity_id = false;
-        // Create child entity
+        // Create child entity under root (entities_id=0)
         $child_entity = $this->createItem(
             \Entity::class,
             [
                 'name' => 'Child Entity Test',
-                'entities_id' => 0, // Parent entity as parent
+                'entities_id' => 0,
             ],
-            ['name'], // Entity uses 'completename' not 'name'
+            ['name'],
         );
         $child_entity_id = $child_entity->getID();
         $this->clearLogEntriesContaining('glpiactiveentities_string');
 
-        // Configure parent entity with specific settings
+        // Configure root entity with specific settings
         $conf = Config::getConfig(0, false);
         $this->updateItem(
             Config::class,
             $conf->getID(),
             [
-                'entities_id' => $parent_entity_id,
-                'is_active' => true,
-                'use_parent_entity' => false, // This is the source config
-                'take_item_group_ticket' => true,
-                'prevent_closure_ticket' => true,
-                'require_technician_to_close_ticket' => true,
-                'mandatory_task_category' => true,
+                'take_item_group_ticket' => 1,
+                'prevent_closure_ticket' => 1,
+                'require_technician_to_close_ticket' => 1,
+                'mandatory_task_category' => 1,
             ],
         );
 
-        // Configure child entity to use parent configuration
+        // Configure child entity to inherit from parent (CONFIG_PARENT)
         $this->assertIsInt($child_entity_id);
         $child_conf = Config::getConfig($child_entity_id, false);
         $this->updateItem(
             Config::class,
             $child_conf->getID(),
             [
-                'entities_id' => $child_entity_id,
-                'is_active' => 1,
-                'use_parent_entity' => 1, // Enable inheritance
-                'take_item_group_ticket' => 0, // These values should be ignored
-                'prevent_closure_ticket' => 0,
-                'require_technician_to_close_ticket' => 0,
-                'mandatory_task_category' => 0,
+                'take_item_group_ticket' => Config::CONFIG_PARENT,
+                'prevent_closure_ticket' => Config::CONFIG_PARENT,
+                'require_technician_to_close_ticket' => Config::CONFIG_PARENT,
+                'mandatory_task_category' => Config::CONFIG_PARENT,
             ],
         );
 
-        // Test effective configuration for child entity
+        // Test effective configuration for child entity — should inherit root values
         $effective_config = Config::getConfig($child_entity_id, true);
 
-        // Should return parent config
-        $this->assertEquals($parent_entity_id, $effective_config->fields['entities_id']);
         $this->assertEquals(1, $effective_config->fields['take_item_group_ticket']);
         $this->assertEquals(1, $effective_config->fields['prevent_closure_ticket']);
         $this->assertEquals(1, $effective_config->fields['require_technician_to_close_ticket']);
@@ -1429,7 +1405,7 @@ class ConfigTest extends MoreOptionsTestCase
      */
     public function testMultiLevelParentEntityConfigInheritance(): void
     {
-        $this->initEntitySession();
+        $this->login();
         // Create grandparent entity (level 1)
         $grandparent_entity = $this->createItem(
             \Entity::class,
@@ -1474,15 +1450,13 @@ class ConfigTest extends MoreOptionsTestCase
             $grandparent_conf->getID(),
             [
                 'entities_id' => $grandparent_entity_id,
-                'is_active' => 1,
-                'use_parent_entity' => 0, // This is the source config
                 'take_item_group_ticket' => 1,
                 'prevent_closure_ticket' => 1,
                 'require_technician_to_close_ticket' => 1,
             ],
         );
 
-        // Configure parent entity to use parent configuration (cascade)
+        // Configure parent entity to inherit from grandparent
         $this->assertIsInt($parent_entity_id);
         $parent_conf = Config::getConfig($parent_entity_id, false);
         $this->updateItem(
@@ -1490,15 +1464,13 @@ class ConfigTest extends MoreOptionsTestCase
             $parent_conf->getID(),
             [
                 'entities_id' => $parent_entity_id,
-                'is_active' => 1,
-                'use_parent_entity' => 1, // Cascade to grandparent
-                'take_item_group_ticket' => 0, // Should be ignored
-                'prevent_closure_ticket' => 0,
-                'require_technician_to_close_ticket' => 0,
+                'take_item_group_ticket' => Config::CONFIG_PARENT,
+                'prevent_closure_ticket' => Config::CONFIG_PARENT,
+                'require_technician_to_close_ticket' => Config::CONFIG_PARENT,
             ],
         );
 
-        // Configure child entity to use parent configuration
+        // Configure child entity to inherit from parent (which itself inherits from grandparent)
         $this->assertIsInt($child_entity_id);
         $child_conf = Config::getConfig($child_entity_id, false);
         $this->updateItem(
@@ -1506,26 +1478,22 @@ class ConfigTest extends MoreOptionsTestCase
             $child_conf->getID(),
             [
                 'entities_id' => $child_entity_id,
-                'is_active' => 1,
-                'use_parent_entity' => 1, // Should cascade to grandparent
-                'take_item_group_ticket' => 0, // Should be ignored
-                'prevent_closure_ticket' => 0,
-                'require_technician_to_close_ticket' => 0,
+                'take_item_group_ticket' => Config::CONFIG_PARENT,
+                'prevent_closure_ticket' => Config::CONFIG_PARENT,
+                'require_technician_to_close_ticket' => Config::CONFIG_PARENT,
             ],
         );
 
-        // Test effective configuration for child entity (should cascade to grandparent)
+        // Child should cascade through parent to resolve grandparent's values
         $effective_config = Config::getConfig($child_entity_id, true);
 
-        // The cascade should find a config with the expected values
-        // Note: Values may be -2 (CONFIG_PARENT) if not fully resolved, or 0 if inherited default
-        $this->assertContains($effective_config->fields['take_item_group_ticket'], [0, 1, -2]);
-        $this->assertContains($effective_config->fields['prevent_closure_ticket'], [0, 1, -2]);
-        $this->assertContains($effective_config->fields['require_technician_to_close_ticket'], [0, 1, -2]);
+        $this->assertEquals(1, $effective_config->fields['take_item_group_ticket']);
+        $this->assertEquals(1, $effective_config->fields['prevent_closure_ticket']);
+        $this->assertEquals(1, $effective_config->fields['require_technician_to_close_ticket']);
     }
 
     /**
-     * Test that child entity without use_parent_entity uses its own config
+     * Test that child entity without inheritance uses its own config
      */
     public function testChildEntityWithoutInheritanceUsesOwnConfig(): void
     {
@@ -1562,8 +1530,6 @@ class ConfigTest extends MoreOptionsTestCase
             $parent_conf->getID(),
             [
                 'entities_id' => $parent_entity_id,
-                'is_active' => 1,
-                'use_parent_entity' => 0,
                 'take_item_group_ticket' => 1,
                 'prevent_closure_ticket' => 1,
             ],
@@ -1577,8 +1543,6 @@ class ConfigTest extends MoreOptionsTestCase
             $child_conf->getID(),
             [
                 'entities_id' => $child_entity_id,
-                'is_active' => 1,
-                'use_parent_entity' => 0, // NO inheritance
                 'take_item_group_ticket' => 0, // Different from parent
                 'prevent_closure_ticket' => 0,
             ],
@@ -1619,8 +1583,6 @@ class ConfigTest extends MoreOptionsTestCase
             $test_conf->getID(),
             [
                 'entities_id' => $test_entity_id,
-                'is_active' => 1,
-                'use_parent_entity' => 0,
                 'take_item_group_ticket' => 1,
             ],
         );
@@ -1656,8 +1618,6 @@ class ConfigTest extends MoreOptionsTestCase
                 Config::class,
                 [
                     'entities_id' => 0,
-                    'is_active' => 1,
-                    'use_parent_entity' => 1, // This should be ignored for root entity
                     'take_item_group_ticket' => 1,
                 ],
             );
@@ -1668,7 +1628,6 @@ class ConfigTest extends MoreOptionsTestCase
                 Config::class,
                 $root_config->getID(),
                 [
-                    'use_parent_entity' => 1, // This should be ignored
                     'take_item_group_ticket' => 1,
                 ],
             );
@@ -1692,6 +1651,7 @@ class ConfigTest extends MoreOptionsTestCase
      */
     public function testControllerUsesEffectiveConfigWithInheritance(): void
     {
+        $this->login();
         $this->initEntitySession();
         // Create parent entity
         $parent_entity = $this->createItem(
@@ -1725,8 +1685,6 @@ class ConfigTest extends MoreOptionsTestCase
             $parent_conf->getID(),
             [
                 'entities_id' => $parent_entity_id,
-                'is_active' => 1,
-                'use_parent_entity' => 0,
                 'mandatory_task_category' => 1, // Enable mandatory task category
                 'mandatory_task_duration' => 1,
             ],
@@ -1740,8 +1698,6 @@ class ConfigTest extends MoreOptionsTestCase
             $child_conf->getID(),
             [
                 'entities_id' => $child_entity_id,
-                'is_active' => 1,
-                'use_parent_entity' => 1, // Inherit from parent
                 'mandatory_task_category' => 0, // Should be ignored
                 'mandatory_task_duration' => 0,
             ],
@@ -1760,7 +1716,18 @@ class ConfigTest extends MoreOptionsTestCase
         ];
 
         // Test Controller::checkTaskRequirements with inherited config
+        $this->updateItem(
+            Config::class,
+            $child_conf->getID(),
+            [
+                'entities_id'            => $child_entity_id,
+                'mandatory_task_category' => Config::CONFIG_PARENT,
+                'mandatory_task_duration' => Config::CONFIG_PARENT,
+            ],
+        );
         $result_task = \GlpiPlugin\Moreoptions\Controller::checkTaskRequirements($task);
+        $this->assertFalse($result_task->input, 'Child entity should block task via inherited mandatory config');
+        $this->clearSessionMessages();
 
         // Now test with filled mandatory fields
         $task2 = new \TicketTask();
@@ -1787,8 +1754,8 @@ class ConfigTest extends MoreOptionsTestCase
         $conf = $this->getCurrentConfig();
 
         $result = $this->updateTestConfig($conf, [
-            'is_active'   => 1,
             'entities_id' => 0,
+            'assign_technician_from_task_ticket' => 1,
         ]);
         $this->assertTrue($result);
 
@@ -1852,8 +1819,8 @@ class ConfigTest extends MoreOptionsTestCase
         $conf = $this->getCurrentConfig();
 
         $result = $this->updateTestConfig($conf, [
-            'is_active'   => 1,
             'entities_id' => 0,
+            'assign_technician_from_task_change' => 1,
         ]);
         $this->assertTrue($result);
 
@@ -1917,8 +1884,8 @@ class ConfigTest extends MoreOptionsTestCase
         $conf = $this->getCurrentConfig();
 
         $result = $this->updateTestConfig($conf, [
-            'is_active'   => 1,
             'entities_id' => 0,
+            'assign_technician_from_task_problem' => 1,
         ]);
         $this->assertTrue($result);
 
@@ -1973,5 +1940,477 @@ class ConfigTest extends MoreOptionsTestCase
         $assignedUser = reset($assigned_users_after);
         $this->assertEquals($tech_id, $assignedUser['users_id']);
         $this->assertEquals(\CommonITILActor::ASSIGN, $assignedUser['type']);
+    }
+
+    public function testAssignTechnicianFromTaskDisabledByConfig(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        $result = $this->updateTestConfig($conf, [
+            'entities_id' => 0,
+            'assign_technician_from_task_ticket' => 0,
+        ]);
+        $this->assertTrue($result);
+
+        $tech = $this->createItem(
+            \User::class,
+            [
+                'name'         => 'tech_from_task_disabled',
+                'password'     => 'tech_from_task_disabled',
+                'password2'    => 'tech_from_task_disabled',
+                '_profiles_id' => 4,
+            ],
+            ['password', 'password2'],
+        );
+        $tech_id = $tech->getID();
+
+        $ticket = $this->createItem(
+            \Ticket::class,
+            [
+                'name'    => 'Test ticket for disabled task assignment',
+                'content' => 'Test content',
+            ],
+        );
+        $ticket_id = $ticket->getID();
+
+        $this->createItem(
+            \TicketTask::class,
+            [
+                'tickets_id'    => $ticket_id,
+                'content'       => 'Test task',
+                'users_id_tech' => $tech_id,
+                'actiontime'    => 3600,
+                'state'         => \Planning::TODO,
+            ],
+        );
+
+        $ticket_user = new \Ticket_User();
+        $assigned_users = $ticket_user->find([
+            'tickets_id' => $ticket_id,
+            'users_id'   => $tech_id,
+            'type'       => \CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(0, $assigned_users);
+    }
+
+    /**
+     * Test that CONFIG_PARENT values are resolved through multiple entity levels.
+     *
+     * Hierarchy: Root(0) → A → B → C
+     *
+     * Root : take_item_group_ticket=1,  take_requester_group_ticket=2
+     * A    : take_item_group_ticket=CONFIG_PARENT, take_requester_group_ticket=1 (own)
+     * B    : take_item_group_ticket=0 (own),       take_requester_group_ticket=CONFIG_PARENT
+     * C    : take_item_group_ticket=CONFIG_PARENT, take_requester_group_ticket=CONFIG_PARENT
+     *
+     * Expected resolved values:
+     * A effective: take_item_group_ticket=1 (from root), take_requester_group_ticket=1 (own)
+     * B effective: take_item_group_ticket=0 (own),       take_requester_group_ticket=1 (from A)
+     * C effective: take_item_group_ticket=0 (from B),    take_requester_group_ticket=1 (from B→A)
+     */
+    public function testMultiLevelInheritanceResolvesConfigParentThroughChain(): void
+    {
+        $this->login();
+
+        $entity_a = $this->createItem(
+            \Entity::class,
+            ['name' => 'Inheritance Test A', 'entities_id' => 0],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $entity_b = $this->createItem(
+            \Entity::class,
+            ['name' => 'Inheritance Test B', 'entities_id' => $entity_a->getID()],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $entity_c = $this->createItem(
+            \Entity::class,
+            ['name' => 'Inheritance Test C', 'entities_id' => $entity_b->getID()],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        // Root: explicit values
+        $root_conf = Config::getConfig(0, false);
+        $this->updateItem(Config::class, $root_conf->getID(), [
+            'take_item_group_ticket'      => 1,
+            'take_requester_group_ticket' => 2,
+        ]);
+
+        // A: inherit take_item_group_ticket from root, own take_requester_group_ticket=1
+        $conf_a = Config::getConfig($entity_a->getID(), false);
+        $this->updateItem(Config::class, $conf_a->getID(), [
+            'take_item_group_ticket'      => Config::CONFIG_PARENT,
+            'take_requester_group_ticket' => 1,
+        ]);
+
+        // B: own take_item_group_ticket=0, inherit take_requester_group_ticket from A
+        $conf_b = Config::getConfig($entity_b->getID(), false);
+        $this->updateItem(Config::class, $conf_b->getID(), [
+            'take_item_group_ticket'      => 0,
+            'take_requester_group_ticket' => Config::CONFIG_PARENT,
+        ]);
+
+        // C: inherit everything
+        $conf_c = Config::getConfig($entity_c->getID(), false);
+        $this->updateItem(Config::class, $conf_c->getID(), [
+            'take_item_group_ticket'      => Config::CONFIG_PARENT,
+            'take_requester_group_ticket' => Config::CONFIG_PARENT,
+        ]);
+
+        // Entity A: CONFIG_PARENT resolves to root's value
+        $resolved_a = Config::getConfig($entity_a->getID());
+        $this->assertEquals(1, $resolved_a->fields['take_item_group_ticket'], 'A should inherit take_item_group_ticket=1 from root');
+        $this->assertEquals(1, $resolved_a->fields['take_requester_group_ticket'], 'A should keep its own take_requester_group_ticket=1');
+
+        // Entity B: own value wins over parent, CONFIG_PARENT resolves through A
+        $resolved_b = Config::getConfig($entity_b->getID());
+        $this->assertEquals(0, $resolved_b->fields['take_item_group_ticket'], 'B should keep its own take_item_group_ticket=0');
+        $this->assertEquals(1, $resolved_b->fields['take_requester_group_ticket'], 'B should inherit take_requester_group_ticket=1 from A');
+
+        // Entity C: CONFIG_PARENT resolves to B's effective values (not root's)
+        $resolved_c = Config::getConfig($entity_c->getID());
+        $this->assertEquals(0, $resolved_c->fields['take_item_group_ticket'], 'C should inherit take_item_group_ticket=0 from B (not root=1)');
+        $this->assertEquals(1, $resolved_c->fields['take_requester_group_ticket'], 'C should inherit take_requester_group_ticket=1 through B→A');
+    }
+
+    /**
+     * Test that a child entity resolves grandparent values through a full CONFIG_PARENT chain.
+     *
+     * Hierarchy: Grandparent (explicit) → Parent (CONFIG_PARENT) → Child (CONFIG_PARENT)
+     * Expected: child gets grandparent's values, not CONFIG_PARENT sentinel (-2).
+     */
+    public function testGrandparentToParentToChildAllInherit(): void
+    {
+        $this->login();
+
+        $grandparent = $this->createItem(
+            \Entity::class,
+            ['name' => 'GP2P2C Grandparent', 'entities_id' => 0],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $parent = $this->createItem(
+            \Entity::class,
+            ['name' => 'GP2P2C Parent', 'entities_id' => $grandparent->getID()],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $child = $this->createItem(
+            \Entity::class,
+            ['name' => 'GP2P2C Child', 'entities_id' => $parent->getID()],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $gp_conf = Config::getConfig($grandparent->getID(), false);
+        $this->updateItem(Config::class, $gp_conf->getID(), [
+            'take_item_group_ticket' => 1,
+            'prevent_closure_ticket' => 1,
+            'mandatory_task_category' => 1,
+        ]);
+
+        $parent_conf = Config::getConfig($parent->getID(), false);
+        $this->updateItem(Config::class, $parent_conf->getID(), [
+            'take_item_group_ticket' => Config::CONFIG_PARENT,
+            'prevent_closure_ticket' => Config::CONFIG_PARENT,
+            'mandatory_task_category' => Config::CONFIG_PARENT,
+        ]);
+
+        $child_conf = Config::getConfig($child->getID(), false);
+        $this->updateItem(Config::class, $child_conf->getID(), [
+            'take_item_group_ticket' => Config::CONFIG_PARENT,
+            'prevent_closure_ticket' => Config::CONFIG_PARENT,
+            'mandatory_task_category' => Config::CONFIG_PARENT,
+        ]);
+
+        $resolved = Config::getConfig($child->getID());
+
+        $this->assertEquals(
+            1,
+            $resolved->fields['take_item_group_ticket'],
+            'Child should resolve to grandparent value (1) through the full CONFIG_PARENT chain',
+        );
+        $this->assertEquals(
+            1,
+            $resolved->fields['prevent_closure_ticket'],
+            'Child should resolve to grandparent value (1) through the full CONFIG_PARENT chain',
+        );
+        $this->assertEquals(
+            1,
+            $resolved->fields['mandatory_task_category'],
+            'Child should resolve to grandparent value (1) through the full CONFIG_PARENT chain',
+        );
+    }
+
+    /**
+     * Test that a child using CONFIG_PARENT gets the parent's own value, not the grandparent's,
+     * when the parent has an explicit override.
+     *
+     * Hierarchy: Grandparent (value=1) → Parent (own value=2) → Child (CONFIG_PARENT)
+     * Expected: child gets 2 (parent's override), not 1 (grandparent's value).
+     */
+    public function testChildInheritsParentOverrideNotGrandparent(): void
+    {
+        $this->login();
+
+        $grandparent = $this->createItem(
+            \Entity::class,
+            ['name' => 'Override GP', 'entities_id' => 0],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $parent = $this->createItem(
+            \Entity::class,
+            ['name' => 'Override Parent', 'entities_id' => $grandparent->getID()],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $child = $this->createItem(
+            \Entity::class,
+            ['name' => 'Override Child', 'entities_id' => $parent->getID()],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $gp_conf = Config::getConfig($grandparent->getID(), false);
+        $this->updateItem(Config::class, $gp_conf->getID(), [
+            'take_item_group_ticket' => 1,
+            'take_requester_group_ticket' => 1,
+        ]);
+
+        // Parent overrides with different explicit values
+        $parent_conf = Config::getConfig($parent->getID(), false);
+        $this->updateItem(Config::class, $parent_conf->getID(), [
+            'take_item_group_ticket' => 2,
+            'take_requester_group_ticket' => 0,
+        ]);
+
+        $child_conf = Config::getConfig($child->getID(), false);
+        $this->updateItem(Config::class, $child_conf->getID(), [
+            'take_item_group_ticket' => Config::CONFIG_PARENT,
+            'take_requester_group_ticket' => Config::CONFIG_PARENT,
+        ]);
+
+        $resolved = Config::getConfig($child->getID());
+
+        $this->assertEquals(
+            2,
+            $resolved->fields['take_item_group_ticket'],
+            'Child should inherit parent override (2), not grandparent value (1)',
+        );
+        $this->assertEquals(
+            0,
+            $resolved->fields['take_requester_group_ticket'],
+            'Child should inherit parent override (0), not grandparent value (1)',
+        );
+    }
+
+    /**
+     * Test that addConfig() initializes actor group fields to CONFIG_PARENT for non-root entities,
+     * and that those values are then resolved correctly through the inheritance chain.
+     *
+     * This test will FAIL if getActorGroupConfigFields() is missing from addConfig().
+     */
+    public function testActorGroupFieldsInheritFromParent(): void
+    {
+        $this->login();
+
+        $parent_entity = $this->createItem(
+            \Entity::class,
+            ['name' => 'Actor Group Parent Entity', 'entities_id' => 0],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $child_entity = $this->createItem(
+            \Entity::class,
+            ['name' => 'Actor Group Child Entity', 'entities_id' => $parent_entity->getID()],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        // addConfig() must have stored CONFIG_PARENT for actor group fields on the child — verify raw DB value
+        $child_conf_raw = Config::getConfig($child_entity->getID(), false);
+        foreach (['take_requester_group_ticket', 'take_requester_group_change', 'take_requester_group_problem',
+            'take_technician_group_ticket', 'take_technician_group_change', 'take_technician_group_problem'] as $field) {
+            $this->assertEquals(
+                Config::CONFIG_PARENT,
+                $child_conf_raw->fields[$field],
+                "addConfig() must initialize $field to CONFIG_PARENT for non-root entities",
+            );
+        }
+
+        // Configure parent with explicit actor group values
+        $parent_conf = Config::getConfig($parent_entity->getID(), false);
+        $this->updateItem(Config::class, $parent_conf->getID(), [
+            'take_requester_group_ticket'   => 2,
+            'take_technician_group_ticket'  => 1,
+            'take_requester_group_change'   => 1,
+            'take_technician_group_change'  => 2,
+            'take_requester_group_problem'  => 2,
+            'take_technician_group_problem' => 1,
+        ]);
+
+        // With inheritance, child must resolve to parent's values
+        $resolved = Config::getConfig($child_entity->getID(), true);
+
+        $this->assertEquals(2, $resolved->fields['take_requester_group_ticket'], 'Child should inherit take_requester_group_ticket=2 from parent');
+        $this->assertEquals(1, $resolved->fields['take_technician_group_ticket'], 'Child should inherit take_technician_group_ticket=1 from parent');
+        $this->assertEquals(1, $resolved->fields['take_requester_group_change'], 'Child should inherit take_requester_group_change=1 from parent');
+        $this->assertEquals(2, $resolved->fields['take_technician_group_change'], 'Child should inherit take_technician_group_change=2 from parent');
+        $this->assertEquals(2, $resolved->fields['take_requester_group_problem'], 'Child should inherit take_requester_group_problem=2 from parent');
+        $this->assertEquals(1, $resolved->fields['take_technician_group_problem'], 'Child should inherit take_technician_group_problem=1 from parent');
+    }
+
+    /**
+     * Test that child entity fields set to CONFIG_PARENT propagate correctly to
+     * Controller::checkTaskRequirements, asserting both the blocked outcome (empty
+     * mandatory fields) and the unblocked outcome (filled mandatory fields).
+     */
+    public function testCheckTaskRequirementsWithInheritedConfig(): void
+    {
+        $this->login();
+
+        $parent_entity = $this->createItem(
+            \Entity::class,
+            ['name' => 'Task Requirements Parent', 'entities_id' => 0],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $child_entity = $this->createItem(
+            \Entity::class,
+            ['name' => 'Task Requirements Child', 'entities_id' => $parent_entity->getID()],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        // Parent enables all mandatory task fields
+        $parent_conf = Config::getConfig($parent_entity->getID(), false);
+        $this->updateItem(Config::class, $parent_conf->getID(), [
+            'mandatory_task_category' => 1,
+            'mandatory_task_duration' => 1,
+            'mandatory_task_user'     => 1,
+            'mandatory_task_group'    => 1,
+        ]);
+
+        // Child inherits all mandatory task fields from parent via CONFIG_PARENT
+        $child_conf = Config::getConfig($child_entity->getID(), false);
+        $this->updateItem(Config::class, $child_conf->getID(), [
+            'mandatory_task_category' => Config::CONFIG_PARENT,
+            'mandatory_task_duration' => Config::CONFIG_PARENT,
+            'mandatory_task_user'     => Config::CONFIG_PARENT,
+            'mandatory_task_group'    => Config::CONFIG_PARENT,
+        ]);
+
+        $original_entity = $_SESSION['glpiactive_entity'];
+        $_SESSION['glpiactive_entity'] = $child_entity->getID();
+
+        // Blocked: missing all mandatory fields — inherited config from parent must block creation
+        $task_empty = new \TicketTask();
+        $task_empty->input = ['content' => 'Test task missing fields'];
+        \GlpiPlugin\Moreoptions\Controller::checkTaskRequirements($task_empty);
+        $this->assertFalse($task_empty->input, 'Task with missing mandatory fields should be blocked (input=false) via inherited config');
+        $this->clearSessionMessages();
+
+        // Unblocked: all mandatory fields filled — inherited config must allow creation
+        $task_filled = new \TicketTask();
+        $task_filled->input = [
+            'content'           => 'Test task with all fields',
+            'taskcategories_id' => 1,
+            'actiontime'        => 3600,
+            'users_id_tech'     => 1,
+            'groups_id_tech'    => 1,
+        ];
+        \GlpiPlugin\Moreoptions\Controller::checkTaskRequirements($task_filled);
+        $this->assertNotFalse($task_filled->input, 'Task with all mandatory fields filled should not be blocked');
+
+        $_SESSION['glpiactive_entity'] = $original_entity;
+    }
+
+    /**
+     * Test that different fields in the same entity can be resolved at different levels
+     * of a three-level hierarchy.
+     *
+     * Hierarchy: Grandparent → Parent → Child
+     * - take_item_group_ticket:      GP=1, Parent=CONFIG_PARENT, Child=CONFIG_PARENT → child gets 1
+     * - take_requester_group_ticket: GP=2, Parent=0 (own),        Child=CONFIG_PARENT → child gets 0
+     * - prevent_closure_ticket:      GP=1, Parent=1 (explicit),   Child=0 (own)       → child keeps 0
+     */
+    public function testMixedFieldInheritanceThroughThreeLevels(): void
+    {
+        $this->login();
+
+        $grandparent = $this->createItem(
+            \Entity::class,
+            ['name' => 'Mixed GP', 'entities_id' => 0],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $parent = $this->createItem(
+            \Entity::class,
+            ['name' => 'Mixed Parent', 'entities_id' => $grandparent->getID()],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $child = $this->createItem(
+            \Entity::class,
+            ['name' => 'Mixed Child', 'entities_id' => $parent->getID()],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $gp_conf = Config::getConfig($grandparent->getID(), false);
+        $this->updateItem(Config::class, $gp_conf->getID(), [
+            'take_item_group_ticket'      => 1,
+            'take_requester_group_ticket' => 2,
+            'prevent_closure_ticket'      => 1,
+        ]);
+
+        // Parent inherits field_a, overrides field_b, sets field_c explicitly
+        $parent_conf = Config::getConfig($parent->getID(), false);
+        $this->updateItem(Config::class, $parent_conf->getID(), [
+            'take_item_group_ticket'      => Config::CONFIG_PARENT, // inherits GP's 1
+            'take_requester_group_ticket' => 0,                    // own override of GP's 2
+            'prevent_closure_ticket'      => 1,                    // same as GP but explicit
+        ]);
+
+        // Child inherits field_a and field_b from parent, owns field_c
+        $child_conf = Config::getConfig($child->getID(), false);
+        $this->updateItem(Config::class, $child_conf->getID(), [
+            'take_item_group_ticket'      => Config::CONFIG_PARENT, // cascades to GP's 1
+            'take_requester_group_ticket' => Config::CONFIG_PARENT, // parent's override: 0
+            'prevent_closure_ticket'      => 0,                    // own explicit value
+        ]);
+
+        $resolved = Config::getConfig($child->getID());
+
+        $this->assertEquals(
+            1,
+            $resolved->fields['take_item_group_ticket'],
+            'Child should resolve to 1 from grandparent (parent also inherits this field)',
+        );
+        $this->assertEquals(
+            0,
+            $resolved->fields['take_requester_group_ticket'],
+            'Child should get parent override (0), not grandparent value (2)',
+        );
+        $this->assertEquals(
+            0,
+            $resolved->fields['prevent_closure_ticket'],
+            'Child should keep its own explicit value (0), ignoring parent and grandparent',
+        );
     }
 }

@@ -86,10 +86,6 @@ class Controller extends CommonDBTM
         }
         $moconfig = Config::getConfig();
 
-        if ($moconfig->fields['is_active'] != 1) {
-            return;
-        }
-
         switch ($item) {
             case $item instanceof Ticket_User:
                 if ($item->fields['type'] == \CommonITILActor::REQUESTER) {
@@ -132,9 +128,6 @@ class Controller extends CommonDBTM
     public static function addItemGroups(CommonDBTM $item): void
     {
         $conf = Config::getConfig();
-        if ($conf->fields['is_active'] != 1) {
-            return;
-        }
 
         // Mapping of item types to their configuration fields and group classes
         $itemMappings = [
@@ -239,7 +232,7 @@ class Controller extends CommonDBTM
                     $t_group->add($criteria);
                 }
             } else {
-                // USe all groups of the user
+                // Use all groups of the user
                 $users_groups = new \Group_User();
                 if (isset($actor['items_id'])) {
                     $u_groups = $users_groups->find([
@@ -257,13 +250,7 @@ class Controller extends CommonDBTM
                         ];
 
                         if (!$t_group->getFromDBByCrit($criteria)) {
-                            $groupData = [
-                                'groups_id' => $ug['groups_id'],
-                                $idField => $object->fields['id'],
-                                'type' => $actorType,
-                            ];
-
-                            $t_group->add($groupData);
+                            $t_group->add($criteria);
                         }
                     }
                 }
@@ -311,9 +298,6 @@ class Controller extends CommonDBTM
     public static function preventClosure(CommonDBTM $item): bool
     {
         $conf = Config::getConfig();
-        if ($conf->fields['is_active'] != 1) {
-            return true;
-        }
 
         $tasks = [];
 
@@ -349,9 +333,6 @@ class Controller extends CommonDBTM
     public static function requireFieldsToClose(CommonDBTM $item, bool $is_solution = false): bool
     {
         $conf = Config::getConfig();
-        if ($conf->fields['is_active'] != 1) {
-            return true;
-        }
 
         $message = '';
         $itemtype = get_class($item);
@@ -447,9 +428,6 @@ class Controller extends CommonDBTM
     public static function checkTaskRequirements(CommonDBTM $item): CommonDBTM
     {
         $conf = Config::getConfig();
-        if ($conf->fields['is_active'] != 1) {
-            return $item;
-        }
 
         $message = '';
         if ($conf->fields['mandatory_task_category'] == 1) {
@@ -488,9 +466,6 @@ class Controller extends CommonDBTM
     public static function updateItemActors(CommonITILObject $item): CommonITILObject
     {
         $conf = Config::getConfig();
-        if ($conf->fields['is_active'] != 1) {
-            return $item;
-        }
 
         switch (get_class($item)) {
             case 'Ticket':
@@ -556,10 +531,7 @@ class Controller extends CommonDBTM
      */
     public static function assignTechnicianFromTask(\CommonITILTask $item): void
     {
-        $conf = Config::getConfig(Session::getActiveEntity());
-        if ($conf->fields['is_active'] != 1) {
-            return;
-        }
+        $conf = Config::getConfig();
 
         // Check if a technician is assigned to the task
         if (empty($item->fields['users_id_tech'])) {
@@ -571,7 +543,7 @@ class Controller extends CommonDBTM
         // Determine the parent ITIL object and user link class based on task type
         switch ($item::class) {
             case TicketTask::class:
-                if (empty($item->fields['tickets_id'])) {
+                if ($conf->fields['assign_technician_from_task_ticket'] != 1 || empty($item->fields['tickets_id'])) {
                     return;
                 }
                 $itilObject = new Ticket();
@@ -581,7 +553,7 @@ class Controller extends CommonDBTM
                 break;
 
             case ChangeTask::class:
-                if (empty($item->fields['changes_id'])) {
+                if ($conf->fields['assign_technician_from_task_change'] != 1 || empty($item->fields['changes_id'])) {
                     return;
                 }
                 $itilObject = new Change();
@@ -591,7 +563,7 @@ class Controller extends CommonDBTM
                 break;
 
             case ProblemTask::class:
-                if (empty($item->fields['problems_id'])) {
+                if ($conf->fields['assign_technician_from_task_problem'] != 1 || empty($item->fields['problems_id'])) {
                     return;
                 }
                 $itilObject = new Problem();

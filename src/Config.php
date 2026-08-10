@@ -47,6 +47,7 @@ class Config extends CommonDBTM
 {
     public $dohistory = true;
     public static $rightname = 'config';
+    public const CONFIG_PARENT = \Entity::CONFIG_PARENT;
     public static function getMenuName(): string
     {
         return __('More options', 'moreoptions');
@@ -69,12 +70,12 @@ class Config extends CommonDBTM
 
     public static function canView(): bool
     {
-        return true;
+        return (bool) Session::haveRight(self::$rightname, READ);
     }
 
     public function canEdit($ID): bool
     {
-        return true;
+        return (bool) Session::haveRight(self::$rightname, UPDATE);
     }
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0): string
@@ -104,11 +105,9 @@ class Config extends CommonDBTM
             return $item;
         }
 
-        foreach (self::getItilConfigFields() as $field) {
-            if (!isset($item->input[$field])) {
-                $item->input[$field] = 0;
-            } elseif ($item->input[$field] == 'on') {
-                $item->input[$field] = 1;
+        foreach (self::getAllConfigFields() as $field) {
+            if (isset($item->input[$field])) {
+                $item->input[$field] = (int) $item->input[$field];
             }
         }
 
@@ -121,7 +120,6 @@ class Config extends CommonDBTM
     public static function getItilConfigFields(): array
     {
         return [
-            'use_parent_entity',
             'take_item_group_ticket',
             'take_item_group_change',
             'take_item_group_problem',
@@ -153,7 +151,33 @@ class Config extends CommonDBTM
             'mandatory_task_duration',
             'mandatory_task_user',
             'mandatory_task_group',
+            'assign_technician_from_task_ticket',
+            'assign_technician_from_task_change',
+            'assign_technician_from_task_problem',
         ];
+    }
+
+    /**
+     * @return array<string>
+     */
+    private static function getActorGroupConfigFields(): array
+    {
+        return [
+            'take_requester_group_ticket',
+            'take_requester_group_change',
+            'take_requester_group_problem',
+            'take_technician_group_ticket',
+            'take_technician_group_change',
+            'take_technician_group_problem',
+        ];
+    }
+
+    /**
+     * @return array<string>
+     */
+    private static function getAllConfigFields(): array
+    {
+        return array_merge(self::getItilConfigFields(), self::getActorGroupConfigFields());
     }
 
     /**
@@ -175,25 +199,26 @@ class Config extends CommonDBTM
             'entities_id' => $item->getID(),
         ]);
 
-        // Get effective configuration to show which entity's config is actually used
-        $effectiveConfig = self::getConfig($item->getID(), true);
-        $parentEntityInfo = null;
-
-        if (($moconfig->fields['use_parent_entity'] ?? false) && ($effectiveConfig->fields['entities_id'] != $item->getID())) {
-            $parentEntity = new Entity();
-            if ($parentEntity->getFromDB($effectiveConfig->fields['entities_id'])) {
-                $parentEntityInfo = $parentEntity->getName();
+        $inheritance_labels = [];
+        if ($item->getID() > 0) {
+            $parentConfig = self::getConfig($item->fields['entities_id'], true);
+            foreach (self::getItilConfigFields() as $field) {
+                $inheritance_labels[$field] = self::getInheritedValueBadge($parentConfig->fields[$field] ?? 0);
+            }
+            foreach (self::getActorGroupConfigFields() as $field) {
+                $inheritance_labels[$field] = self::getInheritedValueBadgeForActorGroup($parentConfig->fields[$field] ?? 0);
             }
         }
 
         TemplateRenderer::getInstance()->display(
             '@moreoptions/config.html.twig',
             [
-                'item' => $moconfig,
-                'dropdown_options' => self::getSelectableActorGroup(),
-                'parent_entity_info' => $parentEntityInfo,
-                'params' => [
-                    'canedit' => true,
+                'item'               => $moconfig,
+                'dropdown_options'   => self::getSelectableActorGroup(),
+                'inheritance_labels' => $inheritance_labels,
+                'config_parent'      => self::CONFIG_PARENT,
+                'params'             => [
+                    'canedit' => self::canUpdate(),
                 ],
             ],
         );
@@ -204,13 +229,33 @@ class Config extends CommonDBTM
         return "ti ti-send";
     }
 
+    private static function getInheritedValueBadge(mixed $value): string
+    {
+        $text = match ((int) $value) {
+            1       => __('Yes'),
+            default => __('No'),
+        };
+        return Entity::inheritedValue(htmlescape($text), false, false);
+    }
+
+    private static function getInheritedValueBadgeForActorGroup(mixed $value): string
+    {
+        $options = self::getSelectableActorGroup();
+        $text = $options[(int) $value] ?? __('No');
+        return Entity::inheritedValue(htmlescape($text), false, false);
+    }
+
     public static function addConfig(CommonDBTM $item): void
     {
         $moconfig = new self();
-        $moconfig->add([
-            'is_active' => 0,
-            'entities_id' => $item->getID(),
-        ]);
+        $entity_id = $item->getID();
+        $data = ['entities_id' => $entity_id];
+        if ($entity_id > 0) {
+            foreach (self::getAllConfigFields() as $field) {
+                $data[$field] = self::CONFIG_PARENT;
+            }
+        }
+        $moconfig->add($data);
     }
 
     /**
@@ -222,7 +267,6 @@ class Config extends CommonDBTM
      */
     public static function getConfig(?int $entityId = null, bool $useInheritance = true): self
     {
-        // Use current entity if not specified
         if ($entityId === null) {
             $entityId = Session::getActiveEntity();
         }
@@ -232,12 +276,15 @@ class Config extends CommonDBTM
             'entities_id' => $entityId,
         ]);
 
-        // If inheritance is enabled, use_parent_entity is set, and we're not at root entity
-        if ($useInheritance && ($moconfig->fields['use_parent_entity'] ?? false) && $entityId > 0) {
+        if ($useInheritance && $entityId > 0) {
             $entity = new Entity();
             if ($entity->getFromDB($entityId)) {
-                $parentId = $entity->fields['entities_id'];
-                return self::getConfig($parentId, true);
+                $parentConfig = self::getConfig((int) $entity->fields['entities_id'], true);
+                foreach (self::getAllConfigFields() as $field) {
+                    if (($moconfig->fields[$field] ?? 0) == self::CONFIG_PARENT) {
+                        $moconfig->fields[$field] = $parentConfig->fields[$field] ?? 0;
+                    }
+                }
             }
         }
 
@@ -253,18 +300,16 @@ class Config extends CommonDBTM
             $migration->displayMessage("Installing $table");
             $query = "CREATE TABLE IF NOT EXISTS `$table` (
                 `id` int unsigned NOT NULL AUTO_INCREMENT,
-                `is_active`  tinyint NOT NULL DEFAULT '1',
                 `entities_id` int unsigned NOT NULL DEFAULT '0',
-                `use_parent_entity` tinyint NOT NULL DEFAULT '0',
-                `take_item_group_ticket` tinyint NOT NULL DEFAULT '-2',
+                `take_item_group_ticket` tinyint NOT NULL DEFAULT '0',
                 `take_item_group_change` tinyint NOT NULL DEFAULT '0',
                 `take_item_group_problem` tinyint NOT NULL DEFAULT '0',
-                `take_requester_group_ticket` int unsigned NOT NULL DEFAULT '0',
-                `take_requester_group_change` int unsigned NOT NULL DEFAULT '0',
-                `take_requester_group_problem` int unsigned NOT NULL DEFAULT '0',
-                `take_technician_group_ticket` int unsigned NOT NULL DEFAULT '0',
-                `take_technician_group_change` int unsigned NOT NULL DEFAULT '0',
-                `take_technician_group_problem` int unsigned NOT NULL DEFAULT '0',
+                `take_requester_group_ticket` tinyint NOT NULL DEFAULT '0',
+                `take_requester_group_change` tinyint NOT NULL DEFAULT '0',
+                `take_requester_group_problem` tinyint NOT NULL DEFAULT '0',
+                `take_technician_group_ticket` tinyint NOT NULL DEFAULT '0',
+                `take_technician_group_change` tinyint NOT NULL DEFAULT '0',
+                `take_technician_group_problem` tinyint NOT NULL DEFAULT '0',
                 `prevent_closure_ticket` tinyint NOT NULL DEFAULT '0',
                 `prevent_closure_change` tinyint NOT NULL DEFAULT '0',
                 `prevent_closure_problem` tinyint NOT NULL DEFAULT '0',
@@ -293,30 +338,49 @@ class Config extends CommonDBTM
                 `mandatory_task_duration` tinyint NOT NULL DEFAULT '0',
                 `mandatory_task_user` tinyint NOT NULL DEFAULT '0',
                 `mandatory_task_group` tinyint NOT NULL DEFAULT '0',
+                `assign_technician_from_task_ticket` tinyint NOT NULL DEFAULT '0',
+                `assign_technician_from_task_change` tinyint NOT NULL DEFAULT '0',
+                `assign_technician_from_task_problem` tinyint NOT NULL DEFAULT '0',
                 PRIMARY KEY (`id`),
-                KEY `entities_id` (`entities_id`),
-                KEY `is_active` (`is_active`)
+                KEY `entities_id` (`entities_id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
               ";
             $DB->doQuery($query);
         }
 
-        // Migration: Add use_parent_entity column if it doesn't exist
-        if (!$DB->fieldExists($table, 'use_parent_entity')) {
-            $migration->displayMessage("Adding use_parent_entity field to $table");
-            $migration->addField($table, 'use_parent_entity', 'tinyint', [
-                'after' => 'entities_id',
-                'value' => 0,
-                'nodefault' => false,
-            ]);
+        foreach (self::getActorGroupConfigFields() as $field) {
+            if (!$DB->fieldExists($table, $field)) {
+                $migration->changeField($table, $field, $field, 'bool', ['value' => '0']);
+            }
         }
+
+        foreach (
+            [
+                'assign_technician_from_task_ticket',
+                'assign_technician_from_task_change',
+                'assign_technician_from_task_problem',
+            ] as $field
+        ) {
+            if (!$DB->fieldExists($table, $field)) {
+                $migration->addField($table, $field, 'bool', ['value' => '0']);
+            }
+        }
+
+        $migration->executeMigration();
 
         $entities = new Entity();
         foreach ($entities->find() as $entity) {
             if (is_array($entity) && isset($entity['id'])) {
-                $data = [
-                    'entities_id' => $entity['id'],
-                ];
+                $entity_id = (int) $entity['id'];
+                if (countElementsInTable(self::getTable(), ['entities_id' => $entity_id]) > 0) {
+                    continue;
+                }
+                $data = ['entities_id' => $entity_id];
+                if ($entity_id > 0) {
+                    foreach (self::getAllConfigFields() as $field) {
+                        $data[$field] = self::CONFIG_PARENT;
+                    }
+                }
                 $DB->insert(
                     self::getTable(),
                     $data,
