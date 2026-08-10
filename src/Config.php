@@ -70,14 +70,6 @@ class Config extends CommonDBTM
 
     public static function canView(): bool
     {
-        return true;
-    }
-
-    public function canEdit($ID): bool
-    {
-        return true;
-    public static function canView(): bool
-    {
         return Session::haveRight(self::$rightname, READ);
     }
 
