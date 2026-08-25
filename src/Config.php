@@ -41,6 +41,7 @@ use CommonGLPI;
 use Entity;
 use Glpi\Application\View\TemplateRenderer;
 use Migration;
+use Plugin;
 use Session;
 
 class Config extends CommonDBTM
@@ -192,6 +193,90 @@ class Config extends CommonDBTM
         ];
     }
 
+    /**
+     * Escalade provides the same feature ("Use the technician's group") with a
+     * global configuration, while this plugin configures it per entity. When the
+     * Escalade option is effectively enabled, it takes precedence over ours.
+     */
+    public static function isTechnicianGroupHandledByEscalade(): bool
+    {
+        if (!Plugin::isPluginActive('escalade')) {
+            return false;
+        }
+
+        $escalade_config = self::getEscaladeConfig();
+        if ($escalade_config === null) {
+            return false;
+        }
+
+        // The main option only selects which groups are used: the feature stays
+        // inert unless it is also enabled on creation and/or on modification.
+        if ((int) ($escalade_config['use_assign_user_group'] ?? 0) === 0) {
+            return false;
+        }
+
+        // Older Escalade versions have no sub-options: the main one was enough.
+        $on_creation     = (int) ($escalade_config['use_assign_user_group_creation'] ?? 1) !== 0;
+        $on_modification = (int) ($escalade_config['use_assign_user_group_modification'] ?? 1) !== 0;
+
+        // On creation, Escalade steps aside when the Behaviors plugin owns the
+        // feature (see PluginEscaladeTicket::assignUserGroup()).
+        if ($on_creation && self::isTechnicianGroupHandledByBehaviors()) {
+            $on_creation = false;
+        }
+
+        return $on_creation || $on_modification;
+    }
+
+    /**
+     * Get the Escalade configuration, from the session when available, from the
+     * database otherwise (CLI, tests, ...).
+     *
+     * @return array<string, mixed>|null
+     */
+    private static function getEscaladeConfig(): ?array
+    {
+        /** @var \DBmysql $DB */
+        global $DB;
+
+        if (isset($_SESSION['glpi_plugins']['escalade']['config']) && is_array($_SESSION['glpi_plugins']['escalade']['config'])) {
+            return $_SESSION['glpi_plugins']['escalade']['config'];
+        }
+
+        $table = 'glpi_plugin_escalade_configs';
+        if (!$DB->tableExists($table) || !$DB->fieldExists($table, 'use_assign_user_group')) {
+            return null;
+        }
+
+        $fields = ['use_assign_user_group'];
+        foreach (['use_assign_user_group_creation', 'use_assign_user_group_modification'] as $field) {
+            if ($DB->fieldExists($table, $field)) {
+                $fields[] = $field;
+            }
+        }
+
+        $escalade_config = $DB->request([
+            'SELECT' => $fields,
+            'FROM'   => $table,
+            'LIMIT'  => 1,
+        ])->current();
+
+        return is_array($escalade_config) ? $escalade_config : null;
+    }
+
+    /**
+     * The Behaviors plugin provides the same feature too, and Escalade gives it
+     * precedence on ticket creation.
+     */
+    private static function isTechnicianGroupHandledByBehaviors(): bool
+    {
+        if (!Plugin::isPluginActive('behaviors') || !class_exists(\GlpiPlugin\Behaviors\Config::class)) {
+            return false;
+        }
+
+        return (int) \GlpiPlugin\Behaviors\Config::getInstance()->getField('use_assign_user_group') !== 0;
+    }
+
     public static function showForEntity(Entity $item): void
     {
         $moconfig = new self();
@@ -217,6 +302,7 @@ class Config extends CommonDBTM
                 'dropdown_options'   => self::getSelectableActorGroup(),
                 'inheritance_labels' => $inheritance_labels,
                 'config_parent'      => self::CONFIG_PARENT,
+                'escalade_takes_technician_group' => self::isTechnicianGroupHandledByEscalade(),
                 'params'             => [
                     'canedit' => self::canUpdate(),
                 ],

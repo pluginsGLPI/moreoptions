@@ -94,6 +94,12 @@ class Controller extends CommonDBTM
                     }
                 } elseif ($item->fields['type'] == \CommonITILActor::ASSIGN) {
                     if ($moconfig->fields['take_technician_group_ticket'] != 0) {
+                        if (Config::isTechnicianGroupHandledByEscalade()) {
+                            // Escalade handles the same feature with a global
+                            // configuration: it takes precedence over ours, so we
+                            // just skip our own processing.
+                            return;
+                        }
                         self::addGroupsForActorType($item, $moconfig, \CommonITILActor::ASSIGN, 'take_technician_group_ticket', 'Ticket');
                     }
                 }
@@ -209,6 +215,15 @@ class Controller extends CommonDBTM
 
         $object->getFromDB($item->fields[$idField]);
 
+        // Escalade reacts to every technician group assignment: it would keep only
+        // the last group added and unassign the technicians. This flag asks it to
+        // skip its own processing for the assignments we make here, which also means
+        // no group cleanup, no escalation history entry and no automatic status
+        // change on its side.
+        $escalade_options = $groupClass === Group_Ticket::class
+            ? ['_plugin_escalade_rules_only' => true]
+            : [];
+
         $actors = $object->getActorsForType($actorType);
         foreach ($actors as $actor) {
             if (!is_array($actor) || !isset($actor['itemtype']) || $actor['itemtype'] !== 'User') {
@@ -229,7 +244,7 @@ class Controller extends CommonDBTM
                 ];
 
                 if (!$t_group->getFromDBByCrit($criteria)) {
-                    $t_group->add($criteria);
+                    $t_group->add($criteria + $escalade_options);
                 }
             } else {
                 // Use all groups of the user
@@ -250,7 +265,7 @@ class Controller extends CommonDBTM
                         ];
 
                         if (!$t_group->getFromDBByCrit($criteria)) {
-                            $t_group->add($criteria);
+                            $t_group->add($criteria + $escalade_options);
                         }
                     }
                 }

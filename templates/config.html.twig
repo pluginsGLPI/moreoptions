@@ -41,6 +41,16 @@
 {% set dropdown_options_with_inherit = inherit_option + dropdown_options %}
 {% set cell_options = {'no_label': true, 'field_class': 'col-12'} %}
 
+{# Escalade owns the same feature with a global configuration: our per-entity option is then inoperative #}
+{% set escalade_takes_technician_group = escalade_takes_technician_group|default(false) %}
+{% set escalade_technician_group_warning %}
+    {% if escalade_takes_technician_group %}
+        <div class="text-warning small mt-1">
+            <i class="ti ti-alert-triangle me-1"></i>{{ __('The "Use the technician\'s group" option from Escalade is enabled and takes precedence over this one.', 'moreoptions') }}
+        </div>
+    {% endif %}
+{% endset %}
+
 <div class="asset">
     <form action="{{ path('plugins/moreoptions/front/config.form.php') }}" method="post">
     {% set item_has_pictures = item.hasItemtypeOrModelPictures() %}
@@ -81,7 +91,7 @@
                                     </tr>
                                     <tr>
                                         <td>{{ __('Take the technician group', 'moreoptions') }}</td>
-                                        <td>{{ fields.dropdownArrayField('take_technician_group_ticket', item.fields['take_technician_group_ticket'], dropdown_options_with_inherit, '', cell_options|merge({'add_field_html': inheritance_labels['take_technician_group_ticket']|default(null)})) }}</td>
+                                        <td>{{ fields.dropdownArrayField('take_technician_group_ticket', item.fields['take_technician_group_ticket'], dropdown_options_with_inherit, '', cell_options|merge({'disabled': escalade_takes_technician_group, 'add_field_html': (inheritance_labels['take_technician_group_ticket']|default('')) ~ escalade_technician_group_warning})) }}</td>
                                         <td>{{ fields.dropdownArrayField('take_technician_group_change', item.fields['take_technician_group_change'], dropdown_options_with_inherit, '', cell_options|merge({'add_field_html': inheritance_labels['take_technician_group_change']|default(null)})) }}</td>
                                         <td>{{ fields.dropdownArrayField('take_technician_group_problem', item.fields['take_technician_group_problem'], dropdown_options_with_inherit, '', cell_options|merge({'add_field_html': inheritance_labels['take_technician_group_problem']|default(null)})) }}</td>
                                     </tr>
