@@ -204,7 +204,26 @@ class Config extends CommonDBTM
             return false;
         }
 
-        $escalade_config = self::getEscaladeConfig();
+        return self::escaladeConfigHandlesTechnicianGroup(
+            self::getEscaladeConfig(),
+            self::isTechnicianGroupHandledByBehaviors(),
+        );
+    }
+
+    /**
+     * Tell whether an Escalade configuration effectively handles the technician
+     * group assignment.
+     *
+     * Holds the decision alone, without reading the plugins state, so that it can
+     * be tested without having Escalade nor Behaviors installed.
+     *
+     * @param array<string, mixed>|null $escalade_config      Escalade configuration, `null` when it cannot be read
+     * @param bool                      $handled_by_behaviors Whether the Behaviors plugin owns the feature
+     */
+    public static function escaladeConfigHandlesTechnicianGroup(
+        ?array $escalade_config,
+        bool $handled_by_behaviors = false,
+    ): bool {
         if ($escalade_config === null) {
             return false;
         }
@@ -221,7 +240,7 @@ class Config extends CommonDBTM
 
         // On creation, Escalade steps aside when the Behaviors plugin owns the
         // feature (see PluginEscaladeTicket::assignUserGroup()).
-        if ($on_creation && self::isTechnicianGroupHandledByBehaviors()) {
+        if ($on_creation && $handled_by_behaviors) {
             $on_creation = false;
         }
 

@@ -38,6 +38,7 @@ namespace GlpiPlugin\Moreoptions\Tests\Units;
 
 use GlpiPlugin\Moreoptions\Config;
 use GlpiPlugin\Moreoptions\Tests\MoreOptionsTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 class ConfigTest extends MoreOptionsTestCase
 {
@@ -2411,6 +2412,82 @@ class ConfigTest extends MoreOptionsTestCase
             0,
             $resolved->fields['prevent_closure_ticket'],
             'Child should keep its own explicit value (0), ignoring parent and grandparent',
+        );
+    }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>|null, bool, bool}>
+     */
+    public static function escaladeTechnicianGroupProvider(): iterable
+    {
+        yield 'no readable configuration' => [null, false, false];
+        yield 'main option disabled' => [
+            ['use_assign_user_group' => 0, 'use_assign_user_group_creation' => 1, 'use_assign_user_group_modification' => 1],
+            false,
+            false,
+        ];
+        yield 'main option enabled but inert' => [
+            ['use_assign_user_group' => 1, 'use_assign_user_group_creation' => 0, 'use_assign_user_group_modification' => 0],
+            false,
+            false,
+        ];
+        yield 'enabled on creation only' => [
+            ['use_assign_user_group' => 1, 'use_assign_user_group_creation' => 1, 'use_assign_user_group_modification' => 0],
+            false,
+            true,
+        ];
+        yield 'enabled on modification only' => [
+            ['use_assign_user_group' => 2, 'use_assign_user_group_creation' => 0, 'use_assign_user_group_modification' => 1],
+            false,
+            true,
+        ];
+        yield 'enabled on both' => [
+            ['use_assign_user_group' => 2, 'use_assign_user_group_creation' => 1, 'use_assign_user_group_modification' => 1],
+            false,
+            true,
+        ];
+        yield 'values stored as strings' => [
+            ['use_assign_user_group' => '1', 'use_assign_user_group_creation' => '1', 'use_assign_user_group_modification' => '0'],
+            false,
+            true,
+        ];
+        yield 'older version without sub options' => [
+            ['use_assign_user_group' => 1],
+            false,
+            true,
+        ];
+        yield 'unrelated configuration' => [['remove_tech' => 1], false, false];
+        yield 'behaviors owns the creation, nothing left' => [
+            ['use_assign_user_group' => 1, 'use_assign_user_group_creation' => 1, 'use_assign_user_group_modification' => 0],
+            true,
+            false,
+        ];
+        yield 'behaviors owns the creation, modification remains' => [
+            ['use_assign_user_group' => 1, 'use_assign_user_group_creation' => 1, 'use_assign_user_group_modification' => 1],
+            true,
+            true,
+        ];
+        yield 'behaviors is irrelevant when the main option is off' => [
+            ['use_assign_user_group' => 0, 'use_assign_user_group_creation' => 1, 'use_assign_user_group_modification' => 1],
+            true,
+            false,
+        ];
+    }
+
+    /**
+     * Test the decision on its own, without requiring Escalade to be installed
+     *
+     * @param array<string, mixed>|null $escalade_config
+     */
+    #[DataProvider('escaladeTechnicianGroupProvider')]
+    public function testEscaladeConfigHandlesTechnicianGroup(
+        ?array $escalade_config,
+        bool $handled_by_behaviors,
+        bool $expected,
+    ): void {
+        $this->assertSame(
+            $expected,
+            Config::escaladeConfigHandlesTechnicianGroup($escalade_config, $handled_by_behaviors),
         );
     }
 }
