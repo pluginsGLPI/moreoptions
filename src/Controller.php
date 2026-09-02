@@ -67,8 +67,8 @@ use User;
 
 class Controller extends CommonDBTM
 {
-    public $dohistory = true;
-    public static $rightname = 'config';
+    public bool $dohistory = true;
+    public static string $rightname = 'config';
     private static bool $solution_check_done = false;
     public static function getTypeName($nb = 0): string
     {
