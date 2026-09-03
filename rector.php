@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../../src/Plugin.php';
+
 use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
