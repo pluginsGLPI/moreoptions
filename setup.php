@@ -84,6 +84,17 @@ function plugin_init_moreoptions(): void
         Controller::class, 'requireFieldsToClose',
     ];
 
+    // Both hooks below are called by GLPI core with an array of parameters (not an item
+    // instance), so they must be registered without an itemtype key: the callback filters
+    // on $params['item'] itself.
+    $PLUGIN_HOOKS[Hooks::TIMELINE_ACTIONS]['moreoptions'] = [
+        Controller::class, 'showSolutionRequirementsWarning',
+    ];
+
+    $PLUGIN_HOOKS[Hooks::POST_ITEM_FORM]['moreoptions'] = [
+        Controller::class, 'markMandatoryTaskFields',
+    ];
+
     $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Ticket::class] = [
         Controller::class, 'beforeCloseITILObject',
     ];
