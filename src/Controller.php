@@ -488,7 +488,7 @@ class Controller extends CommonDBTM
         }
 
         $missing = self::getMissingCloseFields($item, true);
-        if ($missing === null || empty($missing)) {
+        if (empty($missing)) {
             // Nothing configured as required, or everything is already filled: let the
             // normal "Add a solution" action be usable.
             return;
