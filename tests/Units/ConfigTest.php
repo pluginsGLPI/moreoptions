@@ -420,7 +420,9 @@ class ConfigTest extends MoreOptionsTestCase
         );
         $tid = $ticket->getID();
 
-        // Directly set the status to Solved, without any solution (Expected to fail)
+        // Directly set the status to Solved, without any solution (Expected to fail).
+        // `updateItem()` cannot be used here: it asserts the update succeeds, which is
+        // exactly what this step must NOT do.
         $ticket = new \Ticket();
         $result = $ticket->update([
             'id'     => $tid,
@@ -435,15 +437,19 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertNotEquals(\Ticket::SOLVED, $ticket->fields['status']);
 
         // Add a solution (Expected to succeed): the parent ticket is resolved as a side
-        // effect of this, and that resulting status change must not be blocked
-        $solution = new \ITILSolution();
-        $resultSolution = $solution->add([
-            'itemtype' => \Ticket::class,
-            'items_id' => $tid,
-            'content'  => 'My test solution',
-            'status'   => \CommonITILObject::SOLVED,
-        ]);
-        $this->assertIsInt($resultSolution);
+        // effect of this, and that resulting status change must not be blocked.
+        // 'content' and 'status' are skipped from createItem()'s post-add field check,
+        // as ITILSolution may transform/recompute them (rich text, auto-acceptance...).
+        $this->createItem(
+            \ITILSolution::class,
+            [
+                'itemtype' => \Ticket::class,
+                'items_id' => $tid,
+                'content'  => 'My test solution',
+                'status'   => \CommonITILObject::SOLVED,
+            ],
+            ['content', 'status'],
+        );
         $this->clearSessionMessages();
 
         // The ticket must now actually be Solved
