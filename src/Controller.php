@@ -299,7 +299,14 @@ class Controller extends CommonDBTM
             && isset($item->input['status'])
             && ($item->input['status'] == CommonITILObject::CLOSED || $item->input['status'] == CommonITILObject::SOLVED)
         ) {
-            if (self::$solution_check_done && $item->input['status'] == CommonITILObject::SOLVED) {
+            // Consume the one-shot bypass as soon as it is read: it is only meant to let
+            // through the single status update that ITILSolution::post_addItem() performs
+            // on its parent right after the solution itself was validated and saved. Leaving
+            // it at `true` would silently skip this check for every later status change too.
+            $bypass = self::$solution_check_done;
+            self::$solution_check_done = false;
+
+            if ($bypass && $item->input['status'] == CommonITILObject::SOLVED) {
                 return;
             }
             $closed = self::requireFieldsToClose($item);
