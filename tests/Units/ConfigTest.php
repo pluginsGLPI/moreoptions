@@ -393,6 +393,72 @@ class ConfigTest extends MoreOptionsTestCase
     }
 
     /**
+     * Test that a ticket cannot be resolved (status set to Solved) without an existing
+     * solution, but that adding a solution - which resolves the ticket as a side effect -
+     * is not itself blocked by that same requirement
+     */
+    public function testCannotResolveTicketWithoutSolution(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        // Require a solution before resolving/closing a ticket
+        $result = $this->updateTestConfig($conf, [
+            'entities_id'                       => 0,
+            'require_solution_to_close_ticket'  => 1,
+        ]);
+        $this->assertTrue($result);
+
+        // Create a ticket
+        $ticket = $this->createItem(
+            \Ticket::class,
+            [
+                'name'    => 'Test ticket resolve without solution',
+                'content' => 'Test content',
+            ],
+        );
+        $tid = $ticket->getID();
+
+        // Directly set the status to Solved, without any solution (Expected to fail)
+        $ticket = new \Ticket();
+        $result = $ticket->update([
+            'id'     => $tid,
+            'status' => \Ticket::SOLVED,
+        ]);
+        $this->assertFalse($result);
+        $this->clearSessionMessages();
+
+        // The status must not actually have changed in DB
+        $ticket = new \Ticket();
+        $this->assertTrue($ticket->getFromDB($tid));
+        $this->assertNotEquals(\Ticket::SOLVED, $ticket->fields['status']);
+
+        // Add a solution (Expected to succeed): the parent ticket is resolved as a side
+        // effect of this, and that resulting status change must not be blocked
+        $solution = new \ITILSolution();
+        $resultSolution = $solution->add([
+            'itemtype' => \Ticket::class,
+            'items_id' => $tid,
+            'content'  => 'My test solution',
+            'status'   => \CommonITILObject::SOLVED,
+        ]);
+        $this->assertIsInt($resultSolution);
+        $this->clearSessionMessages();
+
+        // The ticket must now actually be Solved
+        $ticket = new \Ticket();
+        $this->assertTrue($ticket->getFromDB($tid));
+        $this->assertEquals(\Ticket::SOLVED, $ticket->fields['status']);
+
+        // Reset config
+        $resetResult = $this->updateTestConfig($conf, [
+            'require_solution_to_close_ticket' => 0,
+        ]);
+        $this->assertTrue($resetResult);
+    }
+
+    /**
      * Test mandatory fields before closing a change
      */
     public function testChangeMandatoryFieldsBeforeCloseChange(): void
