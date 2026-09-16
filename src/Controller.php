@@ -417,12 +417,12 @@ class Controller extends CommonDBTM
             }
         }
 
-        // Check if solution exists before closing
+        // Check if solution exists before resolving/closing.
         if (
             !$is_solution
             && $conf->fields['require_solution_to_close' . $configSuffix] == 1
             && isset($data['status'])
-            && $data['status'] == CommonITILObject::CLOSED
+            && in_array($data['status'], [CommonITILObject::SOLVED, CommonITILObject::CLOSED], true)
         ) {
             $solution = new ITILSolution();
             $solutions = $solution->find([
