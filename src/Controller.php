@@ -47,6 +47,7 @@ use CommonDBTM;
 use CommonITILActor;
 use CommonITILObject;
 use CommonITILValidation;
+use Glpi\Application\View\TemplateRenderer;
 use GlpiPlugin\Moreoptions\Config;
 use Group_Item;
 use Group_Problem;
@@ -298,7 +299,14 @@ class Controller extends CommonDBTM
             && isset($item->input['status'])
             && ($item->input['status'] == CommonITILObject::CLOSED || $item->input['status'] == CommonITILObject::SOLVED)
         ) {
-            if (self::$solution_check_done && $item->input['status'] == CommonITILObject::SOLVED) {
+            // Consume the one-shot bypass as soon as it is read: it is only meant to let
+            // through the single status update that ITILSolution::post_addItem() performs
+            // on its parent right after the solution itself was validated and saved. Leaving
+            // it at `true` would silently skip this check for every later status change too.
+            $bypass = self::$solution_check_done;
+            self::$solution_check_done = false;
+
+            if ($bypass && $item->input['status'] == CommonITILObject::SOLVED) {
                 return;
             }
             $closed = self::requireFieldsToClose($item);
@@ -345,11 +353,17 @@ class Controller extends CommonDBTM
         return true;
     }
 
-    public static function requireFieldsToClose(CommonDBTM $item, bool $is_solution = false): bool
+    /**
+     * Determine which fields configured as required to close are missing on the given item.
+     *
+     * @return string[]|null Labels of the missing fields, an empty array if none are missing,
+     *                        or null if the check could not be performed (invalid actor class).
+     */
+    private static function getMissingCloseFields(CommonDBTM $item, bool $is_solution): ?array
     {
         $conf = Config::getConfig();
 
-        $message = '';
+        $missing = [];
         $itemtype = get_class($item);
 
         $data = array_merge($item->fields, is_array($item->input) ? $item->input : []);
@@ -371,11 +385,11 @@ class Controller extends CommonDBTM
                     'type'       => CommonITILActor::ASSIGN,
                 ]);
                 if (count($techs) == 0) {
-                    $message .= '- ' . __s('Technician') . '<br>';
+                    $missing[] = __s('Technician');
                 }
             } else {
                 // If the user class is not valid, skip this check
-                return false;
+                return null;
             }
         }
 
@@ -385,37 +399,37 @@ class Controller extends CommonDBTM
                 $group = new $groupClass();
             } else {
                 // If the group class is not valid, skip this check
-                return false;
+                return null;
             }
             $groups = $group->find([
                 $itemIdField => $data['id'],
                 'type'       => CommonITILActor::ASSIGN,
             ]);
             if (count($groups) == 0) {
-                $message .= '- ' . __s('Technician group') . '<br>';
+                $missing[] = __s('Technician group');
             }
         }
 
         // Check for required category
         if ($conf->fields['require_category_to_close' . $configSuffix] == 1) {
             if ((!isset($data['itilcategories_id']) || empty($data['itilcategories_id']))) {
-                $message .= '- ' . __s('Category') . '<br>';
+                $missing[] = __s('Category');
             }
         }
 
         // Check for required location
         if ($conf->fields['require_location_to_close' . $configSuffix] == 1) {
             if ((!isset($data['locations_id']) || empty($data['locations_id']))) {
-                $message .= '- ' . __s('Location') . '<br>';
+                $missing[] = __s('Location');
             }
         }
 
-        // Check if solution exists before closing
+        // Check if solution exists before resolving/closing.
         if (
             !$is_solution
             && $conf->fields['require_solution_to_close' . $configSuffix] == 1
             && isset($data['status'])
-            && $data['status'] == CommonITILObject::CLOSED
+            && in_array($data['status'], [CommonITILObject::SOLVED, CommonITILObject::CLOSED], true)
         ) {
             $solution = new ITILSolution();
             $solutions = $solution->find([
@@ -426,18 +440,77 @@ class Controller extends CommonDBTM
                 ],
             ]);
             if (count($solutions) == 0) {
-                $message .= '- ' . __s('Solution') . '<br>';
+                $missing[] = __s('Solution');
             }
         }
 
-        if (!empty($message)) {
+        return $missing;
+    }
+
+    public static function requireFieldsToClose(CommonDBTM $item, bool $is_solution = false): bool
+    {
+        $missing = self::getMissingCloseFields($item, $is_solution);
+
+        if ($missing === null) {
+            return false;
+        }
+
+        if (!empty($missing)) {
             $itemTypeLabel = $item->getTypeName();
 
-            $message = sprintf(__s('To close this %s, you must fill in the following fields:', 'moreoptions'), $itemTypeLabel) . '<br>' . $message;
+            $message = sprintf(__s('To close this %s, you must fill in the following fields:', 'moreoptions'), $itemTypeLabel) . '<br>';
+            foreach ($missing as $field) {
+                $message .= '- ' . $field . '<br>';
+            }
             Session::addMessageAfterRedirect($message, false, ERROR);
             return false;
         }
         return true;
+    }
+
+    /**
+     * Hooked on {@link \Glpi\Plugin\Hooks::TIMELINE_ACTIONS}. Renders, into the ticket/change/
+     * problem timeline footer, a script that mutes the "Add a solution" action, adds a lock icon
+     * to it, and attaches a popover listing the missing fields, as soon as one of the fields
+     * required to close the item (technician, group, category, location...) is missing.
+     *
+     * This is purely client-side: it does not replace the server-side block already performed by
+     * {@see self::beforeCloseITILObject()} on actual submission, it just gives the user a visual
+     * hint before they even open the solution form.
+     *
+     * @param array<string, mixed> $params
+     */
+    public static function showSolutionRequirementsWarning(array $params): void
+    {
+        $item = $params['item'] ?? null;
+        if (!($item instanceof CommonITILObject) || !$item->canSolve()) {
+            return;
+        }
+
+        $missing = self::getMissingCloseFields($item, true);
+        if (empty($missing)) {
+            // Nothing configured as required, or everything is already filled: let the
+            // normal "Add a solution" action be usable.
+            return;
+        }
+
+        $count = count($missing);
+        $header = sprintf(
+            _n(
+                '%1$d required field is missing, so this %2$s can\'t be solved yet.',
+                '%1$d required fields are missing, so this %2$s can\'t be solved yet.',
+                $count,
+                'moreoptions',
+            ),
+            $count,
+            $item->getTypeName(1),
+        );
+
+        TemplateRenderer::getInstance()->display('@moreoptions/timeline_solution_warning.html.twig', [
+            'marker_id'      => 'moreoptions-solution-warning-' . $item->getType() . '-' . $item->getID(),
+            'header'         => $header,
+            'missing_fields' => $missing,
+        ]);
     }
 
     public static function checkTaskRequirements(CommonDBTM $item): CommonDBTM
@@ -476,6 +549,57 @@ class Controller extends CommonDBTM
         }
 
         return $item;
+    }
+
+    /**
+     * Hooked on {@link \Glpi\Plugin\Hooks::POST_ITEM_FORM}. Renders, into the task creation/edit
+     * form, a script that marks the fields configured as mandatory in moreoptions (category,
+     * duration, technician, technician group) with the usual red "required" marker and blocks
+     * client-side submission of the form until they are filled.
+     *
+     * The server-side block already performed by {@see self::checkTaskRequirements()} on actual
+     * submission (PRE_ITEM_ADD) is kept as-is; this only prevents the user from submitting an
+     * incomplete task in the first place.
+     *
+     * @param array<string, mixed> $params
+     */
+    public static function markMandatoryTaskFields(array $params): void
+    {
+        $item = $params['item'] ?? null;
+        if (
+            !($item instanceof TicketTask)
+            && !($item instanceof ChangeTask)
+            && !($item instanceof ProblemTask)
+        ) {
+            return;
+        }
+
+        $conf = Config::getConfig();
+
+        $labels = [];
+        if ($conf->fields['mandatory_task_category'] == 1) {
+            $labels['taskcategories_id'] = __('Category');
+        }
+        if ($conf->fields['mandatory_task_duration'] == 1) {
+            $labels['actiontime'] = __('Duration');
+        }
+        if ($conf->fields['mandatory_task_user'] == 1) {
+            $labels['users_id_tech'] = __('User');
+        }
+        if ($conf->fields['mandatory_task_group'] == 1) {
+            $labels['groups_id_tech'] = __('Group');
+        }
+
+        if (empty($labels)) {
+            return;
+        }
+
+        TemplateRenderer::getInstance()->display('@moreoptions/timeline_task_mandatory_fields.html.twig', [
+            // Unique per-call anchor: lets the injected script find its own <form> reliably.
+            'marker_id'     => 'moreoptions-task-mandatory-' . bin2hex(random_bytes(6)),
+            'field_labels'  => $labels,
+            'error_message' => __('To create this task, you must fill in the following fields:', 'moreoptions'),
+        ]);
     }
 
     public static function updateItemActors(CommonITILObject $item): CommonITILObject
