@@ -8,3 +8,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [unreleased]
 
 - GLPI 12 Compatibility
+
+## [1.0.0-rc1]

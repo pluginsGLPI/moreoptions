@@ -1,0 +1,87 @@
+# English translations for PACKAGE package.
+# Copyright (C) 2026 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-14 09:44+0000\n"
+"PO-Revision-Date: 2026-09-14 09:44+0000\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: en_GB\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: templates/config.html.twig
+msgid ""
+"The \"Use the technician's group\" option from Escalade is enabled and takes "
+"precedence over this one."
+msgstr ""
+"The \"Use the technician's group\" option from Escalade is enabled and takes "
+"precedence over this one."
+
+#: templates/config.html.twig
+msgid "Take the group of associated item"
+msgstr "Take the group of associated item"
+
+#: templates/config.html.twig
+msgid "Take the requester group"
+msgstr "Take the requester group"
+
+#: templates/config.html.twig
+msgid "Take the technician group"
+msgstr "Take the technician group"
+
+#: templates/config.html.twig
+msgid "Prevent closure with tasks in To Do status"
+msgstr "Prevent closure with tasks in To Do status"
+
+#: templates/config.html.twig
+msgid "Assign technical manager when changing category"
+msgstr "Assign technical manager when changing category"
+
+#: templates/config.html.twig
+msgid "Assign technical group when changing category"
+msgstr "Assign technical group when changing category"
+
+#: templates/config.html.twig
+msgid "Assign technician from task to parent item"
+msgstr "Assign technician from task to parent item"
+
+#: templates/config.html.twig
+msgid "Mandatory fields to Solve and Close ITILs"
+msgstr "Mandatory fields to Solve and Close ITILs"
+
+#: templates/config.html.twig
+msgid "Mandatory fields for Tasks creation"
+msgstr "Mandatory fields for Tasks creation"
+
+#: src/Config.php:54 src/Config.php:59 src/Config.php:86
+msgid "More options"
+msgstr "More options"
+
+#: src/Config.php:191
+msgid "Default"
+msgstr "Default"
+
+#: src/Controller.php:75
+msgid "Controller"
+msgstr "Controller"
+
+#: src/Controller.php:340
+msgid "The ticket you wish to close has tasks that need to be completed."
+msgstr "The ticket you wish to close has tasks that need to be completed."
+
+#: src/Controller.php:436
+#, php-format
+msgid "To close this %s, you must fill in the following fields:"
+msgstr "To close this %s, you must fill in the following fields:"
+
+#: src/Controller.php:473
+msgid "To create this task, you must fill in the following fields:"
+msgstr "To create this task, you must fill in the following fields:"

@@ -36,7 +36,7 @@ use GlpiPlugin\Moreoptions\Config;
 use GlpiPlugin\Moreoptions\Controller;
 
 /** @phpstan-ignore theCodingMachineSafe.function (safe to assume this isn't already defined) */
-define('PLUGIN_MOREOPTIONS_VERSION', '0.0.1');
+define('PLUGIN_MOREOPTIONS_VERSION', '1.0.0-rc1');
 
 // Minimal GLPI version, inclusive
 /** @phpstan-ignore theCodingMachineSafe.function (safe to assume this isn't already defined) */
