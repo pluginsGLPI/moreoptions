@@ -470,6 +470,8 @@ class Controller extends CommonDBTM
      * This is purely client-side: it does not replace the server-side block already performed by
      * {@see self::beforeCloseITILObject()} on actual submission, it just gives the user a visual
      * hint before they even open the solution form.
+     *
+     * @param array<string, mixed> $params
      */
     public static function showSolutionRequirementsWarning(array $params): void
     {
@@ -491,10 +493,10 @@ class Controller extends CommonDBTM
                 '%1$d required field is missing, so this %2$s can\'t be solved yet.',
                 '%1$d required fields are missing, so this %2$s can\'t be solved yet.',
                 $count,
-                'moreoptions'
+                'moreoptions',
             ),
             $count,
-            $item->getTypeName(1)
+            $item->getTypeName(1),
         );
 
         TemplateRenderer::getInstance()->display('@moreoptions/timeline_solution_warning.html.twig', [
@@ -543,7 +545,7 @@ class Controller extends CommonDBTM
     }
 
     /**
-     * Hooked on {@link \Glpi\Plugin\Hooks::POST_ITEM_FORM}. Echoes, into the task creation/edit
+     * Hooked on {@link \Glpi\Plugin\Hooks::POST_ITEM_FORM}. Renders, into the task creation/edit
      * form, a script that marks the fields configured as mandatory in moreoptions (category,
      * duration, technician, technician group) with the usual red "required" marker and blocks
      * client-side submission of the form until they are filled.
@@ -551,6 +553,8 @@ class Controller extends CommonDBTM
      * The server-side block already performed by {@see self::checkTaskRequirements()} on actual
      * submission (PRE_ITEM_ADD) is kept as-is; this only prevents the user from submitting an
      * incomplete task in the first place.
+     *
+     * @param array<string, mixed> $params
      */
     public static function markMandatoryTaskFields(array $params): void
     {
