@@ -64,6 +64,8 @@ function plugin_init_moreoptions(): void
 
     Plugin::registerClass(Config::class, ['addtabon' => 'Entity']);
 
+    $PLUGIN_HOOKS[Hooks::ADD_CSS]['moreoptions'][] = 'css/moreoptions.scss';
+
     $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Entity::class] = [
         Config::class, 'addConfig',
     ];

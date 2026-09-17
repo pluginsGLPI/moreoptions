@@ -1,0 +1,72 @@
+{#
+ # -------------------------------------------------------------------------
+ # MoreOptions plugin for GLPI
+ # -------------------------------------------------------------------------
+ #
+ # MIT License
+ #
+ # Permission is hereby granted, free of charge, to any person obtaining a copy
+ # of this software and associated documentation files (the "Software"), to deal
+ # in the Software without restriction, including without limitation the rights
+ # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ # copies of the Software, and to permit persons to whom the Software is
+ # furnished to do so, subject to the following conditions:
+ #
+ # The above copyright notice and this permission notice shall be included in all
+ # copies or substantial portions of the Software.
+ #
+ # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ # SOFTWARE.
+ # -------------------------------------------------------------------------
+ # @copyright Copyright (C) 2025 by the MoreOptions plugin team.
+ # @license   MIT https://opensource.org/licenses/mit-license.php
+ # @link      https://github.com/pluginsGLPI/moreoptions
+ # @link      https://gitlab.teclib.com/glpi-network/moreoptions/
+ # -------------------------------------------------------------------------
+ #}
+
+{#
+ # A single field's worth of options, rendered as a compact button group
+ # instead of a dropdown: every possible value -- and the one currently
+ # active -- is readable at a glance, without opening anything.
+ #
+ # Backed by plain radio inputs sharing `field` as their name, so the value
+ # they send on submit is exactly what a <select> used to send: nothing else
+ # in the form, or in front/config.form.php, needs to know this isn't one.
+ #}
+{% macro render(field, options, current, parent_badge = null, disabled = false, canedit = true, rand = null) %}
+    {% if parent_badge %}
+        {# GLPI's own inherited-value badge (Entity::inheritedValue()), built
+           server-side -- outside the button group, to its left. #}
+        <div class="mo-inherited">{{ parent_badge|raw }}</div>
+    {% endif %}
+    <div class="mo-seg me-2" role="radiogroup">
+        {% for option in options %}
+            {# `rand` keeps these ids unique if this whole tab ever ends up rendered
+               twice on the same page (GLPI caches a loaded tab's DOM instead of
+               reloading it -- see config.html.twig). #}
+            {% set input_id = 'mo-' ~ field ~ '-' ~ option.v ~ (rand is not null ? '-' ~ rand : '') %}
+            <input
+                type="radio"
+                id="{{ input_id }}"
+                name="{{ field }}"
+                value="{{ option.v }}"
+                class="{{ option.inherit ? 'mo-seg-inherit' : '' }}"
+                {{ option.v == current ? 'checked' : '' }}
+                {{ disabled or not canedit ? 'disabled' : '' }}
+            />
+            <label
+                for="{{ input_id }}"
+                title="{{ option.inherit ? __('Follow the parent entity', 'moreoptions') : option.label }}"
+            >
+                {% if option.inherit %}<i class="ti ti-corner-left-up-double"></i>{% endif %}
+                {{ option.label }}
+            </label>
+        {% endfor %}
+    </div>
+{% endmacro %}
