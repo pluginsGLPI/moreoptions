@@ -1,0 +1,114 @@
+{#
+ # -------------------------------------------------------------------------
+ # MoreOptions plugin for GLPI
+ # -------------------------------------------------------------------------
+ #
+ # MIT License
+ #
+ # Permission is hereby granted, free of charge, to any person obtaining a copy
+ # of this software and associated documentation files (the "Software"), to deal
+ # in the Software without restriction, including without limitation the rights
+ # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ # copies of the Software, and to permit persons to whom the Software is
+ # furnished to do so, subject to the following conditions:
+ #
+ # The above copyright notice and this permission notice shall be included in all
+ # copies or substantial portions of the Software.
+ #
+ # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ # SOFTWARE.
+ # -------------------------------------------------------------------------
+ # @copyright Copyright (C) 2025 by the MoreOptions plugin team.
+ # @license   MIT https://opensource.org/licenses/mit-license.php
+ # @link      https://github.com/pluginsGLPI/moreoptions
+ # -------------------------------------------------------------------------
+ #}
+
+{#
+ # Rendered through the core `Hooks::TIMELINE_ACTIONS` hook (see Controller::showSolutionRequirementsWarning).
+ # We cannot alter the "Add a solution" action markup itself (rendered by GLPI core), so this
+ # only drops an invisible anchor + script that finds it and adjusts it client-side: mute its
+ # label, append a lock icon, and attach a tooltip listing the missing fields.
+ #}
+{#
+ # Bootstrap's tooltip sanitizer strips `style` attributes from HTML content (its default
+ # allowlist has no entry for it), so text alignment has to go through an actual CSS class
+ # instead of an inline style, which would silently be removed.
+ #}
+<style>
+.moreoptions-solution-warning-text {
+    text-align: justify;
+}
+</style>
+
+{% set tooltip_content %}
+    <div class="d-flex align-items-start gap-2">
+        <i class="ti ti-alert-triangle text-warning mt-1" aria-hidden="true"></i>
+        <div class="moreoptions-solution-warning-text">
+            <div class="mb-1">{{ header }}</div>
+            <ul class="mb-0 ps-3">
+                {% for field in missing_fields %}
+                    <li>{{ field }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+{% endset %}
+
+<span id="{{ marker_id }}" style="display: none;" aria-hidden="true"></span>
+<script>
+(function() {
+    var marker = document.getElementById({{ marker_id|json_encode|raw }});
+    var footer = marker ? marker.closest('#itil-footer') : null;
+    if (!footer) {
+        return;
+    }
+
+    var solutionToggle = footer.querySelector('[data-bs-target="#new-ITILSolution-block"]');
+    if (!solutionToggle) {
+        return;
+    }
+
+    solutionToggle.style.fontWeight = 'normal';
+    solutionToggle.style.cursor = 'not-allowed';
+
+    solutionToggle.style.display = 'flex';
+    solutionToggle.style.alignItems = 'center';
+    solutionToggle.style.justifyContent = 'space-between';
+    solutionToggle.style.gap = '.5rem';
+    solutionToggle.style.opacity = '0.6';
+
+    var contentWrapper = document.createElement('span');
+    contentWrapper.style.display = 'inline-flex';
+    contentWrapper.style.alignItems = 'center';
+    contentWrapper.style.gap = '.5rem';
+    contentWrapper.style.opacity = '0.6';
+    while (solutionToggle.firstChild) {
+        contentWrapper.appendChild(solutionToggle.firstChild);
+    }
+    solutionToggle.appendChild(contentWrapper);
+
+    var lock = document.createElement('i');
+    lock.className = 'ti ti-lock text-muted';
+    lock.setAttribute('aria-hidden', 'true');
+    solutionToggle.appendChild(lock);
+
+    // A tooltip (not a popover) so it keeps GLPI's dark bubble style: core deliberately
+    // styles popovers with a light background (see `.popover .popover-body` in
+    // _base.scss), while tooltips stay dark. Tooltips support HTML content too.
+    solutionToggle.setAttribute('data-bs-toggle', 'tooltip');
+    solutionToggle.setAttribute('data-bs-placement', 'right');
+    solutionToggle.setAttribute('data-bs-trigger', 'hover focus');
+    solutionToggle.setAttribute('data-bs-html', 'true');
+    solutionToggle.setAttribute('title', {{ tooltip_content|json_encode|raw }});
+
+    if (typeof initTooltips === 'function') {
+        initTooltips(footer);
+    }
+})();
+</script>
