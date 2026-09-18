@@ -32,22 +32,23 @@
 {#
  # Rendered through the core `Hooks::POST_ITEM_FORM` hook (see Controller::markMandatoryTaskFields),
  # right before the task form's closing tag. Marks the configured fields as required (red asterisk
- # on their label, matching GLPI's own convention) and blocks client-side submission until they
- # are filled.
+ # on their label, matching GLPI's own convention).
+ #
+ # This is purely a visual hint: submission itself is left to go through normally so the existing
+ # server-side block ({@see Controller::checkTaskRequirements()}, on PRE_ITEM_ADD) can render its
+ # usual accessible, styled message. An earlier version of this script also intercepted the
+ # form's `submit` event to reject it client-side through a `window.alert()`: that stopped the
+ # AJAX round-trip entirely, so the styled server-side message never got a chance to show, and a
+ # native `alert()` popup isn't reachable through accessible/role-based locators anyway.
  #}
 <span id="{{ marker_id }}" style="display: none;" aria-hidden="true"></span>
 <script>
 (function() {
     var fieldLabels = {{ field_labels|json_encode|raw }};
-    var errorMessage = {{ error_message|json_encode|raw }};
     var marker = document.getElementById({{ marker_id|json_encode|raw }});
     var form = marker ? marker.closest('form') : null;
     if (!form) {
         return;
-    }
-
-    function isEmpty(value) {
-        return value === null || value === undefined || value === '' || value === '0';
     }
 
     Object.keys(fieldLabels).forEach(function(name) {
@@ -59,22 +60,6 @@
             mark.textContent = '*';
             label.appendChild(document.createTextNode(' '));
             label.appendChild(mark);
-        }
-    });
-
-    form.addEventListener('submit', function(e) {
-        var missing = [];
-        Object.keys(fieldLabels).forEach(function(name) {
-            var field = form.querySelector('[name="' + name + '"]');
-            var value = field ? field.value : '';
-            if (isEmpty(value)) {
-                missing.push(fieldLabels[name]);
-            }
-        });
-        if (missing.length > 0) {
-            e.preventDefault();
-            e.stopPropagation();
-            window.alert(errorMessage + '\n- ' + missing.join('\n- '));
         }
     });
 })();

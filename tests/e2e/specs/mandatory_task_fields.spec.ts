@@ -105,7 +105,8 @@ for (const itil of ITIL_TYPES) {
             const retry_block = page.getByTestId(`new-${itil.taskApi}-block`);
             await glpi.getRichTextByLabel('Task', retry_block).fill('Task with a category');
             await glpi.doSetDropdownValue(
-                glpi.getDropdownByLabel('Category', retry_block),
+                // Not exact: moreoptions marks the field as required, which appends a "*" to its label.
+                glpi.getDropdownByLabel('Category', retry_block, false),
                 task_category_name,
                 false,
             );
@@ -195,7 +196,8 @@ for (const itil of ITIL_TYPES) {
             const task_block = page.getByTestId(`new-${itil.taskApi}-block`);
             await glpi.getRichTextByLabel('Task', task_block).fill('Task without a user');
             // The user field is pre-filled with the current session user: clear it.
-            await glpi.doSetDropdownValue(glpi.getDropdownByLabel('User', task_block), '-----', false);
+            // Not exact: moreoptions marks the field as required, which appends a "*" to its label.
+            await glpi.doSetDropdownValue(glpi.getDropdownByLabel('User', task_block, false), '-----', false);
             await task_block.getByRole('button', { name: 'Add', exact: true }).click();
 
             await expect(page.getByRole('alert').filter({ hasText: 'User' })).toBeVisible();
@@ -262,7 +264,8 @@ for (const itil of ITIL_TYPES) {
             await page.getByRole('listitem', { name: 'Create a task' }).click();
             const retry_block = page.getByTestId(`new-${itil.taskApi}-block`);
             await glpi.getRichTextByLabel('Task', retry_block).fill('Task with a group');
-            await glpi.doSetDropdownValue(glpi.getDropdownByLabel('Group', retry_block), group_name, false);
+            // Not exact: moreoptions marks the field as required, which appends a "*" to its label.
+            await glpi.doSetDropdownValue(glpi.getDropdownByLabel('Group', retry_block, false), group_name, false);
             await retry_block.getByRole('button', { name: 'Add', exact: true }).click();
             await expect(page.getByText('Task with a group')).toBeVisible();
         });
