@@ -32,173 +32,105 @@
  # -------------------------------------------------------------------------
  #}
 
-{% import 'components/form/fields_macros.html.twig' as fields %}
+{% import '@moreoptions/components/segmented_control.html.twig' as mo %}
 
-{# Layout options for fields #}
-{% set field_options = {'label_class': 'col-8', 'input_class': 'col-4', 'field_class': 'col-6', 'full_width': false} %}
-{% set inherit_option = item.fields['entities_id'] != 0 ? {(config_parent): __('Inheritance of the parent entity')} : {} %}
-{% set yes_no_options = inherit_option + {0: __('No'), 1: __('Yes')} %}
-{% set dropdown_options_with_inherit = inherit_option + dropdown_options %}
-{% set cell_options = {'no_label': true, 'field_class': 'col-12'} %}
+{% set rand = random() %}
 
-{# Escalade owns the same feature with a global configuration: our per-entity option is then inoperative #}
-{% set escalade_takes_technician_group = escalade_takes_technician_group|default(false) %}
-{% set escalade_technician_group_warning %}
-    {% if escalade_takes_technician_group %}
-        <div class="text-warning small mt-1">
-            <i class="ti ti-alert-triangle me-1"></i>{{ __('The "Use the technician\'s group" option from Escalade is enabled and takes precedence over this one.', 'moreoptions') }}
-        </div>
-    {% endif %}
-{% endset %}
+{% set canedit = params['canedit'] ?? false %}
+{% set can_inherit = parent_entity_id is not null %}
 
-<div class="asset">
+{# Option lists, built once: the inherit choice only exists below the root entity. #}
+{% set yes_no_set = [] %}
+{% if can_inherit %}
+    {% set yes_no_set = [{'v': config_parent, 'label': __('Inherit', 'moreoptions'), 'inherit': true}] %}
+{% endif %}
+{% set yes_no_set = yes_no_set|merge([
+    {'v': 0, 'label': __('No'), 'inherit': false},
+    {'v': 1, 'label': __('Yes'), 'inherit': false},
+]) %}
+
+{% set actor_set = [] %}
+{% if can_inherit %}
+    {% set actor_set = [{'v': config_parent, 'label': __('Inherit', 'moreoptions'), 'inherit': true}] %}
+{% endif %}
+{% for value, label in dropdown_options %}
+    {% set actor_set = actor_set|merge([{'v': value, 'label': label, 'inherit': false}]) %}
+{% endfor %}
+
+{#
+ # The tabs themselves, and which sections/settings go in each, are built by
+ # Config::getScreenTabs() / Config::showForEntity() -- see `tabs` and
+ # `sections_by_tab`. Keeping that definition in PHP rather than here is what
+ # lets a new setting (including one restricted to a single ITIL type) or a
+ # whole new section get added in one place, without touching this template.
+ #}
+
+<div class="asset mo-config">
     <form action="{{ path('plugins/moreoptions/front/config.form.php') }}" method="post">
-    {% set item_has_pictures = item.hasItemtypeOrModelPictures() %}
+        <ul class="nav nav-tabs" role="tablist">
+            {% for tab in tabs %}
+                <li class="nav-item">
+                    <a
+                        class="nav-link {{ loop.first ? 'active' : '' }}"
+                        id="mo-tab-{{ tab.id }}-{{ rand }}"
+                        data-bs-toggle="tab"
+                        href="#mo-pane-{{ tab.id }}-{{ rand }}"
+                        role="tab"
+                        aria-controls="mo-pane-{{ tab.id }}-{{ rand }}"
+                        aria-selected="{{ loop.first ? 'true' : 'false' }}"
+                    >
+                        <i class="ti {{ tab.icon }}"></i>
+                        {{ tab.label }}
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
 
-    <div class="card-body d-flex flex-wrap">
-        <div class="col-12 col-xxl-{{ item_has_pictures ? '9' : '12' }} flex-column">
-            <div class="d-flex flex-row flex-wrap flex-xl-nowrap">
-                <div class="row flex-row align-items-start flex-grow-1">
-                <div class="row flex-row">
-
-                        <div class="hr-text">
-                            <i class="fa-2x ti ti-alert-circle"></i>
-                            <span>{{ __('Itil items') }}</span>
+        <div class="tab-content pt-2">
+            {% for tab in tabs %}
+                <div
+                    class="mo-pane {{ loop.first ? 'active' : '' }}"
+                    id="mo-pane-{{ tab.id }}-{{ rand }}"
+                    role="tabpanel"
+                    aria-labelledby="mo-tab-{{ tab.id }}-{{ rand }}"
+                >
+                    {% for section in sections_by_tab[tab.id] %}
+                        <div class="hr-text hr-text-left">
+                            <i class="fa-2x ti {{ section.icon }}"></i>
+                            <span>{{ section.title }}</span>
                         </div>
+                        {% if section.note is defined %}
+                            <div class="text-secondary small mb-2">{{ section.note }}</div>
+                        {% endif %}
 
-                        <div class="moreoptions-config">
-                            <table class="table table-hover border card-table" style="table-layout: fixed" id="config_table">
-                                <thead>
-                                    <tr>
-                                        <th> &nbsp; </th>
-                                        <th>{{ __('Ticket') }}</th>
-                                        <th>{{ __('Change') }}</th>
-                                        <th>{{ __('Problem') }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>{{ __('Take the group of associated item', 'moreoptions') }}</td>
-                                        <td>{{ fields.dropdownArrayField('take_item_group_ticket', item.fields['take_item_group_ticket'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['take_item_group_ticket']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('take_item_group_change', item.fields['take_item_group_change'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['take_item_group_change']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('take_item_group_problem', item.fields['take_item_group_problem'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['take_item_group_problem']|default(null)})) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>{{ __('Take the requester group', 'moreoptions') }}</td>
-                                        <td>{{ fields.dropdownArrayField('take_requester_group_ticket', item.fields['take_requester_group_ticket'], dropdown_options_with_inherit, '', cell_options|merge({'add_field_html': inheritance_labels['take_requester_group_ticket']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('take_requester_group_change', item.fields['take_requester_group_change'], dropdown_options_with_inherit, '', cell_options|merge({'add_field_html': inheritance_labels['take_requester_group_change']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('take_requester_group_problem', item.fields['take_requester_group_problem'], dropdown_options_with_inherit, '', cell_options|merge({'add_field_html': inheritance_labels['take_requester_group_problem']|default(null)})) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>{{ __('Take the technician group', 'moreoptions') }}</td>
-                                        <td>{{ fields.dropdownArrayField('take_technician_group_ticket', item.fields['take_technician_group_ticket'], dropdown_options_with_inherit, '', cell_options|merge({'disabled': escalade_takes_technician_group, 'add_field_html': (inheritance_labels['take_technician_group_ticket']|default('')) ~ escalade_technician_group_warning})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('take_technician_group_change', item.fields['take_technician_group_change'], dropdown_options_with_inherit, '', cell_options|merge({'add_field_html': inheritance_labels['take_technician_group_change']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('take_technician_group_problem', item.fields['take_technician_group_problem'], dropdown_options_with_inherit, '', cell_options|merge({'add_field_html': inheritance_labels['take_technician_group_problem']|default(null)})) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>{{ __('Prevent closure with tasks in To Do status', 'moreoptions') }}</td>
-                                        <td>{{ fields.dropdownArrayField('prevent_closure_ticket', item.fields['prevent_closure_ticket'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['prevent_closure_ticket']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('prevent_closure_change', item.fields['prevent_closure_change'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['prevent_closure_change']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('prevent_closure_problem', item.fields['prevent_closure_problem'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['prevent_closure_problem']|default(null)})) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>{{ __('Assign technical manager when changing category', 'moreoptions') }}</td>
-                                        <td>{{ fields.dropdownArrayField('assign_technical_manager_when_changing_category_ticket', item.fields['assign_technical_manager_when_changing_category_ticket'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['assign_technical_manager_when_changing_category_ticket']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('assign_technical_manager_when_changing_category_change', item.fields['assign_technical_manager_when_changing_category_change'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['assign_technical_manager_when_changing_category_change']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('assign_technical_manager_when_changing_category_problem', item.fields['assign_technical_manager_when_changing_category_problem'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['assign_technical_manager_when_changing_category_problem']|default(null)})) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>{{ __('Assign technical group when changing category', 'moreoptions') }}</td>
-                                        <td>{{ fields.dropdownArrayField('assign_technical_group_when_changing_category_ticket', item.fields['assign_technical_group_when_changing_category_ticket'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['assign_technical_group_when_changing_category_ticket']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('assign_technical_group_when_changing_category_change', item.fields['assign_technical_group_when_changing_category_change'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['assign_technical_group_when_changing_category_change']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('assign_technical_group_when_changing_category_problem', item.fields['assign_technical_group_when_changing_category_problem'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['assign_technical_group_when_changing_category_problem']|default(null)})) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>{{ __('Assign technician from task to parent item', 'moreoptions') }}</td>
-                                        <td>{{ fields.dropdownArrayField('assign_technician_from_task_ticket', item.fields['assign_technician_from_task_ticket'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['assign_technician_from_task_ticket']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('assign_technician_from_task_change', item.fields['assign_technician_from_task_change'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['assign_technician_from_task_change']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('assign_technician_from_task_problem', item.fields['assign_technician_from_task_problem'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['assign_technician_from_task_problem']|default(null)})) }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div class="row">
+                            {% for row in section.rows %}
+                                {% set options = row.kind == 'actor' ? actor_set : yes_no_set %}
+                                {% set current = item.fields[row.field]|default(can_inherit ? config_parent : 0) %}
+                                {% set disabled = (row.warn_on|default(null) == tab.id) and escalade_takes_technician_group %}
 
-                            <div class="hr-text">
-                                <i class="fa-2x ti ti-help-circle"></i>
-                                <span>{{ __('Mandatory fields to Solve and Close ITILs', 'moreoptions') }}</span>
-                            </div>
-
-                            <table class="table table-hover border card-table" style="table-layout: fixed" id="solutions_table">
-                                <thead>
-                                    <tr>
-                                        <th> &nbsp; </th>
-                                        <th>{{ __('Ticket') }}</th>
-                                        <th>{{ __('Change') }}</th>
-                                        <th>{{ __('Problem') }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>{{ __('Technician') }}</td>
-                                        <td>{{ fields.dropdownArrayField('require_technician_to_close_ticket', item.fields['require_technician_to_close_ticket'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['require_technician_to_close_ticket']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('require_technician_to_close_change', item.fields['require_technician_to_close_change'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['require_technician_to_close_change']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('require_technician_to_close_problem', item.fields['require_technician_to_close_problem'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['require_technician_to_close_problem']|default(null)})) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>{{ __('Technicians group') }}</td>
-                                        <td>{{ fields.dropdownArrayField('require_technicians_group_to_close_ticket', item.fields['require_technicians_group_to_close_ticket'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['require_technicians_group_to_close_ticket']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('require_technicians_group_to_close_change', item.fields['require_technicians_group_to_close_change'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['require_technicians_group_to_close_change']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('require_technicians_group_to_close_problem', item.fields['require_technicians_group_to_close_problem'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['require_technicians_group_to_close_problem']|default(null)})) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>{{ __('Category') }}</td>
-                                        <td>{{ fields.dropdownArrayField('require_category_to_close_ticket', item.fields['require_category_to_close_ticket'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['require_category_to_close_ticket']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('require_category_to_close_change', item.fields['require_category_to_close_change'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['require_category_to_close_change']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('require_category_to_close_problem', item.fields['require_category_to_close_problem'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['require_category_to_close_problem']|default(null)})) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>{{ __('Location') }}</td>
-                                        <td>{{ fields.dropdownArrayField('require_location_to_close_ticket', item.fields['require_location_to_close_ticket'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['require_location_to_close_ticket']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('require_location_to_close_change', item.fields['require_location_to_close_change'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['require_location_to_close_change']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('require_location_to_close_problem', item.fields['require_location_to_close_problem'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['require_location_to_close_problem']|default(null)})) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>{{ __('Solution') }}</td>
-                                        <td>{{ fields.dropdownArrayField('require_solution_to_close_ticket', item.fields['require_solution_to_close_ticket'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['require_solution_to_close_ticket']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('require_solution_to_close_change', item.fields['require_solution_to_close_change'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['require_solution_to_close_change']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('require_solution_to_close_problem', item.fields['require_solution_to_close_problem'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['require_solution_to_close_problem']|default(null)})) }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-
-                            <div class="hr-text">
-                                <i class="fa-2x ti ti-checklist"></i>
-                                <span>{{ __('Mandatory fields for Tasks creation', 'moreoptions') }}</span>
-                            </div>
-
-                            <table class="table table-hover border card-table" style="table-layout: fixed" id="tasks_table">
-                                <thead>
-                                    <tr>
-                                        <th>{{ __('Category') }}</th>
-                                        <th>{{ __('Duration') }}</th>
-                                        <th>{{ __('User') }}</th>
-                                        <th>{{ __('Group') }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>{{ fields.dropdownArrayField('mandatory_task_category', item.fields['mandatory_task_category'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['mandatory_task_category']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('mandatory_task_duration', item.fields['mandatory_task_duration'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['mandatory_task_duration']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('mandatory_task_user', item.fields['mandatory_task_user'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['mandatory_task_user']|default(null)})) }}</td>
-                                        <td>{{ fields.dropdownArrayField('mandatory_task_group', item.fields['mandatory_task_group'], yes_no_options, '', cell_options|merge({'add_field_html': inheritance_labels['mandatory_task_group']|default(null)})) }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                <div class="form-field row align-items-center col-12 my-2 mx-2">
+                                    <div class="col-6 text-xxl-start">
+                                        <label class="col-form-label p-0">{{ row.label }}</label>
+                                        {% if disabled %}
+                                            <div class="mo-row-warn">
+                                                <i class="ti ti-alert-triangle"></i>
+                                                <span>{{ __('The "Use the technician\'s group" option from Escalade is enabled and takes precedence over this one.', 'moreoptions') }}</span>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-6 d-flex align-items-center justify-content-end gap-2">
+                                        {{ mo.render(row.field, options, current, parent_badges[row.field]|default(null), disabled, canedit, rand) }}
+                                    </div>
+                                </div>
+                                <div class="hr my-1" style="opacity: 0.075;"></div>
+                            {% endfor %}
                         </div>
-                    </div>
+                    {% endfor %}
                 </div>
-            </div>
+            {% endfor %}
         </div>
-    </div>
-    {{ include('components/form/buttons.html.twig') }}
+
+        {{ include('components/form/buttons.html.twig') }}
     </form>
 </div>
