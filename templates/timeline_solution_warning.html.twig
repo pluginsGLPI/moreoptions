@@ -101,14 +101,20 @@
     // A tooltip (not a popover) so it keeps GLPI's dark bubble style: core deliberately
     // styles popovers with a light background (see `.popover .popover-body` in
     // _base.scss), while tooltips stay dark. Tooltips support HTML content too.
-    solutionToggle.setAttribute('data-bs-toggle', 'tooltip');
-    solutionToggle.setAttribute('data-bs-placement', 'right');
-    solutionToggle.setAttribute('data-bs-trigger', 'hover focus');
-    solutionToggle.setAttribute('data-bs-html', 'true');
-    solutionToggle.setAttribute('title', {{ tooltip_content|json_encode|raw }});
-
-    if (typeof initTooltips === 'function') {
-        initTooltips(footer);
+    //
+    // The toggle already carries `data-bs-toggle="collapse"` (it's still a working
+    // "Add a solution" action): it can't also be set to "tooltip", as Bootstrap only
+    // honors one `data-bs-toggle` value per element and would silently drop the
+    // collapse behavior. The tooltip is instantiated directly through the JS API
+    // instead of going through `initTooltips()`'s `[data-bs-toggle="tooltip"]` selector.
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        new bootstrap.Tooltip(solutionToggle, {
+            delay: {show: 50, hide: 50},
+            html: true,
+            placement: 'right',
+            trigger: 'hover focus',
+            title: {{ tooltip_content|json_encode|raw }},
+        });
     }
 })();
 </script>
