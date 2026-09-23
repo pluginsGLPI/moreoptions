@@ -331,6 +331,7 @@ class Config extends CommonDBTM
             ['id' => 'change', 'label' => __('Change'), 'icon' => 'ti-git-branch'],
             ['id' => 'problem', 'label' => __('Problem'), 'icon' => 'ti-alert-circle'],
             ['id' => 'task', 'label' => _n('Task', 'Tasks', 2), 'icon' => 'ti-checklist'],
+            ['id' => 'escalate', 'label' => __('Escalate', 'moreoptions'), 'icon' => 'ti-arrow-up'],
         ];
     }
 
@@ -397,6 +398,13 @@ class Config extends CommonDBTM
                     ],
                 ],
             ],
+            'escalate' => [
+                [
+                    'title' => __('Escalate', 'moreoptions'),
+                    'icon'  => 'ti-arrow-up',
+                    'rows'  => [],
+                ],
+            ],
         ];
     }
 
@@ -409,8 +417,13 @@ class Config extends CommonDBTM
      */
     private static function getSectionsForTab(string $tab_id): array
     {
-        $group  = $tab_id === 'task' ? 'task' : 'itil';
-        $suffix = $tab_id === 'task' ? '' : ('_' . $tab_id);
+        if ($tab_id === 'task' || $tab_id === 'escalate') {
+            $group = $tab_id;
+            $suffix = '';
+        } else {
+            $group = 'itil';
+            $suffix = '_' . $tab_id;
+        }
 
         $sections = [];
         foreach (self::getScreenSections()[$group] as $section) {
