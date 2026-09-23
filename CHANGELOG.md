@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [1.0.0-rc2]
 
+- GLPI 12 Compatibility
+
 ### Fixed
 - Fixed the issue where a ticket could be solved without a solution
 
