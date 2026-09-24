@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 /**
  * -------------------------------------------------------------------------
  * MoreOptions plugin for GLPI
@@ -32,6 +30,8 @@ declare(strict_types=1);
  * @link      https://github.com/pluginsGLPI/moreoptions
  * -------------------------------------------------------------------------
  */
+
+declare(strict_types=1);
 
 use Glpi\Plugin\Hooks;
 use GlpiPlugin\Moreoptions\Config;
