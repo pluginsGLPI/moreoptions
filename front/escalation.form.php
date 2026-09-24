@@ -28,30 +28,27 @@
  * @copyright Copyright (C) 2025 by the MoreOptions plugin team.
  * @license   MIT https://opensource.org/licenses/mit-license.php
  * @link      https://github.com/pluginsGLPI/moreoptions
+ * @link      https://gitlab.teclib.com/glpi-network/moreoptions/
  * -------------------------------------------------------------------------
  */
 
-declare(strict_types=1);
-
-use GlpiPlugin\Moreoptions\Config;
+use Glpi\Exception\Http\AccessDeniedHttpException;
 use GlpiPlugin\Moreoptions\Escalation;
 
-function plugin_moreoptions_install(): bool
-{
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
+Session::checkLoginUser();
 
-    Config::install($migration);
-    Escalation::install($migration);
-    $migration->executeMigration();
-    return true;
+if (isset($_POST['add'])) {
+    $item = getItemForItemtype($_POST['itemtype'] ?? '');
+    if (
+        !$item instanceof CommonITILObject
+        || !$item->getFromDB((int) ($_POST['items_id'] ?? 0))
+        || !$item->canAssign()
+        || !Escalation::isEnabledFor($item)
+    ) {
+        throw new AccessDeniedHttpException();
+    }
+
+    (new Escalation())->add($_POST);
 }
 
-function plugin_moreoptions_uninstall(): bool
-{
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
-
-    Config::uninstall($migration);
-    Escalation::uninstall($migration);
-
-    return true;
-}
+Html::back();
