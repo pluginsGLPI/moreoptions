@@ -303,8 +303,28 @@ class Escalation extends CommonDBTM
      */
     public static function showEscalationForm(CommonITILObject $item): void
     {
+        switch ($item::class) {
+            case Ticket::class:
+                $groups = new \Group_Ticket();
+                break;
+            case Change::class:
+                $groups = new \Change_Group();
+                break;
+            case Problem::class:
+                $groups = new \Group_Problem();
+                break;
+            default:
+                return;
+        }
+
+        $groups = $groups->find([strtolower($item::class) . 's_id' => $item->getID(), 'type' => CommonITILActor::ASSIGN]);
+        foreach ($groups as $key => $row) {
+            $groups_used[$key] = (int) $row['groups_id'];
+        }
+
         TemplateRenderer::getInstance()->display('@moreoptions/escalation_form.html.twig', [
             'item' => $item,
+            'groups_used' => $groups_used ?? [],
         ]);
     }
 
