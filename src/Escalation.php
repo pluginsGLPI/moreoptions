@@ -194,7 +194,7 @@ class Escalation extends CommonDBTM
 
     /**
      * The author is always the current user, and the source groups are the groups assigned to
-     * the item before the escalation (the target group excepted).
+     * the item before the escalation. Escalating to a group already assigned is refused.
      *
      * @param array<string, mixed> $input
      * @return array<string, mixed>|false
@@ -215,11 +215,19 @@ class Escalation extends CommonDBTM
                 $group_link->find([
                     $item->getForeignKeyField() => $item->getID(),
                     'type'                      => CommonITILActor::ASSIGN,
-                    'NOT'                       => ['groups_id' => (int) ($input['groups_id'] ?? 0)],
                 ]) as $assigned
             ) {
                 $groups_ids_source[] = (int) $assigned['groups_id'];
             }
+        }
+
+        if (in_array((int) ($input['groups_id'] ?? 0), $groups_ids_source, true)) {
+            Session::addMessageAfterRedirect(
+                __s('This group is already assigned.', 'moreoptions'),
+                false,
+                ERROR,
+            );
+            return false;
         }
         $input['groups_ids_source'] = json_encode($groups_ids_source);
 
@@ -228,8 +236,8 @@ class Escalation extends CommonDBTM
 
     /**
      * Applies the escalation to the escalated item, through the group link hook (see
-     * self::escalate()): assigns the target group with `_plugin_moreoptions_escalade`, or, when it
-     * is already assigned, directly drops the other assigned groups.
+     * self::escalate()): assigns the target group with `_plugin_moreoptions_escalade`, which drops
+     * the other assigned groups.
      */
     public function post_addItem()
     {
@@ -243,18 +251,12 @@ class Escalation extends CommonDBTM
             return;
         }
 
-        $criteria = [
-            $item->getForeignKeyField() => (int) $this->fields['items_id'],
-            'groups_id'                 => (int) $this->fields['groups_id'],
-            'type'                      => CommonITILActor::ASSIGN,
-        ];
-
-        if ($group_link->getFromDBByCrit($criteria)) {
-            self::keepOnlyAssignedGroup($group_link);
-            return;
-        }
-
-        $group_link->add($criteria + ['_plugin_moreoptions_escalade' => true]);
+        $group_link->add([
+            $item->getForeignKeyField()    => (int) $this->fields['items_id'],
+            'groups_id'                    => (int) $this->fields['groups_id'],
+            'type'                         => CommonITILActor::ASSIGN,
+            '_plugin_moreoptions_escalade' => true,
+        ]);
     }
 
     /**
