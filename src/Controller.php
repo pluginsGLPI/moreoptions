@@ -49,6 +49,7 @@ use CommonITILObject;
 use CommonITILValidation;
 use Glpi\Application\View\TemplateRenderer;
 use GlpiPlugin\Moreoptions\Config;
+use Group;
 use Group_Item;
 use Group_Problem;
 use Group_Ticket;
@@ -182,10 +183,39 @@ class Controller extends CommonDBTM
                 'type' => CommonITILActor::ASSIGN,
             ];
 
-            if (!$gitem->getFromDBByCrit($criteria)) {
+            if (
+                self::canGroupBeActor((int) $g['groups_id'], CommonITILActor::ASSIGN)
+                && !$gitem->getFromDBByCrit($criteria)
+            ) {
                 $gitem->add($criteria);
             }
         }
+    }
+
+    /**
+     * Check that the group exists and is allowed to be used for the given actor type
+     * (requester, observer or assigned), according to its "is_requester",
+     * "is_watcher" and "is_assign" flags.
+     */
+    private static function canGroupBeActor(int $groups_id, int $actorType): bool
+    {
+        $field = match ($actorType) {
+            CommonITILActor::REQUESTER => 'is_requester',
+            CommonITILActor::OBSERVER  => 'is_watcher',
+            CommonITILActor::ASSIGN    => 'is_assign',
+            default                    => null,
+        };
+
+        if ($field === null || $groups_id <= 0) {
+            return false;
+        }
+
+        $group = new Group();
+        if (!$group->getFromDB($groups_id)) {
+            return false;
+        }
+
+        return (bool) $group->fields[$field];
     }
 
     /**
@@ -244,7 +274,10 @@ class Controller extends CommonDBTM
                     'type' => $actorType,
                 ];
 
-                if (!$t_group->getFromDBByCrit($criteria)) {
+                if (
+                    self::canGroupBeActor((int) $user->fields['groups_id'], $actorType)
+                    && !$t_group->getFromDBByCrit($criteria)
+                ) {
                     $t_group->add($criteria + $escalade_options);
                 }
             } else {
@@ -265,7 +298,10 @@ class Controller extends CommonDBTM
                             'type' => $actorType,
                         ];
 
-                        if (!$t_group->getFromDBByCrit($criteria)) {
+                        if (
+                            self::canGroupBeActor((int) $ug['groups_id'], $actorType)
+                            && !$t_group->getFromDBByCrit($criteria)
+                        ) {
                             $t_group->add($criteria + $escalade_options);
                         }
                     }
@@ -650,7 +686,10 @@ class Controller extends CommonDBTM
                             'type'     => CommonITILActor::ASSIGN,
                             $itemIdField => $item->fields['id'],
                         ];
-                        if (!$group_link->getFromDBByCrit($criteria)) {
+                        if (
+                            self::canGroupBeActor((int) $category->fields['groups_id'], CommonITILActor::ASSIGN)
+                            && !$group_link->getFromDBByCrit($criteria)
+                        ) {
                             $group_link->add($criteria);
                         }
                     }
