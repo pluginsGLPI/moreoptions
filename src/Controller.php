@@ -38,6 +38,8 @@
 
 namespace GlpiPlugin\Moreoptions;
 
+use Group_User;
+use CommonITILTask;
 use Change;
 use Change_Group;
 use Change_Item;
@@ -69,12 +71,16 @@ use User;
 class Controller extends CommonDBTM
 {
     public $dohistory = true;
+
     public static $rightname = 'config';
+
     private static bool $solution_check_done = false;
+
     public static function getTypeName($nb = 0): string
     {
         return __s("Controller", "moreoptions");
     }
+
     public static function getIcon(): string
     {
         return "ti ti-server-2";
@@ -82,18 +88,19 @@ class Controller extends CommonDBTM
 
     public static function useConfig(CommonDBTM $item): void
     {
-        if ($item->fields['type'] == \CommonITILActor::OBSERVER) {
+        if ($item->fields['type'] == CommonITILActor::OBSERVER) {
             return;
         }
+
         $moconfig = Config::getConfig();
 
         switch ($item) {
             case $item instanceof Ticket_User:
-                if ($item->fields['type'] == \CommonITILActor::REQUESTER) {
+                if ($item->fields['type'] == CommonITILActor::REQUESTER) {
                     if ($moconfig->fields['take_requester_group_ticket'] != 0) {
-                        self::addGroupsForActorType($item, $moconfig, \CommonITILActor::REQUESTER, 'take_requester_group_ticket', 'Ticket');
+                        self::addGroupsForActorType($item, $moconfig, CommonITILActor::REQUESTER, 'take_requester_group_ticket', 'Ticket');
                     }
-                } elseif ($item->fields['type'] == \CommonITILActor::ASSIGN) {
+                } elseif ($item->fields['type'] == CommonITILActor::ASSIGN) {
                     if ($moconfig->fields['take_technician_group_ticket'] != 0) {
                         if (Config::isTechnicianGroupHandledByEscalade()) {
                             // Escalade handles the same feature with a global
@@ -101,31 +108,35 @@ class Controller extends CommonDBTM
                             // just skip our own processing.
                             return;
                         }
-                        self::addGroupsForActorType($item, $moconfig, \CommonITILActor::ASSIGN, 'take_technician_group_ticket', 'Ticket');
+
+                        self::addGroupsForActorType($item, $moconfig, CommonITILActor::ASSIGN, 'take_technician_group_ticket', 'Ticket');
                     }
                 }
+
                 break;
             case $item instanceof Change_User:
-                if ($item->fields['type'] == \CommonITILActor::REQUESTER) {
+                if ($item->fields['type'] == CommonITILActor::REQUESTER) {
                     if ($moconfig->fields['take_requester_group_change'] != 0) {
-                        self::addGroupsForActorType($item, $moconfig, \CommonITILActor::REQUESTER, 'take_requester_group_change', 'Change');
+                        self::addGroupsForActorType($item, $moconfig, CommonITILActor::REQUESTER, 'take_requester_group_change', 'Change');
                     }
-                } elseif ($item->fields['type'] == \CommonITILActor::ASSIGN) {
+                } elseif ($item->fields['type'] == CommonITILActor::ASSIGN) {
                     if ($moconfig->fields['take_technician_group_change'] != 0) {
-                        self::addGroupsForActorType($item, $moconfig, \CommonITILActor::ASSIGN, 'take_technician_group_change', 'Change');
+                        self::addGroupsForActorType($item, $moconfig, CommonITILActor::ASSIGN, 'take_technician_group_change', 'Change');
                     }
                 }
+
                 break;
             case $item instanceof Problem_User:
-                if ($item->fields['type'] == \CommonITILActor::REQUESTER) {
+                if ($item->fields['type'] == CommonITILActor::REQUESTER) {
                     if ($moconfig->fields['take_requester_group_problem'] != 0) {
-                        self::addGroupsForActorType($item, $moconfig, \CommonITILActor::REQUESTER, 'take_requester_group_problem', 'Problem');
+                        self::addGroupsForActorType($item, $moconfig, CommonITILActor::REQUESTER, 'take_requester_group_problem', 'Problem');
                     }
-                } elseif ($item->fields['type'] == \CommonITILActor::ASSIGN) {
+                } elseif ($item->fields['type'] == CommonITILActor::ASSIGN) {
                     if ($moconfig->fields['take_technician_group_problem'] != 0) {
-                        self::addGroupsForActorType($item, $moconfig, \CommonITILActor::ASSIGN, 'take_technician_group_problem', 'Problem');
+                        self::addGroupsForActorType($item, $moconfig, CommonITILActor::ASSIGN, 'take_technician_group_problem', 'Problem');
                     }
                 }
+
                 break;
             default:
                 return;
@@ -155,7 +166,7 @@ class Controller extends CommonDBTM
             ],
         ];
 
-        $itemClass = get_class($item);
+        $itemClass = $item::class;
 
         // Check if the item is supported and the configuration is enabled
         if (!isset($itemMappings[$itemClass]) || $conf->fields[$itemMappings[$itemClass]['config_field']] != 1) {
@@ -237,6 +248,7 @@ class Controller extends CommonDBTM
                 if (isset($actor['items_id'])) {
                     $user->getFromDB($actor['items_id']);
                 }
+
                 $t_group = new $groupClass();
                 $criteria = [
                     'groups_id' => $user->fields['groups_id'],
@@ -249,7 +261,7 @@ class Controller extends CommonDBTM
                 }
             } else {
                 // Use all groups of the user
-                $users_groups = new \Group_User();
+                $users_groups = new Group_User();
                 if (isset($actor['items_id'])) {
                     $u_groups = $users_groups->find([
                         'users_id' => $actor['items_id'],
@@ -258,6 +270,7 @@ class Controller extends CommonDBTM
                         if (!is_array($ug) || !isset($ug['groups_id'])) {
                             continue;
                         }
+
                         $t_group = new $groupClass();
                         $criteria = [
                             'groups_id' => $ug['groups_id'],
@@ -309,6 +322,7 @@ class Controller extends CommonDBTM
             if ($bypass && $item->input['status'] == CommonITILObject::SOLVED) {
                 return;
             }
+
             $closed = self::requireFieldsToClose($item);
             $closed = self::preventClosure($item) && $closed;
         }
@@ -330,12 +344,14 @@ class Controller extends CommonDBTM
                 'tickets_id' => $item->fields['id'],
             ]);
         }
+
         if ($item instanceof Change && $conf->fields['prevent_closure_change'] == 1) {
             $task = new ChangeTask();
             $tasks = $task->find([
                 'changes_id' => $item->fields['id'],
             ]);
         }
+
         if ($item instanceof Problem && $conf->fields['prevent_closure_problem'] == 1) {
             $task = new ProblemTask();
             $tasks = $task->find([
@@ -350,6 +366,7 @@ class Controller extends CommonDBTM
                 return false;
             }
         }
+
         return true;
     }
 
@@ -364,7 +381,7 @@ class Controller extends CommonDBTM
         $conf = Config::getConfig();
 
         $missing = [];
-        $itemtype = get_class($item);
+        $itemtype = $item::class;
 
         $data = array_merge($item->fields, is_array($item->input) ? $item->input : []);
 
@@ -384,7 +401,7 @@ class Controller extends CommonDBTM
                     $itemIdField => $data['id'],
                     'type'       => CommonITILActor::ASSIGN,
                 ]);
-                if (count($techs) == 0) {
+                if (count($techs) === 0) {
                     $missing[] = __s('Technician');
                 }
             } else {
@@ -401,11 +418,12 @@ class Controller extends CommonDBTM
                 // If the group class is not valid, skip this check
                 return null;
             }
+
             $groups = $group->find([
                 $itemIdField => $data['id'],
                 'type'       => CommonITILActor::ASSIGN,
             ]);
-            if (count($groups) == 0) {
+            if (count($groups) === 0) {
                 $missing[] = __s('Technician group');
             }
         }
@@ -439,7 +457,7 @@ class Controller extends CommonDBTM
                     'status' => CommonITILValidation::REFUSED,
                 ],
             ]);
-            if (count($solutions) == 0) {
+            if (count($solutions) === 0) {
                 $missing[] = __s('Solution');
             }
         }
@@ -455,16 +473,18 @@ class Controller extends CommonDBTM
             return false;
         }
 
-        if (!empty($missing)) {
+        if ($missing !== []) {
             $itemTypeLabel = $item->getTypeName();
 
             $message = sprintf(__s('To close this %s, you must fill in the following fields:', 'moreoptions'), $itemTypeLabel) . '<br>';
             foreach ($missing as $field) {
                 $message .= '- ' . $field . '<br>';
             }
+
             Session::addMessageAfterRedirect($message, false, ERROR);
             return false;
         }
+
         return true;
     }
 
@@ -542,7 +562,7 @@ class Controller extends CommonDBTM
             }
         }
 
-        if (!empty($message)) {
+        if ($message !== '' && $message !== '0') {
             $message = __s('To create this task, you must fill in the following fields:', 'moreoptions') . '<br>' . $message;
             Session::addMessageAfterRedirect($message, false, ERROR);
             $item->input = false;
@@ -580,12 +600,15 @@ class Controller extends CommonDBTM
         if ($conf->fields['mandatory_task_category'] == 1) {
             $labels['taskcategories_id'] = __('Category');
         }
+
         if ($conf->fields['mandatory_task_duration'] == 1) {
             $labels['actiontime'] = __('Duration');
         }
+
         if ($conf->fields['mandatory_task_user'] == 1) {
             $labels['users_id_tech'] = __('User');
         }
+
         if ($conf->fields['mandatory_task_group'] == 1) {
             $labels['groups_id_tech'] = __('Group');
         }
@@ -606,7 +629,7 @@ class Controller extends CommonDBTM
     {
         $conf = Config::getConfig();
 
-        switch (get_class($item)) {
+        switch ($item::class) {
             case 'Ticket':
                 $assign_tech_manager = $conf->fields['assign_technical_manager_when_changing_category_ticket'];
                 $assign_tech_group = $conf->fields['assign_technical_group_when_changing_category_ticket'];
@@ -625,7 +648,7 @@ class Controller extends CommonDBTM
 
         if ($assign_tech_manager || $assign_tech_group) {
 
-            $itemIdField = strtolower(get_class($item)) . 's_id';
+            $itemIdField = strtolower($item::class) . 's_id';
             $category = new ITILCategory();
             $fund = $category->getFromDB($item->fields['itilcategories_id']);
             if ($fund) {
@@ -642,6 +665,7 @@ class Controller extends CommonDBTM
                         }
                     }
                 }
+
                 if ($assign_tech_group) {
                     if (is_a($item->grouplinkclass, CommonDBTM::class, true)) {
                         $group_link = new $item->grouplinkclass();
@@ -657,6 +681,7 @@ class Controller extends CommonDBTM
                 }
             }
         }
+
         return $item;
     }
 
@@ -665,10 +690,9 @@ class Controller extends CommonDBTM
      * When a task is created with a technician assigned, this method will
      * automatically assign that technician to the parent ticket/change/problem
      *
-     * @param \CommonITILTask $item The task item (TicketTask, ChangeTask, or ProblemTask)
-     * @return void
+     * @param CommonITILTask $item The task item (TicketTask, ChangeTask, or ProblemTask)
      */
-    public static function assignTechnicianFromTask(\CommonITILTask $item): void
+    public static function assignTechnicianFromTask(CommonITILTask $item): void
     {
         $conf = Config::getConfig();
 
@@ -685,6 +709,7 @@ class Controller extends CommonDBTM
                 if ($conf->fields['assign_technician_from_task_ticket'] != 1 || empty($item->fields['tickets_id'])) {
                     return;
                 }
+
                 $itilObject = new Ticket();
                 $userLinkClass = Ticket_User::class;
                 $itilIdField = 'tickets_id';
@@ -695,6 +720,7 @@ class Controller extends CommonDBTM
                 if ($conf->fields['assign_technician_from_task_change'] != 1 || empty($item->fields['changes_id'])) {
                     return;
                 }
+
                 $itilObject = new Change();
                 $userLinkClass = Change_User::class;
                 $itilIdField = 'changes_id';
@@ -705,6 +731,7 @@ class Controller extends CommonDBTM
                 if ($conf->fields['assign_technician_from_task_problem'] != 1 || empty($item->fields['problems_id'])) {
                     return;
                 }
+
                 $itilObject = new Problem();
                 $userLinkClass = Problem_User::class;
                 $itilIdField = 'problems_id';
