@@ -51,6 +51,7 @@ use CommonITILObject;
 use CommonITILValidation;
 use Glpi\Application\View\TemplateRenderer;
 use GlpiPlugin\Moreoptions\Config;
+use GlpiPlugin\Moreoptions\Escalation;
 use Group_Item;
 use Group_Problem;
 use Group_Ticket;
@@ -489,7 +490,20 @@ class Controller extends CommonDBTM
     }
 
     /**
-     * Hooked on {@link \Glpi\Plugin\Hooks::TIMELINE_ACTIONS}. Renders, into the ticket/change/
+     * Hooked on {@link \Glpi\Plugin\Hooks::TIMELINE_ACTIONS}, which takes a single callback per
+     * plugin: renders everything MoreOptions adds to the ticket/change/problem timeline footer.
+     *
+     * @param array<string, mixed> $params
+     */
+    public static function showTimelineActions(array $params): void
+    {
+        self::showSolutionRequirementsWarning($params);
+        Escalation::showEscalateButton($params);
+        Escalation::showTimelineScripts($params);
+    }
+
+    /**
+     * Called from {@see self::showTimelineActions()}. Renders, into the ticket/change/
      * problem timeline footer, a script that mutes the "Add a solution" action, adds a lock icon
      * to it, and attaches a popover listing the missing fields, as soon as one of the fields
      * required to close the item (technician, group, category, location...) is missing.
