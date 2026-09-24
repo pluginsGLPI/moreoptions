@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * -------------------------------------------------------------------------
  * MoreOptions plugin for GLPI
@@ -66,107 +68,57 @@ function plugin_init_moreoptions(): void
 
     $PLUGIN_HOOKS[Hooks::ADD_CSS]['moreoptions'][] = 'css/moreoptions.scss';
 
-    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Entity::class] = [
-        Config::class, 'addConfig',
-    ];
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Entity::class] = Config::addConfig(...);
 
-    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Ticket_User::class] = [
-        Controller::class, 'useConfig',
-    ];
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Ticket_User::class] = Controller::useConfig(...);
 
-    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Change_User::class] = [
-        Controller::class, 'useConfig',
-    ];
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Change_User::class] = Controller::useConfig(...);
 
-    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Problem_User::class] = [
-        Controller::class, 'useConfig',
-    ];
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Problem_User::class] = Controller::useConfig(...);
 
-    $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['moreoptions'][ITILSolution::class] = [
-        Controller::class, 'requireFieldsToClose',
-    ];
+    $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['moreoptions'][ITILSolution::class] = Controller::requireFieldsToClose(...);
 
     // Both hooks below are called by GLPI core with an array of parameters (not an item
     // instance), so they must be registered without an itemtype key: the callback filters
     // on $params['item'] itself.
-    $PLUGIN_HOOKS[Hooks::TIMELINE_ACTIONS]['moreoptions'] = [
-        Controller::class, 'showSolutionRequirementsWarning',
-    ];
+    $PLUGIN_HOOKS[Hooks::TIMELINE_ACTIONS]['moreoptions'] = Controller::showSolutionRequirementsWarning(...);
 
-    $PLUGIN_HOOKS[Hooks::POST_ITEM_FORM]['moreoptions'] = [
-        Controller::class, 'markMandatoryTaskFields',
-    ];
+    $PLUGIN_HOOKS[Hooks::POST_ITEM_FORM]['moreoptions'] = Controller::markMandatoryTaskFields(...);
 
-    $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Ticket::class] = [
-        Controller::class, 'beforeCloseITILObject',
-    ];
+    $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Ticket::class] = Controller::beforeCloseITILObject(...);
 
-    $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Change::class] = [
-        Controller::class, 'beforeCloseITILObject',
-    ];
+    $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Change::class] = Controller::beforeCloseITILObject(...);
 
-    $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Problem::class] = [
-        Controller::class, 'beforeCloseITILObject',
-    ];
+    $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Problem::class] = Controller::beforeCloseITILObject(...);
 
-    $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['moreoptions'][ITILSolution::class] = [
-        Controller::class, 'beforeCloseITILObject',
-    ];
-    $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][ITILSolution::class] = [
-        Controller::class, 'beforeCloseITILObject',
-    ];
+    $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['moreoptions'][ITILSolution::class] = Controller::beforeCloseITILObject(...);
+    $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][ITILSolution::class] = Controller::beforeCloseITILObject(...);
 
-    $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Config::class] = [
-        Config::class, 'preItemUpdate',
-    ];
+    $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Config::class] = Config::preItemUpdate(...);
 
-    $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['moreoptions'][TicketTask::class] = [
-        Controller::class, 'checkTaskRequirements',
-    ];
+    $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['moreoptions'][TicketTask::class] = Controller::checkTaskRequirements(...);
 
-    $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['moreoptions'][ChangeTask::class] = [
-        Controller::class, 'checkTaskRequirements',
-    ];
+    $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['moreoptions'][ChangeTask::class] = Controller::checkTaskRequirements(...);
 
-    $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['moreoptions'][ProblemTask::class] = [
-        Controller::class, 'checkTaskRequirements',
-    ];
+    $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['moreoptions'][ProblemTask::class] = Controller::checkTaskRequirements(...);
 
-    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Item_Ticket::class] = [
-        Controller::class, 'addItemGroups',
-    ];
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Item_Ticket::class] = Controller::addItemGroups(...);
 
-    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Change_Item::class] = [
-        Controller::class, 'addItemGroups',
-    ];
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Change_Item::class] = Controller::addItemGroups(...);
 
-    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Item_Problem::class] = [
-        Controller::class, 'addItemGroups',
-    ];
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Item_Problem::class] = Controller::addItemGroups(...);
 
-    $PLUGIN_HOOKS[Hooks::ITEM_UPDATE]['moreoptions'][Ticket::class] = [
-        Controller::class, 'updateItemActors',
-    ];
+    $PLUGIN_HOOKS[Hooks::ITEM_UPDATE]['moreoptions'][Ticket::class] = Controller::updateItemActors(...);
 
-    $PLUGIN_HOOKS[Hooks::ITEM_UPDATE]['moreoptions'][Change::class] = [
-        Controller::class, 'updateItemActors',
-    ];
+    $PLUGIN_HOOKS[Hooks::ITEM_UPDATE]['moreoptions'][Change::class] = Controller::updateItemActors(...);
 
-    $PLUGIN_HOOKS[Hooks::ITEM_UPDATE]['moreoptions'][Problem::class] = [
-        Controller::class, 'updateItemActors',
-    ];
+    $PLUGIN_HOOKS[Hooks::ITEM_UPDATE]['moreoptions'][Problem::class] = Controller::updateItemActors(...);
 
-    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][TicketTask::class] = [
-        Controller::class, 'assignTechnicianFromTask',
-    ];
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][TicketTask::class] = Controller::assignTechnicianFromTask(...);
 
-    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][ChangeTask::class] = [
-        Controller::class, 'assignTechnicianFromTask',
-    ];
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][ChangeTask::class] = Controller::assignTechnicianFromTask(...);
 
-    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][ProblemTask::class] = [
-        Controller::class, 'assignTechnicianFromTask',
-    ];
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][ProblemTask::class] = Controller::assignTechnicianFromTask(...);
 }
 
 /**

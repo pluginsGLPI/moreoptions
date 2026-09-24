@@ -36,6 +36,7 @@
 
 namespace GlpiPlugin\Moreoptions;
 
+use DBmysql;
 use CommonDBTM;
 use CommonGLPI;
 use Entity;
@@ -47,8 +48,11 @@ use Session;
 class Config extends CommonDBTM
 {
     public $dohistory = true;
+
     public static $rightname = 'config';
-    public const CONFIG_PARENT = \Entity::CONFIG_PARENT;
+
+    public const CONFIG_PARENT = Entity::CONFIG_PARENT;
+
     public static function getMenuName(): string
     {
         return __('More options', 'moreoptions');
@@ -81,22 +85,23 @@ class Config extends CommonDBTM
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0): string
     {
-        switch ($item->getType()) {
-            case Entity::class:
-                return self::createTabEntry(__('More options', 'moreoptions'), 0);
+        if ($item->getType() === Entity::class) {
+            return self::createTabEntry(__('More options', 'moreoptions'), 0);
         }
+
         return '';
     }
 
     public static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
     {
-        switch ($item->getType()) {
-            case Entity::class:
-                if ($item instanceof Entity) {
-                    self::showForEntity($item);
-                }
-                return true;
+        if ($item->getType() === Entity::class) {
+            if ($item instanceof Entity) {
+                self::showForEntity($item);
+            }
+
+            return true;
         }
+
         return true;
     }
 
@@ -237,7 +242,7 @@ class Config extends CommonDBTM
      */
     private static function getEscaladeConfig(): ?array
     {
-        /** @var \DBmysql $DB */
+        /** @var DBmysql $DB */
         global $DB;
 
         if (isset($_SESSION['glpi_plugins']['escalade']['config']) && is_array($_SESSION['glpi_plugins']['escalade']['config'])) {
@@ -451,6 +456,7 @@ class Config extends CommonDBTM
             $text = ((int) ($parent_config->fields[$field] ?? 0)) === 1 ? __('Yes') : __('No');
             $badges[$field] = Entity::inheritedValue(htmlescape($text), false, false);
         }
+
         foreach (self::getActorGroupConfigFields() as $field) {
             $text = $actor_options[(int) ($parent_config->fields[$field] ?? 0)] ?? __('No');
             $badges[$field] = Entity::inheritedValue(htmlescape($text), false, false);
@@ -469,6 +475,7 @@ class Config extends CommonDBTM
                 $data[$field] = self::CONFIG_PARENT;
             }
         }
+
         $moconfig->add($data);
     }
 
@@ -477,7 +484,6 @@ class Config extends CommonDBTM
      *
      * @param int|null $entityId Entity ID (null = current active entity)
      * @param bool $useInheritance Whether to follow parent entity inheritance (default: true)
-     * @return self
      */
     public static function getConfig(?int $entityId = null, bool $useInheritance = true): self
     {
@@ -507,12 +513,12 @@ class Config extends CommonDBTM
 
     public static function install(Migration $migration): void
     {
-        /** @var \DBmysql $DB */
+        /** @var DBmysql $DB */
         global $DB;
         $table = self::getTable();
         if (!$DB->tableExists($table)) {
-            $migration->displayMessage("Installing $table");
-            $query = "CREATE TABLE IF NOT EXISTS `$table` (
+            $migration->displayMessage('Installing ' . $table);
+            $query = "CREATE TABLE IF NOT EXISTS `{$table}` (
                 `id` int unsigned NOT NULL AUTO_INCREMENT,
                 `entities_id` int unsigned NOT NULL DEFAULT '0',
                 `take_item_group_ticket` tinyint NOT NULL DEFAULT '0',
@@ -589,12 +595,14 @@ class Config extends CommonDBTM
                 if (countElementsInTable(self::getTable(), ['entities_id' => $entity_id]) > 0) {
                     continue;
                 }
+
                 $data = ['entities_id' => $entity_id];
                 if ($entity_id > 0) {
                     foreach (self::getAllConfigFields() as $field) {
                         $data[$field] = self::CONFIG_PARENT;
                     }
                 }
+
                 $DB->insert(
                     self::getTable(),
                     $data,
@@ -606,7 +614,7 @@ class Config extends CommonDBTM
 
     public static function uninstall(Migration $migration): void
     {
-        /** @var \DBmysql $DB */
+        /** @var DBmysql $DB */
         global $DB;
         $table = self::getTable();
         if ($DB->tableExists($table)) {
