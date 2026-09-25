@@ -186,7 +186,7 @@ class EscalationTest extends MoreOptionsTestCase
             'items_id'  => $item->getID(),
             'groups_id' => $assigned_groups[0]->getID(),
         ]));
-        $this->hasSessionMessages(ERROR, ['This group is already assigned, it cannot be escalated to.']);
+        $this->hasSessionMessages(ERROR, ['This group is already assigned.']);
 
         // Nothing changed: no escalation, and the assigned groups are kept
         $this->assertSame(0, countElementsInTable(Escalation::getTable(), [
