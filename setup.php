@@ -84,24 +84,20 @@ function plugin_init_moreoptions(): void
     // on $params['item'] itself.
     $PLUGIN_HOOKS[Hooks::TIMELINE_ACTIONS]['moreoptions'] = Controller::showTimelineActions(...);
 
+    $PLUGIN_HOOKS[Hooks::TIMELINE_ACTIONS]['moreoptions'] = Controller::showSolutionRequirementsWarning(...);
+
     $PLUGIN_HOOKS[Hooks::POST_ITEM_FORM]['moreoptions'] = Controller::markMandatoryTaskFields(...);
 
-    $PLUGIN_HOOKS[Hooks::TIMELINE_ITEMS]['moreoptions'] = [
-        Escalation::class, 'showInTimeline',
-    ];
+    $PLUGIN_HOOKS[Hooks::TIMELINE_ITEMS]['moreoptions'] = Escalation::showInTimeline(...);
 
     // Group links added with `_plugin_moreoptions_escalade => true` are escalations.
-    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Group_Ticket::class] = [
-        Escalation::class, 'escalate',
-    ];
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Group_Ticket::class] = Escalation::escalate(...);
 
-    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Change_Group::class] = [
-        Escalation::class, 'escalate',
-    ];
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Change_Group::class] = Escalation::escalate(...);
 
-    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Group_Problem::class] = [
-        Escalation::class, 'escalate',
-    ];
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Group_Problem::class] = Escalation::escalate(...);
+
+    $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Ticket::class] = Controller::beforeCloseITILObject(...);
 
     $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Ticket::class] = Controller::beforeCloseITILObject(...);
 

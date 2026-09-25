@@ -34,6 +34,10 @@
 
 namespace GlpiPlugin\Moreoptions;
 
+use Group_Ticket;
+use Change_Group;
+use Group_Problem;
+use DBmysql;
 use Change;
 use CommonDBTM;
 use CommonITILActor;
@@ -47,6 +51,10 @@ use Problem;
 use Session;
 use Ticket;
 
+use function Safe\json_decode;
+use function Safe\json_encode;
+use function Safe\preg_replace;
+
 /**
  * An escalation of a ticket / change / problem, shown as its own entry in the
  * item timeline when the "Escalate" option is enabled for the item entity.
@@ -54,6 +62,7 @@ use Ticket;
 class Escalation extends CommonDBTM
 {
     public $dohistory = true;
+
     public static $rightname = 'ticket';
 
     /**
@@ -189,7 +198,7 @@ class Escalation extends CommonDBTM
     {
         $groups_ids = json_decode((string) ($row['groups_ids_source'] ?? ''), true);
 
-        return is_array($groups_ids) ? array_map('intval', $groups_ids) : [];
+        return is_array($groups_ids) ? array_map(intval(...), $groups_ids) : [];
     }
 
     /**
@@ -229,6 +238,7 @@ class Escalation extends CommonDBTM
             );
             return false;
         }
+
         $input['groups_ids_source'] = json_encode($groups_ids_source);
 
         return $input;
@@ -307,13 +317,13 @@ class Escalation extends CommonDBTM
     {
         switch ($item::class) {
             case Ticket::class:
-                $groups = new \Group_Ticket();
+                $groups = new Group_Ticket();
                 break;
             case Change::class:
-                $groups = new \Change_Group();
+                $groups = new Change_Group();
                 break;
             case Problem::class:
-                $groups = new \Group_Problem();
+                $groups = new Group_Problem();
                 break;
             default:
                 return;
@@ -367,13 +377,13 @@ class Escalation extends CommonDBTM
 
     public static function install(Migration $migration): void
     {
-        /** @var \DBmysql $DB */
+        /** @var DBmysql $DB */
         global $DB;
 
         $table = self::getTable();
         if (!$DB->tableExists($table)) {
-            $migration->displayMessage("Installing $table");
-            $query = "CREATE TABLE IF NOT EXISTS `$table` (
+            $migration->displayMessage('Installing ' . $table);
+            $query = "CREATE TABLE IF NOT EXISTS `{$table}` (
                 `id` int unsigned NOT NULL AUTO_INCREMENT,
                 `itemtype` varchar(100) NOT NULL DEFAULT '',
                 `items_id` int unsigned NOT NULL DEFAULT '0',
@@ -410,24 +420,27 @@ class Escalation extends CommonDBTM
                 }
             }
         }
+
         if ($DB->fieldExists($table, 'groups_id_source')) {
             $migration->dropKey($table, 'groups_id_source');
             $migration->dropField($table, 'groups_id_source');
         }
+
         if (!$DB->fieldExists($table, 'is_private')) {
             $migration->addField($table, 'is_private', 'bool', ['value' => '0']);
         }
+
         $migration->executeMigration();
     }
 
     public static function uninstall(Migration $migration): void
     {
-        /** @var \DBmysql $DB */
+        /** @var DBmysql $DB */
         global $DB;
 
         $table = self::getTable();
         if ($DB->tableExists($table)) {
-            $DB->doQuery("DROP TABLE IF EXISTS `$table`");
+            $DB->doQuery(sprintf('DROP TABLE IF EXISTS `%s`', $table));
         }
     }
 }
