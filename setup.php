@@ -36,6 +36,7 @@ declare(strict_types=1);
 use Glpi\Plugin\Hooks;
 use GlpiPlugin\Moreoptions\Config;
 use GlpiPlugin\Moreoptions\Controller;
+use GlpiPlugin\Moreoptions\Escalation;
 
 /** @phpstan-ignore theCodingMachineSafe.function (safe to assume this isn't already defined) */
 define('PLUGIN_MOREOPTIONS_VERSION', '1.0.0-rc2');
@@ -81,9 +82,21 @@ function plugin_init_moreoptions(): void
     // Both hooks below are called by GLPI core with an array of parameters (not an item
     // instance), so they must be registered without an itemtype key: the callback filters
     // on $params['item'] itself.
-    $PLUGIN_HOOKS[Hooks::TIMELINE_ACTIONS]['moreoptions'] = Controller::showSolutionRequirementsWarning(...);
+    $PLUGIN_HOOKS[Hooks::TIMELINE_ACTIONS]['moreoptions'] = Controller::showTimelineActions(...);
+
 
     $PLUGIN_HOOKS[Hooks::POST_ITEM_FORM]['moreoptions'] = Controller::markMandatoryTaskFields(...);
+
+    $PLUGIN_HOOKS[Hooks::TIMELINE_ITEMS]['moreoptions'] = Escalation::showInTimeline(...);
+
+    // Group links added with `_plugin_moreoptions_escalade => true` are escalations.
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Group_Ticket::class] = Escalation::escalate(...);
+
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Change_Group::class] = Escalation::escalate(...);
+
+    $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Group_Problem::class] = Escalation::escalate(...);
+
+    $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Ticket::class] = Controller::beforeCloseITILObject(...);
 
     $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][Ticket::class] = Controller::beforeCloseITILObject(...);
 

@@ -402,7 +402,9 @@ class Config extends CommonDBTM
                 [
                     'title' => __('Escalate', 'moreoptions'),
                     'icon'  => 'ti-arrow-up',
-                    'rows'  => [],
+                    'rows'  => [
+                        ['key' => 'escalate_is_active', 'kind' => 'yes_no', 'label' => __('Activate escalation', 'moreoptions')],
+                    ],
                 ],
             ],
         ];
@@ -574,6 +576,7 @@ class Config extends CommonDBTM
                 `assign_technician_from_task_ticket` tinyint NOT NULL DEFAULT '0',
                 `assign_technician_from_task_change` tinyint NOT NULL DEFAULT '0',
                 `assign_technician_from_task_problem` tinyint NOT NULL DEFAULT '0',
+                `escalate_is_active` tinyint NOT NULL DEFAULT '0',
                 PRIMARY KEY (`id`),
                 KEY `entities_id` (`entities_id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
@@ -592,6 +595,7 @@ class Config extends CommonDBTM
                 'assign_technician_from_task_ticket',
                 'assign_technician_from_task_change',
                 'assign_technician_from_task_problem',
+                'escalate_is_active',
             ] as $field
         ) {
             if (!$DB->fieldExists($table, $field)) {
