@@ -84,7 +84,6 @@ function plugin_init_moreoptions(): void
     // on $params['item'] itself.
     $PLUGIN_HOOKS[Hooks::TIMELINE_ACTIONS]['moreoptions'] = Controller::showTimelineActions(...);
 
-    $PLUGIN_HOOKS[Hooks::TIMELINE_ACTIONS]['moreoptions'] = Controller::showSolutionRequirementsWarning(...);
 
     $PLUGIN_HOOKS[Hooks::POST_ITEM_FORM]['moreoptions'] = Controller::markMandatoryTaskFields(...);
 
