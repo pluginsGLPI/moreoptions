@@ -118,11 +118,18 @@ class Escalation extends CommonDBTM
 
         /** @var array<string, mixed> $timeline */
         $timeline = &$params['timeline'];
-
-        $escalations = (new self())->find([
+        $can_see_private = Session::haveRight('followup', ITILFollowup::SEEPRIVATE);
+        
+        $criterias = [
             'itemtype' => $item::class,
             'items_id' => $item->getID(),
-        ]);
+        ];
+        
+        if (!$can_see_private) {
+            $criterias['is_private'] = 0;
+        }
+
+        $escalations = (new self())->find($criterias);
 
         foreach ($escalations as $row) {
             $timeline['MoreoptionsEscalation_' . $row['id']] = [
