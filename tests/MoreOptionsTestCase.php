@@ -41,6 +41,7 @@ use Session;
 abstract class MoreOptionsTestCase extends DbTestCase
 {
     public const TU_USER = 'glpi';
+
     public const TU_PASS = 'glpi';
 
     /**
@@ -129,6 +130,7 @@ abstract class MoreOptionsTestCase extends DbTestCase
         if (empty($config->fields) || $config->isNewItem()) {
             $config = $this->createTestConfig();
         }
+
         return $config;
     }
 
@@ -147,7 +149,7 @@ abstract class MoreOptionsTestCase extends DbTestCase
      */
     protected function clearLogEntriesContaining(string $pattern): void
     {
-        if (!isset($this->log_handler)) {
+        if (!property_exists($this, 'log_handler') || $this->log_handler === null) {
             return;
         }
 
@@ -172,6 +174,7 @@ abstract class MoreOptionsTestCase extends DbTestCase
         if (!isset($_SESSION['glpiactiveentities_string'])) {
             $_SESSION['glpiactiveentities_string'] = '';
         }
+
         if (!isset($_SESSION['glpiactiveentities'])) {
             $_SESSION['glpiactiveentities'] = [];
         }

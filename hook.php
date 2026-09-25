@@ -31,6 +31,8 @@
  * -------------------------------------------------------------------------
  */
 
+declare(strict_types=1);
+
 use GlpiPlugin\Moreoptions\Config;
 
 function plugin_moreoptions_install(): bool

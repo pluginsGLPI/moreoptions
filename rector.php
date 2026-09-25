@@ -31,15 +31,27 @@
  * -------------------------------------------------------------------------
  */
 
-use GlpiPlugin\Moreoptions\Config;
+use Rector\Configuration\RectorConfigBuilder;
 
-Session::checkLoginUser();
+require_once __DIR__ . '/../../src/Plugin.php';
 
-$config = new Config();
-
-if (isset($_POST["update"])) {
-    $config->check($_POST['id'], UPDATE);
-    $config->update($_POST);
+$baseline_file = __DIR__ . '/../../PluginsRector.php';
+if (!file_exists($baseline_file)) {
+    throw new RuntimeException(
+        sprintf(
+            'Unable to find "%s". Running rector on a plugin requires a GLPI development checkout that ships PluginsRector.php.',
+            $baseline_file,
+        ),
+    );
 }
 
-Html::back();
+$baseline = require $baseline_file;
+
+/** @var RectorConfigBuilder $config */
+$config = $baseline([
+    __DIR__ . '/front',
+    __DIR__ . '/src',
+    __DIR__ . '/tests',
+]);
+
+return $config;
