@@ -2590,4 +2590,277 @@ class ConfigTest extends MoreOptionsTestCase
             Config::escaladeConfigHandlesTechnicianGroup($escalade_config, $handled_by_behaviors),
         );
     }
+
+    /**
+     * Groups not allowed as requester must not be added as requester group
+     */
+    public function testTakeTheRequesterGroupSkipsGroupsNotAllowedAsRequester(): void
+    {
+        $conf = $this->getCurrentConfig();
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'entities_id'                 => 0,
+            'take_requester_group_ticket' => 2, // All
+        ]));
+
+        $allowed_group = $this->createItem(
+            \Group::class,
+            [
+                'name'         => 'Requester allowed group',
+                'is_requester' => 1,
+            ],
+        );
+        $forbidden_group = $this->createItem(
+            \Group::class,
+            [
+                'name'         => 'Requester forbidden group',
+                'is_requester' => 0,
+            ],
+        );
+
+        $user = new \User();
+        $this->assertTrue($user->getFromDBByCrit(['name' => 'glpi']));
+
+        foreach ([$allowed_group, $forbidden_group] as $group) {
+            $this->createItem(
+                \Group_User::class,
+                [
+                    'groups_id' => $group->getID(),
+                    'users_id'  => $user->getID(),
+                ],
+            );
+        }
+
+        $ticket = $this->createItem(
+            \Ticket::class,
+            [
+                'name'    => 'Test ticket requester group not allowed',
+                'content' => 'Test content',
+            ],
+        );
+
+        $this->createItem(
+            \Ticket_User::class,
+            [
+                'tickets_id' => $ticket->getID(),
+                'users_id'   => $user->getID(),
+                'type'       => \Ticket_User::REQUESTER,
+            ],
+        );
+
+        $ticket_group = new \Group_Ticket();
+        $groups = $ticket_group->find([
+            'tickets_id' => $ticket->getID(),
+            'type'       => \CommonITILActor::REQUESTER,
+        ]);
+        $this->assertCount(1, $groups);
+        $this->assertEquals($allowed_group->getID(), current($groups)['groups_id']);
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'entities_id'                 => 0,
+            'take_requester_group_ticket' => 0,
+        ]));
+    }
+
+    /**
+     * Main group of the technician must not be added if it is not allowed as assigned
+     */
+    public function testTakeTheTechnicianGroupSkipsGroupNotAllowedAsAssigned(): void
+    {
+        $conf = $this->getCurrentConfig();
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'entities_id'                  => 0,
+            'take_technician_group_ticket' => 1, // Main group only
+        ]));
+
+        $forbidden_group = $this->createItem(
+            \Group::class,
+            [
+                'name'      => 'Assign forbidden group',
+                'is_assign' => 0,
+            ],
+        );
+
+        $user = new \User();
+        $this->assertTrue($user->getFromDBByCrit(['name' => 'tech']));
+
+        $this->createItem(
+            \Group_User::class,
+            [
+                'groups_id' => $forbidden_group->getID(),
+                'users_id'  => $user->getID(),
+            ],
+        );
+        $this->updateItem(
+            \User::class,
+            $user->getID(),
+            [
+                'groups_id' => $forbidden_group->getID(),
+            ],
+        );
+
+        $ticket = $this->createItem(
+            \Ticket::class,
+            [
+                'name'    => 'Test ticket technician group not allowed',
+                'content' => 'Test content',
+            ],
+        );
+
+        $this->createItem(
+            \Ticket_User::class,
+            [
+                'tickets_id' => $ticket->getID(),
+                'users_id'   => $user->getID(),
+                'type'       => \Ticket_User::ASSIGN,
+            ],
+        );
+
+        $ticket_group = new \Group_Ticket();
+        $this->assertCount(0, $ticket_group->find([
+            'tickets_id' => $ticket->getID(),
+            'groups_id'  => $forbidden_group->getID(),
+        ]));
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'entities_id'                  => 0,
+            'take_technician_group_ticket' => 0,
+        ]));
+    }
+
+    /**
+     * Item groups not allowed as assigned must not be added to the ticket
+     */
+    public function testTakeItemGroupsSkipsGroupNotAllowedAsAssigned(): void
+    {
+        $conf = $this->getCurrentConfig();
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'entities_id'            => 0,
+            'take_item_group_ticket' => 1,
+        ]));
+
+        $allowed_group = $this->createItem(
+            \Group::class,
+            [
+                'name'      => 'Item group allowed',
+                'is_assign' => 1,
+            ],
+        );
+        $forbidden_group = $this->createItem(
+            \Group::class,
+            [
+                'name'      => 'Item group forbidden',
+                'is_assign' => 0,
+            ],
+        );
+
+        $computer = $this->createItem(
+            \Computer::class,
+            [
+                'name'        => 'Test computer group not allowed',
+                'entities_id' => 0,
+            ],
+        );
+
+        foreach ([$allowed_group, $forbidden_group] as $group) {
+            $this->createItem(
+                \Group_Item::class,
+                [
+                    'items_id'  => $computer->getID(),
+                    'itemtype'  => \Computer::class,
+                    'groups_id' => $group->getID(),
+                    'type'      => 1,
+                ],
+            );
+        }
+
+        $ticket = $this->createItem(
+            \Ticket::class,
+            [
+                'name'    => 'Test ticket item group not allowed',
+                'content' => 'Test content',
+            ],
+        );
+
+        $this->createItem(
+            \Item_Ticket::class,
+            [
+                'tickets_id' => $ticket->getID(),
+                'items_id'   => $computer->getID(),
+                'itemtype'   => \Computer::class,
+            ],
+        );
+
+        $ticket_group = new \Group_Ticket();
+        $groups = $ticket_group->find([
+            'tickets_id' => $ticket->getID(),
+            'type'       => \CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(1, $groups);
+        $this->assertEquals($allowed_group->getID(), current($groups)['groups_id']);
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'entities_id'            => 0,
+            'take_item_group_ticket' => 0,
+        ]));
+    }
+
+    /**
+     * Category technical group not allowed as assigned must not be added to the ticket
+     */
+    public function testUpdateTicketActorsOnCategoryChangeSkipsGroupNotAllowedAsAssigned(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'entities_id'                                          => 0,
+            'assign_technical_group_when_changing_category_ticket' => 1,
+        ]));
+
+        $forbidden_group = $this->createItem(
+            \Group::class,
+            [
+                'name'      => 'Category group forbidden',
+                'is_assign' => 0,
+            ],
+        );
+
+        $category = $this->createItem(
+            \ITILCategory::class,
+            [
+                'name'      => 'Test Category with forbidden group',
+                'groups_id' => $forbidden_group->getID(),
+            ],
+        );
+
+        $ticket = $this->createItem(
+            \Ticket::class,
+            [
+                'name'    => 'Test ticket category group not allowed',
+                'content' => 'Test content',
+            ],
+        );
+
+        $this->updateItem(
+            \Ticket::class,
+            $ticket->getID(),
+            [
+                'itilcategories_id' => $category->getID(),
+            ],
+        );
+
+        $ticket_group = new \Group_Ticket();
+        $this->assertCount(0, $ticket_group->find([
+            'tickets_id' => $ticket->getID(),
+            'groups_id'  => $forbidden_group->getID(),
+        ]));
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'assign_technical_group_when_changing_category_ticket' => 0,
+        ]));
+    }
 }
