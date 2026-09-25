@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Add
 - Add rector config
+- Implementation of the basic concept of escalation
 
 ## [1.0.0-rc2]
 

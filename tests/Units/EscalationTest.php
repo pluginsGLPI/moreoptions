@@ -55,9 +55,9 @@ class EscalationTest extends MoreOptionsTestCase
     public static function escalationProvider(): iterable
     {
         foreach ([Ticket::class, Change::class, Problem::class] as $itemtype) {
-            yield "$itemtype without group before escalation" => [$itemtype, 0];
-            yield "$itemtype with one group before escalation" => [$itemtype, 1];
-            yield "$itemtype with two groups before escalation" => [$itemtype, 2];
+            yield $itemtype . ' without group before escalation' => [$itemtype, 0];
+            yield $itemtype . ' with one group before escalation' => [$itemtype, 1];
+            yield $itemtype . ' with two groups before escalation' => [$itemtype, 2];
         }
     }
 
@@ -82,8 +82,9 @@ class EscalationTest extends MoreOptionsTestCase
         // Groups assigned to the item before the escalation
         $source_groups = [];
         for ($i = 1; $i <= $nb_source_groups; $i++) {
-            $source_groups[] = $this->createGroup($entities_id, "Source group $i");
+            $source_groups[] = $this->createGroup($entities_id, 'Source group ' . $i);
         }
+
         foreach ($source_groups as $group) {
             $this->createItem($item->grouplinkclass, [
                 $item->getForeignKeyField() => $item->getID(),
@@ -91,6 +92,7 @@ class EscalationTest extends MoreOptionsTestCase
                 'type'                      => CommonITILActor::ASSIGN,
             ]);
         }
+
         $this->assertSame($this->getIdsOf($source_groups), $this->getAssignedGroupIds($item));
 
         // Escalate to a new group
@@ -135,6 +137,7 @@ class EscalationTest extends MoreOptionsTestCase
         } else {
             $this->assertStringContainsString('Escalate from', $content);
         }
+
         foreach ($source_groups as $group) {
             $this->assertStringContainsString($group->fields['name'], $content);
         }
@@ -240,15 +243,13 @@ class EscalationTest extends MoreOptionsTestCase
         $group_link = getItemForItemtype($item->grouplinkclass);
         $this->assertInstanceOf(CommonITILActor::class, $group_link);
 
-        $groups_ids = array_map(
+        return array_map(
             static fn(array $row): int => (int) $row['groups_id'],
             array_values($group_link->find([
                 $item->getForeignKeyField() => $item->getID(),
                 'type'                      => CommonITILActor::ASSIGN,
             ], ['id ASC'])),
         );
-
-        return $groups_ids;
     }
 
     /**
