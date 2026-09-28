@@ -54,7 +54,6 @@ use Ticket;
 
 use function Safe\json_decode;
 use function Safe\json_encode;
-use function Safe\preg_replace;
 
 /**
  * An escalation of a ticket / change / problem, shown as its own entry in the
@@ -65,11 +64,6 @@ class Escalation extends CommonDBTM
     public $dohistory = true;
 
     public static $rightname = 'ticket';
-
-    /**
-     * Maximum length of the comment shown inline in the timeline, before it gets cut with "...".
-     */
-    private const TIMELINE_EXCERPT_LENGTH = 50;
 
     public static function getTypeName($nb = 0): string
     {
@@ -152,50 +146,56 @@ class Escalation extends CommonDBTM
     }
 
     /**
-     * The one-line summary shown in the timeline, in the manner of pending reason reminders:
-     * "Escalate from <source groups> to <target group>", or "Escalate to <target group>" when no
-     * group was assigned before the escalation. Each group links to its form.
+     * The timeline entry of an escalation: a header line "<icon> | <source groups> -> <target group>"
+     * (see escalation_timeline.html.twig, which puts it next to the "Created: ... by ..." badge),
+     * followed by the escalation comment, if any, which can be collapsed.
      *
      * @param array<string, mixed> $row
      */
     private static function getTimelineContent(array $row): string
     {
         $can_view_groups = Group::canView();
-        $badge = static function (int $groups_id) use ($can_view_groups): string {
+        $group_link = static function (int $groups_id) use ($can_view_groups): string {
             $name = htmlescape(Dropdown::getDropdownName(Group::getTable(), $groups_id));
             if ($can_view_groups) {
                 $name = sprintf('<a href="%s">%s</a>', htmlescape(Group::getFormURLWithID($groups_id)), $name);
             }
 
-            return '<span class="badge moreoptions-escalation-group"><i class="ti ti-users moreoptions-escalation-group-icon"></i> ' . $name . '</span>';
+            return '<span class="moreoptions-escalation-group"><i class="ti ti-users"></i>' . $name . '</span>';
         };
 
-        $target = $badge((int) $row['groups_id']);
-        $sources = array_map($badge, self::getSourceGroupIds($row));
-        $text = $sources !== []
-            ? sprintf(__s('Escalate from %1$s to %2$s', 'moreoptions'), implode(' ', $sources), $target)
-            : sprintf(__s('Escalate to %s', 'moreoptions'), $target);
+        $target = $group_link((int) $row['groups_id']);
+        $sources = array_map($group_link, self::getSourceGroupIds($row));
 
-        $content = '<span>'
-            . '<i class="' . htmlescape(self::getIcon()) . ' text-danger me-1" title="' . htmlescape(self::getTypeName(1)) . '" data-bs-toggle="tooltip"></i>'
-            . $text;
+        // The same as a sentence, as the icon tooltip. Already escaped: the group names are.
+        $sentence = strip_tags($sources !== []
+            ? sprintf(__s('Escalate from %1$s to %2$s', 'moreoptions'), implode(', ', $sources), $target)
+            : sprintf(__s('Escalate to %s', 'moreoptions'), $target));
+
+        $content = '<div class="moreoptions-escalation-summary">'
+            . '<i class="' . htmlescape(self::getIcon()) . '" title="' . $sentence . '" aria-label="' . $sentence . '" data-bs-toggle="tooltip"></i>'
+            . '<span class="moreoptions-escalation-separator" aria-hidden="true">|</span>'
+            . '<span class="moreoptions-escalation-groups">'
+            . implode('', $sources)
+            . '<i class="ti ti-arrow-right" aria-hidden="true"></i>'
+            . $target
+            . '</span>'
+            . '</div>';
 
         if (!empty($row['content'])) {
-            // Inline: the comment as plain text on a single line, cut with "..." when too long.
-            // Tooltip: the whole comment, with its formatting.
-            $excerpt = trim((string) preg_replace('/\s+/', ' ', RichText::getTextFromHtml($row['content'], false, true)));
-            if (mb_strlen($excerpt) > self::TIMELINE_EXCERPT_LENGTH) {
-                $excerpt = rtrim(mb_substr($excerpt, 0, self::TIMELINE_EXCERPT_LENGTH)) . '...';
-            }
-
+            $comment_id = 'moreoptions-escalation-comment-' . (int) $row['id'];
             $content .= sprintf(
-                '<span class="moreoptions-escalation-comment" data-bs-toggle="tooltip" data-bs-html="true" title="%s">%s</span>',
-                htmlescape(RichText::getSafeHtml($row['content'])),
-                ' (<u>' . htmlescape($excerpt) . '</u>)',
+                '<button type="button" class="btn btn-sm btn-ghost-secondary moreoptions-escalation-toggle" data-bs-toggle="collapse" data-bs-target="#%1$s" aria-expanded="true" aria-controls="%1$s" title="%2$s">'
+                    . '<i class="ti ti-chevron-up"></i>'
+                    . '</button>'
+                    . '<div id="%1$s" class="collapse show moreoptions-escalation-comment">%3$s</div>',
+                htmlescape($comment_id),
+                htmlescape(__('Show / hide the comment', 'moreoptions')),
+                RichText::getEnhancedHtml($row['content']),
             );
         }
 
-        return $content . '</span>';
+        return $content;
     }
 
     /**
@@ -300,8 +300,8 @@ class Escalation extends CommonDBTM
 
     /**
      * Called from the {@link \Glpi\Plugin\Hooks::TIMELINE_ACTIONS} hook (see
-     * Controller::showTimelineActions()). Renders the script that moves the "internal" icon of
-     * escalation entries into their "Created: ... by ..." badge.
+     * Controller::showTimelineActions()). Renders the script that lays out the header of escalation
+     * entries (summary, "Created: ... by ..." badge, collapse button, "internal" icon).
      *
      * @param array<string, mixed> $params
      */

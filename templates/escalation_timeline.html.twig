@@ -32,8 +32,10 @@
 {#
  # Rendered through the core `Hooks::TIMELINE_ACTIONS` hook (see Escalation::showTimelineScripts()).
  # The header of timeline entries is rendered by GLPI core, so this only drops an invisible anchor +
- # script that moves the "internal" icon of escalation entries into their "Created: ... by ..."
- # badge, after a small separator.
+ # script that, for each escalation entry (see Escalation::getTimelineContent()):
+ #  - moves the "<icon> | <source groups> -> <target group>" summary before the "Created: ... by ..." badge,
+ #  - moves the button collapsing the comment next to the badge,
+ #  - puts a small separator before the "internal" icon.
  #}
 <span id="{{ marker_id }}" style="display: none;" aria-hidden="true"></span>
 <script>
@@ -44,20 +46,34 @@
         return;
     }
 
-    container.querySelectorAll('.timeline-item.moreoptions-escalation').forEach(function(entry) {
-        var private_icon = entry.querySelector('.timeline-item-buttons .is-private');
-        var badge = entry.querySelector('.timeline-header .creator .badge');
-        if (!private_icon || !badge) {
+    container.querySelectorAll('.timeline-item.moreoptions-escalation:not([data-moreoptions-ready])').forEach(function(entry) {
+        var header = entry.querySelector('.timeline-header');
+        var buttons = entry.querySelector('.timeline-header .timeline-item-buttons');
+        if (!header || !buttons) {
             return;
         }
+        entry.setAttribute('data-moreoptions-ready', '1');
 
-        var separator = document.createElement('span');
-        separator.className = 'moreoptions-escalation-separator mx-1';
-        separator.setAttribute('aria-hidden', 'true');
-        separator.textContent = '|';
+        var summary = entry.querySelector('.read-only-content .moreoptions-escalation-summary');
+        if (summary) {
+            header.prepend(summary);
+        }
 
-        private_icon.classList.remove('ms-2');
-        badge.append(separator, private_icon);
+        var toggle = entry.querySelector('.read-only-content .moreoptions-escalation-toggle');
+        if (toggle) {
+            buttons.prepend(toggle);
+        }
+
+        var private_icon = buttons.querySelector('.is-private');
+        if (private_icon) {
+            var separator = document.createElement('span');
+            separator.className = 'moreoptions-escalation-separator';
+            separator.setAttribute('aria-hidden', 'true');
+            separator.textContent = '|';
+
+            private_icon.classList.remove('ms-2');
+            private_icon.before(separator);
+        }
     });
 })();
 </script>
