@@ -2604,26 +2604,26 @@ class ConfigTest extends MoreOptionsTestCase
         ]));
 
         $allowed_group = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name'         => 'Requester allowed group',
                 'is_requester' => 1,
             ],
         );
         $forbidden_group = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name'         => 'Requester forbidden group',
                 'is_requester' => 0,
             ],
         );
 
-        $user = new \User();
+        $user = new User();
         $this->assertTrue($user->getFromDBByCrit(['name' => 'glpi']));
 
         foreach ([$allowed_group, $forbidden_group] as $group) {
             $this->createItem(
-                \Group_User::class,
+                Group_User::class,
                 [
                     'groups_id' => $group->getID(),
                     'users_id'  => $user->getID(),
@@ -2632,7 +2632,7 @@ class ConfigTest extends MoreOptionsTestCase
         }
 
         $ticket = $this->createItem(
-            \Ticket::class,
+            Ticket::class,
             [
                 'name'    => 'Test ticket requester group not allowed',
                 'content' => 'Test content',
@@ -2640,18 +2640,18 @@ class ConfigTest extends MoreOptionsTestCase
         );
 
         $this->createItem(
-            \Ticket_User::class,
+            Ticket_User::class,
             [
                 'tickets_id' => $ticket->getID(),
                 'users_id'   => $user->getID(),
-                'type'       => \Ticket_User::REQUESTER,
+                'type'       => Ticket_User::REQUESTER,
             ],
         );
 
-        $ticket_group = new \Group_Ticket();
+        $ticket_group = new Group_Ticket();
         $groups = $ticket_group->find([
             'tickets_id' => $ticket->getID(),
-            'type'       => \CommonITILActor::REQUESTER,
+            'type'       => CommonITILActor::REQUESTER,
         ]);
         $this->assertCount(1, $groups);
         $this->assertEquals($allowed_group->getID(), current($groups)['groups_id']);
@@ -2675,25 +2675,25 @@ class ConfigTest extends MoreOptionsTestCase
         ]));
 
         $forbidden_group = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name'      => 'Assign forbidden group',
                 'is_assign' => 0,
             ],
         );
 
-        $user = new \User();
+        $user = new User();
         $this->assertTrue($user->getFromDBByCrit(['name' => 'tech']));
 
         $this->createItem(
-            \Group_User::class,
+            Group_User::class,
             [
                 'groups_id' => $forbidden_group->getID(),
                 'users_id'  => $user->getID(),
             ],
         );
         $this->updateItem(
-            \User::class,
+            User::class,
             $user->getID(),
             [
                 'groups_id' => $forbidden_group->getID(),
@@ -2701,7 +2701,7 @@ class ConfigTest extends MoreOptionsTestCase
         );
 
         $ticket = $this->createItem(
-            \Ticket::class,
+            Ticket::class,
             [
                 'name'    => 'Test ticket technician group not allowed',
                 'content' => 'Test content',
@@ -2709,15 +2709,15 @@ class ConfigTest extends MoreOptionsTestCase
         );
 
         $this->createItem(
-            \Ticket_User::class,
+            Ticket_User::class,
             [
                 'tickets_id' => $ticket->getID(),
                 'users_id'   => $user->getID(),
-                'type'       => \Ticket_User::ASSIGN,
+                'type'       => Ticket_User::ASSIGN,
             ],
         );
 
-        $ticket_group = new \Group_Ticket();
+        $ticket_group = new Group_Ticket();
         $this->assertCount(0, $ticket_group->find([
             'tickets_id' => $ticket->getID(),
             'groups_id'  => $forbidden_group->getID(),
@@ -2742,14 +2742,14 @@ class ConfigTest extends MoreOptionsTestCase
         ]));
 
         $allowed_group = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name'      => 'Item group allowed',
                 'is_assign' => 1,
             ],
         );
         $forbidden_group = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name'      => 'Item group forbidden',
                 'is_assign' => 0,
@@ -2757,7 +2757,7 @@ class ConfigTest extends MoreOptionsTestCase
         );
 
         $computer = $this->createItem(
-            \Computer::class,
+            Computer::class,
             [
                 'name'        => 'Test computer group not allowed',
                 'entities_id' => 0,
@@ -2766,10 +2766,10 @@ class ConfigTest extends MoreOptionsTestCase
 
         foreach ([$allowed_group, $forbidden_group] as $group) {
             $this->createItem(
-                \Group_Item::class,
+                Group_Item::class,
                 [
                     'items_id'  => $computer->getID(),
-                    'itemtype'  => \Computer::class,
+                    'itemtype'  => Computer::class,
                     'groups_id' => $group->getID(),
                     'type'      => 1,
                 ],
@@ -2777,7 +2777,7 @@ class ConfigTest extends MoreOptionsTestCase
         }
 
         $ticket = $this->createItem(
-            \Ticket::class,
+            Ticket::class,
             [
                 'name'    => 'Test ticket item group not allowed',
                 'content' => 'Test content',
@@ -2785,18 +2785,18 @@ class ConfigTest extends MoreOptionsTestCase
         );
 
         $this->createItem(
-            \Item_Ticket::class,
+            Item_Ticket::class,
             [
                 'tickets_id' => $ticket->getID(),
                 'items_id'   => $computer->getID(),
-                'itemtype'   => \Computer::class,
+                'itemtype'   => Computer::class,
             ],
         );
 
-        $ticket_group = new \Group_Ticket();
+        $ticket_group = new Group_Ticket();
         $groups = $ticket_group->find([
             'tickets_id' => $ticket->getID(),
-            'type'       => \CommonITILActor::ASSIGN,
+            'type'       => CommonITILActor::ASSIGN,
         ]);
         $this->assertCount(1, $groups);
         $this->assertEquals($allowed_group->getID(), current($groups)['groups_id']);
@@ -2822,7 +2822,7 @@ class ConfigTest extends MoreOptionsTestCase
         ]));
 
         $forbidden_group = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name'      => 'Category group forbidden',
                 'is_assign' => 0,
@@ -2830,7 +2830,7 @@ class ConfigTest extends MoreOptionsTestCase
         );
 
         $category = $this->createItem(
-            \ITILCategory::class,
+            ITILCategory::class,
             [
                 'name'      => 'Test Category with forbidden group',
                 'groups_id' => $forbidden_group->getID(),
@@ -2838,7 +2838,7 @@ class ConfigTest extends MoreOptionsTestCase
         );
 
         $ticket = $this->createItem(
-            \Ticket::class,
+            Ticket::class,
             [
                 'name'    => 'Test ticket category group not allowed',
                 'content' => 'Test content',
@@ -2846,14 +2846,14 @@ class ConfigTest extends MoreOptionsTestCase
         );
 
         $this->updateItem(
-            \Ticket::class,
+            Ticket::class,
             $ticket->getID(),
             [
                 'itilcategories_id' => $category->getID(),
             ],
         );
 
-        $ticket_group = new \Group_Ticket();
+        $ticket_group = new Group_Ticket();
         $this->assertCount(0, $ticket_group->find([
             'tickets_id' => $ticket->getID(),
             'groups_id'  => $forbidden_group->getID(),
