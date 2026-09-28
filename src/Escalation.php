@@ -46,6 +46,7 @@ use Dropdown;
 use Glpi\Application\View\TemplateRenderer;
 use Glpi\RichText\RichText;
 use Group;
+use ITILFollowup;
 use Migration;
 use Problem;
 use Session;
@@ -119,12 +120,12 @@ class Escalation extends CommonDBTM
         /** @var array<string, mixed> $timeline */
         $timeline = &$params['timeline'];
         $can_see_private = Session::haveRight('followup', ITILFollowup::SEEPRIVATE);
-        
+
         $criterias = [
             'itemtype' => $item::class,
             'items_id' => $item->getID(),
         ];
-        
+
         if (!$can_see_private) {
             $criterias['is_private'] = 0;
         }
