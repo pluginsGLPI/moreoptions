@@ -113,10 +113,10 @@
 }
 
 :root {
-    --mo-escalation-color: #ffdddd80;
+    --mo-escalation-color: #fff0f0ca;
 
     --mo-escalation-background: var(--mo-escalation-color);
-    --mo-escalation-border: color-mix(in srgb, var(--mo-escalation-color), #af2020 30%);
+    --mo-escalation-border: color-mix(in srgb, var(--mo-escalation-color), #a81313 50%);
 }
 
 // "Escalate" button, next to the "Assigned to" field (see escalation_button.html.twig).
@@ -132,8 +132,10 @@
     color: white !important;
 }
 
-// Escalation entries in the timeline (see Escalation::showInTimeline()): a single line, the same
-// way GLPI core displays pending reason reminders (`.ITILReminder` in _timeline.scss).
+// Escalation entries in the timeline (see Escalation::getTimelineContent() and
+// escalation_timeline.html.twig): a centered card with a dashed border, holding the
+// "<icon> | <source groups> -> <target group>" summary next to the "Created: ... by ..." badge,
+// then the escalation comment, which can be collapsed.
 .timeline-item.moreoptions-escalation {
     width: 100%;
 
@@ -142,50 +144,72 @@
     }
 
     .content-part {
-        flex-direction: row-reverse !important;
-        justify-content: flex-end;
+        align-items: center;
         margin-left: 75px;
         margin-right: 83px;
 
         .timeline-content {
-            border: 0;
-            box-shadow: none;
-            margin-top: 0 !important;
             flex-grow: 0 !important;
-            background: transparent;
+            // Core stretches timeline entries to the full width: fit the content instead, so a
+            // collapsed (or comment-less) entry is no wider than its header line.
+            min-width: 0;
+            max-width: 100%;
+            background: var(--mo-escalation-background);
+            // Core squares the corner the (hidden) speech bubble arrow points to.
+            border-radius: var(--tblr-border-radius-lg) !important;
+            // Also replaces the thicker dashed border of "internal" entries (`.private-item`).
+            border: 1px dashed var(--mo-escalation-border);
+            box-shadow: none;
+
+            // Speech bubble arrow pointing to the (hidden) avatar
+            &::before,
+            &::after {
+                display: none;
+            }
 
             .card-body {
-                padding: 0;
-                display: flex;
-                flex-direction: row-reverse;
-
-                .timeline-header {
-                    margin-left: 1rem;
-                    margin-top: 0;
-                    margin-bottom: 0;
-                }
+                padding: 0.5rem 1rem !important;
             }
-        }
-
-        .user_link {
-            display: none !important;
-        }
-
-        .itil-date-creation {
-            margin-left: 1rem !important;
         }
     }
 
-    // "Internal" icon, moved into the "Created: ... by ..." badge (see escalation_timeline.html.twig).
+    .timeline-header {
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin: 0;
+    }
+
+    .timeline-item-buttons {
+        align-items: center;
+        gap: 0.5rem;
+        margin-left: 0 !important;
+    }
+
     .moreoptions-escalation-separator {
         opacity: 0.4;
     }
 
+    .moreoptions-escalation-summary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--mo-escalation-border);
+    }
+
+    .moreoptions-escalation-groups {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        font-style: italic;
+    }
+
     .moreoptions-escalation-group {
-        color: inherit;
-        font-weight: normal;
-        background-color: var(--mo-escalation-background);
-        border: 1px solid var(--mo-escalation-border);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
 
         a {
             color: inherit;
@@ -194,5 +218,21 @@
                 text-decoration: underline;
             }
         }
+    }
+
+    .moreoptions-escalation-toggle {
+        padding: 0 0.25rem;
+
+        i {
+            transition: transform 0.2s;
+        }
+
+        &.collapsed i {
+            transform: rotate(180deg);
+        }
+    }
+
+    .moreoptions-escalation-comment {
+        margin-top: 0.75rem;
     }
 }
