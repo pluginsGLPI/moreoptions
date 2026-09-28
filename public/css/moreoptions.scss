@@ -111,3 +111,88 @@
         }
     }
 }
+
+:root {
+    --mo-escalation-color: #ffdddd80;
+
+    --mo-escalation-background: var(--mo-escalation-color);
+    --mo-escalation-border: color-mix(in srgb, var(--mo-escalation-color), #af2020 30%);
+}
+
+// "Escalate" button, next to the "Assigned to" field (see escalation_button.html.twig).
+.moreoptions-escalate-btn,
+.moreoptions-escalate-btn:focus {
+    color: var(--mo-escalation-border) !important;
+    border-color: var(--mo-escalation-border) !important;
+}
+
+.moreoptions-escalate-btn:hover {
+    background-color: var(--mo-escalation-border) !important;
+    border-color: var(--mo-escalation-border) !important;
+    color: white !important;
+}
+
+// Escalation entries in the timeline (see Escalation::showInTimeline()): a single line, the same
+// way GLPI core displays pending reason reminders (`.ITILReminder` in _timeline.scss).
+.timeline-item.moreoptions-escalation {
+    width: 100%;
+
+    .user-part {
+        display: none !important;
+    }
+
+    .content-part {
+        flex-direction: row-reverse !important;
+        justify-content: flex-end;
+        margin-left: 75px;
+        margin-right: 83px;
+
+        .timeline-content {
+            border: 0;
+            box-shadow: none;
+            margin-top: 0 !important;
+            flex-grow: 0 !important;
+            background: transparent;
+
+            .card-body {
+                padding: 0;
+                display: flex;
+                flex-direction: row-reverse;
+
+                .timeline-header {
+                    margin-left: 1rem;
+                    margin-top: 0;
+                    margin-bottom: 0;
+                }
+            }
+        }
+
+        .user_link {
+            display: none !important;
+        }
+
+        .itil-date-creation {
+            margin-left: 1rem !important;
+        }
+    }
+
+    // "Internal" icon, moved into the "Created: ... by ..." badge (see escalation_timeline.html.twig).
+    .moreoptions-escalation-separator {
+        opacity: 0.4;
+    }
+
+    .moreoptions-escalation-group {
+        color: inherit;
+        font-weight: normal;
+        background-color: var(--mo-escalation-background);
+        border: 1px solid var(--mo-escalation-border);
+
+        a {
+            color: inherit;
+
+            &:hover {
+                text-decoration: underline;
+            }
+        }
+    }
+}

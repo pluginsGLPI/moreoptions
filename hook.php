@@ -34,12 +34,14 @@
 declare(strict_types=1);
 
 use GlpiPlugin\Moreoptions\Config;
+use GlpiPlugin\Moreoptions\Escalation;
 
 function plugin_moreoptions_install(): bool
 {
     $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
 
     Config::install($migration);
+    Escalation::install($migration);
     $migration->executeMigration();
     return true;
 }
@@ -49,6 +51,7 @@ function plugin_moreoptions_uninstall(): bool
     $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
 
     Config::uninstall($migration);
+    Escalation::uninstall($migration);
 
     return true;
 }
