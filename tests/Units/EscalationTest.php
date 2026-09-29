@@ -403,8 +403,12 @@ class EscalationTest extends MoreOptionsTestCase
         $this->assertInstanceOf(CommonITILObject::class, $item);
 
         ob_start();
-        Escalation::showEscalationForm($item);
-        $crawler = new Crawler(ob_get_clean());
+        try {
+            Escalation::showEscalationForm($item);
+        } finally {
+            $html = ob_get_clean();
+        }
+        $crawler = new Crawler($html);
 
         $observer_switch = $crawler->filter('input[type="checkbox"][name="add_me_as_observer"]');
         $this->assertCount(1, $observer_switch);
