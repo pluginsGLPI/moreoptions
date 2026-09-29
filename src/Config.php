@@ -464,7 +464,7 @@ class Config extends CommonDBTM
                     'icon'  => 'ti-settings',
                     'rows'  => [
                         ['key' => 'escalade_assign_me_as_obsever_by_default', 'kind' => 'yes_no', 'label' => __('Assign me as observer after escalation', 'moreoptions')],
-                        ['key' => 'escalade_is_private_by_default', 'kind' => 'yes_no', 'label' => __('Escalate is private in timeline', 'moreoptions')],
+                        ['key' => 'escalade_is_private_by_default', 'kind' => 'yes_no', 'label' => __('Escalate event is private', 'moreoptions')],
                     ],
                 ],
             ],

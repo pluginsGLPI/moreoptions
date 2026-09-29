@@ -246,6 +246,7 @@ class EscalationTest extends MoreOptionsTestCase
         foreach ($technicians as $technician) {
             $this->addUserActor($item, $technician, CommonITILActor::ASSIGN);
         }
+
         $requester = $this->getUser('post-only');
         $observer = $this->getUser('glpi');
         $this->addUserActor($item, $requester, CommonITILActor::REQUESTER);
@@ -315,6 +316,7 @@ class EscalationTest extends MoreOptionsTestCase
         foreach ([Ticket::class, Change::class, Problem::class] as $configured_itemtype) {
             $options['escalade_status_after_escalation_' . strtolower($configured_itemtype)] = $statuses[$configured_itemtype] ?? 0;
         }
+
         $this->enableEscalation($entities_id, $options);
 
         $item = $this->createItem($itemtype, [
@@ -503,14 +505,15 @@ class EscalationTest extends MoreOptionsTestCase
         $this->assertSame((int) $is_private, (int) $escalation->fields['is_private']);
 
         // Allowed to see private followups: the escalation is always shown, flagged as private
-        $this->assertTrue(Session::haveRight('followup', ITILFollowup::SEEPRIVATE));
+        $this->assertNotEmpty(Session::haveRight('followup', ITILFollowup::SEEPRIVATE));
         $entries = $this->getEscalationTimelineEntries($item);
         $this->assertCount(1, $entries);
         $this->assertSame((int) $is_private, (int) $entries[0]['item']['is_private']);
 
-        // Not allowed to see private followups: a private escalation is hidden
-        $this->login('post-only', 'postonly');
-        $this->assertFalse(Session::haveRight('followup', ITILFollowup::SEEPRIVATE));
+        // Not allowed to see private followups (but still allowed to see the item, or the core
+        // returns an empty timeline): a private escalation is hidden
+        $_SESSION['glpiactiveprofile']['followup'] &= ~ITILFollowup::SEEPRIVATE;
+        $this->assertEmpty(Session::haveRight('followup', ITILFollowup::SEEPRIVATE));
         $this->assertCount($is_private ? 0 : 1, $this->getEscalationTimelineEntries($item));
     }
 
