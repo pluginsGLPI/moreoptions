@@ -72,7 +72,7 @@ class Escalation extends CommonDBTM
 
     public static function getIcon(): string
     {
-        return 'ti ti-arrow-up';
+        return 'ti ti-escalator-up';
     }
 
     /**

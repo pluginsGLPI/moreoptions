@@ -376,11 +376,11 @@ class Config extends CommonDBTM
     public static function getScreenTabs(): array
     {
         return [
-            ['id' => 'ticket', 'label' => __('Ticket'), 'icon' => 'ti-ticket'],
-            ['id' => 'change', 'label' => __('Change'), 'icon' => 'ti-git-branch'],
-            ['id' => 'problem', 'label' => __('Problem'), 'icon' => 'ti-alert-circle'],
+            ['id' => 'ticket', 'label' => __('Ticket'), 'icon' => Ticket::getIcon()],
+            ['id' => 'change', 'label' => __('Change'), 'icon' => Change::getIcon()],
+            ['id' => 'problem', 'label' => __('Problem'), 'icon' => Problem::getIcon()],
             ['id' => 'task', 'label' => _n('Task', 'Tasks', 2), 'icon' => 'ti-checklist'],
-            ['id' => 'escalate', 'label' => __('Escalate', 'moreoptions'), 'icon' => 'ti-arrow-up'],
+            ['id' => 'escalate', 'label' => __('Escalate', 'moreoptions'), 'icon' => Escalation::getIcon(),],
         ];
     }
 
@@ -450,7 +450,7 @@ class Config extends CommonDBTM
             'escalate' => [
                 [
                     'title' => __('Escalate', 'moreoptions'),
-                    'icon'  => 'ti-escalator-up',
+                    'icon'  => Escalation::getIcon(),
                     'rows'  => [
                         ['key' => 'escalate_is_active', 'kind' => 'yes_no', 'label' => __('Activate escalation', 'moreoptions')],
                         ['key' => 'escalate_remove_technician', 'kind' => 'yes_no', 'label' => __('Remove technician after escalation', 'moreoptions')],
