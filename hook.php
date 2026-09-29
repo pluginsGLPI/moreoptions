@@ -35,6 +35,7 @@ declare(strict_types=1);
 
 use GlpiPlugin\Moreoptions\Config;
 use GlpiPlugin\Moreoptions\Escalation;
+use GlpiPlugin\Moreoptions\Group_Link;
 
 function plugin_moreoptions_install(): bool
 {
@@ -42,6 +43,7 @@ function plugin_moreoptions_install(): bool
 
     Config::install($migration);
     Escalation::install($migration);
+    Group_Link::install($migration);
     $migration->executeMigration();
     return true;
 }
@@ -52,6 +54,7 @@ function plugin_moreoptions_uninstall(): bool
 
     Config::uninstall($migration);
     Escalation::uninstall($migration);
+    Group_Link::uninstall($migration);
 
     return true;
 }
