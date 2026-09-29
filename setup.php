@@ -37,6 +37,7 @@ use Glpi\Plugin\Hooks;
 use GlpiPlugin\Moreoptions\Config;
 use GlpiPlugin\Moreoptions\Controller;
 use GlpiPlugin\Moreoptions\Escalation;
+use GlpiPlugin\Moreoptions\Group_Link;
 
 /** @phpstan-ignore theCodingMachineSafe.function (safe to assume this isn't already defined) */
 define('PLUGIN_MOREOPTIONS_VERSION', '1.0.0-rc2');
@@ -66,6 +67,8 @@ function plugin_init_moreoptions(): void
     }
 
     Plugin::registerClass(Config::class, ['addtabon' => 'Entity']);
+
+    Plugin::registerClass(Group_Link::class, ['addtabon' => 'Group']);
 
     $PLUGIN_HOOKS[Hooks::ADD_CSS]['moreoptions'][] = 'css/moreoptions.scss';
 
