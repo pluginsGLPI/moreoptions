@@ -28,33 +28,51 @@
  * @copyright Copyright (C) 2025 by the MoreOptions plugin team.
  * @license   MIT https://opensource.org/licenses/mit-license.php
  * @link      https://github.com/pluginsGLPI/moreoptions
+ * @link      https://gitlab.teclib.com/glpi-network/moreoptions/
  * -------------------------------------------------------------------------
  */
 
-declare(strict_types=1);
+namespace GlpiPlugin\Moreoptions\LinkStrategy;
 
-use GlpiPlugin\Moreoptions\Config;
-use GlpiPlugin\Moreoptions\Escalation;
-use GlpiPlugin\Moreoptions\Group_Link;
-
-function plugin_moreoptions_install(): bool
+enum LinkStrategyEnum: string
 {
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
+    case NONE      = 'none';
+    case BASIC     = 'basic';
+    case INHERITED = 'inherited';
 
-    Config::install($migration);
-    Escalation::install($migration);
-    Group_Link::install($migration);
-    $migration->executeMigration();
-    return true;
-}
+    /**
+     * Create a new instance of the strategy
+     */
+    public function getStrategy(): AbstractLinkStrategy
+    {
+        return match ($this) {
+            self::NONE      => new NoneLink(),
+            self::BASIC     => new BasicLink(),
+            self::INHERITED => new InheritedLink(),
+        };
+    }
 
-function plugin_moreoptions_uninstall(): bool
-{
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
+    /**
+     * Get the default strategy
+     */
+    public static function getDefault(): self
+    {
+        return self::NONE;
+    }
 
-    Config::uninstall($migration);
-    Escalation::uninstall($migration);
-    Group_Link::uninstall($migration);
+    /**
+     * Get all available link strategies
+     *
+     * @return array<string, AbstractLinkStrategy>
+     */
+    public static function getAvailableStrategies(): array
+    {
+        $strategies = [];
 
-    return true;
+        foreach (LinkStrategyEnum::cases() as $case) {
+            $strategies[$case->value] = $case->getStrategy();
+        }
+
+        return $strategies;
+    }
 }
