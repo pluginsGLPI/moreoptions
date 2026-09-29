@@ -408,6 +408,7 @@ class EscalationTest extends MoreOptionsTestCase
         } finally {
             $html = ob_get_clean();
         }
+
         $crawler = new Crawler($html);
 
         $observer_switch = $crawler->filter('input[type="checkbox"][name="add_me_as_observer"]');
