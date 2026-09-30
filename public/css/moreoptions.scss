@@ -135,7 +135,7 @@
 }
 
 // Escalation entries in the timeline (see Escalation::getTimelineContent() and
-// escalation_timeline.html.twig): a centered card with a dashed border, holding the
+// escalation_timeline.html.twig): a centered card, with a dashed border when private, holding the
 // "<icon> | <source groups> -> <target group>" summary next to the "Created: ... by ..." badge,
 // then the escalation comment, which can be collapsed.
 .timeline-item.moreoptions-escalation {
@@ -159,8 +159,8 @@
             background: var(--mo-escalation-background);
             // Core squares the corner the (hidden) speech bubble arrow points to.
             border-radius: var(--tblr-border-radius-lg) !important;
-            // Also replaces the thicker dashed border of "internal" entries (`.private-item`).
-            border: 1px dashed var(--mo-escalation-border);
+            // Dashed only for "internal" entries (`.private-item`), replacing their thicker core border.
+            border: 1px solid var(--mo-escalation-border);
             box-shadow: none;
 
             // Speech bubble arrow pointing to the (hidden) avatar
@@ -173,6 +173,10 @@
                 padding: 0.5rem 1rem !important;
             }
         }
+    }
+
+    &.private-item .content-part .timeline-content {
+        border-style: dashed;
     }
 
     .timeline-header {
@@ -236,5 +240,31 @@
 
     .moreoptions-escalation-comment {
         margin-top: 0.75rem;
+    }
+}
+
+// "Escalation history" popover, opened by the button next to the "Escalate" one (see
+// escalation_button.html.twig).
+.popover.moreoptions-escalation-history-popover {
+    --tblr-popover-max-width: 28rem;
+
+    .popover-body {
+        max-height: 20rem;
+        overflow-y: auto;
+    }
+
+    .moreoptions-escalation-groups {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.25rem 0.5rem;
+        font-style: italic;
+        color: var(--tblr-body-color);
+    }
+
+    .moreoptions-escalation-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
     }
 }

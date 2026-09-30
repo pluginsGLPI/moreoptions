@@ -47,4 +47,4 @@ if (
     throw new AccessDeniedHttpException();
 }
 
-Escalation::showEscalationForm($item);
+Escalation::showEscalationForm($item, (int) ($_GET['groups_id'] ?? 0));
