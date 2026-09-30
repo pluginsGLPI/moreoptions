@@ -159,18 +159,11 @@ class Config extends CommonDBTM
      */
     private static function getStatusConfigFields(): array
     {
-        $fields = [];
-        foreach (self::getScreenTabs() as $tab) {
-            foreach (self::getSectionsForTab($tab['id']) as $section) {
-                foreach ($section['rows'] as $row) {
-                    if ($row['kind'] === 'status') {
-                        $fields[$row['field']] = $row['itemtype'];
-                    }
-                }
-            }
-        }
-
-        return $fields;
+        return [
+            'escalade_status_after_escalation_ticket'  => Ticket::class,
+            'escalade_status_after_escalation_change'  => Change::class,
+            'escalade_status_after_escalation_problem' => Problem::class,
+        ];
     }
 
     /**
@@ -454,9 +447,9 @@ class Config extends CommonDBTM
                     'rows'  => [
                         ['key' => 'escalate_is_active', 'kind' => 'yes_no', 'label' => __('Activate escalation', 'moreoptions')],
                         ['key' => 'escalate_remove_technician', 'kind' => 'yes_no', 'label' => __('Remove technician after escalation', 'moreoptions')],
-                        ['key' => 'escalade_status_after_escalation_ticket', 'kind' => 'status', 'itemtype' => Ticket::class, 'label' => __('Ticket status after escalation', 'moreoptions')],
-                        ['key' => 'escalade_status_after_escalation_change', 'kind' => 'status', 'itemtype' => Change::class, 'label' => __('Change status after escalation', 'moreoptions')],
-                        ['key' => 'escalade_status_after_escalation_problem', 'kind' => 'status', 'itemtype' => Problem::class, 'label' => __('Problem status after escalation', 'moreoptions')],
+                        ['key' => 'escalade_status_after_escalation_ticket', 'kind' => 'status', 'label' => __('Ticket status after escalation', 'moreoptions')],
+                        ['key' => 'escalade_status_after_escalation_change', 'kind' => 'status', 'label' => __('Change status after escalation', 'moreoptions')],
+                        ['key' => 'escalade_status_after_escalation_problem', 'kind' => 'status', 'label' => __('Problem status after escalation', 'moreoptions')],
                     ],
                 ],
                 [
