@@ -586,55 +586,6 @@ class EscalationTest extends MoreOptionsTestCase
     }
 
     /**
-     * The escalation form preselects the given group, only when the item can be escalated to it.
-     *
-     * @param class-string<CommonITILObject> $itemtype
-     */
-    #[DataProvider('blockerItemtypeProvider')]
-    public function testEscalationFormPreselectsGroup(string $itemtype): void
-    {
-        $this->login();
-        $entities_id = $this->getTestRootEntity(true);
-        $this->assertIsInt($entities_id);
-        $this->enableEscalation($entities_id);
-
-        $item = $this->createItem($itemtype, [
-            'name'        => 'Test escalation',
-            'content'     => 'Test content',
-            'entities_id' => $entities_id,
-        ]);
-        $this->assertInstanceOf(CommonITILObject::class, $item);
-
-        $first_group  = $this->createGroup($entities_id, 'First group');
-        $second_group = $this->createGroup($entities_id, 'Second group');
-        foreach ([$first_group, $second_group] as $group) {
-            $this->assertNotFalse((new Escalation())->add([
-                'itemtype'  => $item::class,
-                'items_id'  => $item->getID(),
-                'groups_id' => $group->getID(),
-            ]));
-        }
-
-        $getSelectedGroup = function (int $groups_id) use ($item): ?string {
-            ob_start();
-            try {
-                Escalation::showEscalationForm($item, $groups_id);
-            } finally {
-                $html = ob_get_clean();
-            }
-
-            $selected = (new Crawler($html))->filter('select[name="groups_id"] option[selected]');
-
-            return $selected->count() > 0 ? $selected->attr('value') : null;
-        };
-
-        // The first group is no longer assigned: it can be preselected
-        $this->assertSame((string) $first_group->getID(), $getSelectedGroup($first_group->getID()));
-        // The second group is assigned: it is not preselected
-        $this->assertNotSame((string) $second_group->getID(), $getSelectedGroup($second_group->getID()));
-    }
-
-    /**
      * Enable the escalation option for the given entity.
      *
      * @param array<string, mixed> $options Other escalation options to set

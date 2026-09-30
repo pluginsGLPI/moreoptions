@@ -431,10 +431,9 @@ class Escalation extends CommonDBTM
 
     /**
      * Renders the escalation form, loaded in the modal opened by the "Escalate" button (see
-     * ajax/escalation_form.php). The target group is preselected with the given one, when the
-     * item can be escalated to it (used to escalate again from the escalation history).
+     * ajax/escalation_form.php).
      */
-    public static function showEscalationForm(CommonITILObject $item, int $groups_id = 0): void
+    public static function showEscalationForm(CommonITILObject $item): void
     {
         switch ($item::class) {
             case Ticket::class:
@@ -460,7 +459,6 @@ class Escalation extends CommonDBTM
         TemplateRenderer::getInstance()->display('@moreoptions/escalation_form.html.twig', [
             'item' => $item,
             'groups_used' => $groups_used ?? [],
-            'groups_id'   => $groups_id > 0 && self::getEscalationBlocker($item, $groups_id) === null ? $groups_id : 0,
             // Default values of the form options
             'config' => [
                 'assign_to_observer' => (int) ($config->fields['escalade_assign_me_as_obsever_by_default'] ?? 0) === 1,
