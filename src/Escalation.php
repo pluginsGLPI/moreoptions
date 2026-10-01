@@ -113,20 +113,8 @@ class Escalation extends CommonDBTM
 
         /** @var array<string, mixed> $timeline */
         $timeline = &$params['timeline'];
-        $can_see_private = Session::haveRight('followup', ITILFollowup::SEEPRIVATE);
 
-        $criterias = [
-            'itemtype' => $item::class,
-            'items_id' => $item->getID(),
-        ];
-
-        if (!$can_see_private) {
-            $criterias['is_private'] = 0;
-        }
-
-        $escalations = (new self())->find($criterias);
-
-        foreach ($escalations as $row) {
+        foreach (self::getEscalationsOf($item) as $row) {
             $timeline['MoreoptionsEscalation_' . $row['id']] = [
                 'type'  => self::getType(),
                 'class' => 'moreoptions-escalation',
@@ -143,6 +131,79 @@ class Escalation extends CommonDBTM
                 ],
             ];
         }
+    }
+
+    /**
+     * The escalations of the item the current user can see (private ones require the right to see
+     * private followups).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private static function getEscalationsOf(CommonITILObject $item, string $order = 'id ASC'): array
+    {
+        $criterias = [
+            'itemtype' => $item::class,
+            'items_id' => $item->getID(),
+        ];
+
+        if (!Session::haveRight('followup', ITILFollowup::SEEPRIVATE)) {
+            $criterias['is_private'] = 0;
+        }
+
+        return (new self())->find($criterias, $order);
+    }
+
+    /**
+     * Why the item cannot be escalated to the given group, or null when it can: the group must
+     * exist, be assignable, be visible from the item entity and not be already assigned to the item.
+     */
+    public static function getEscalationBlocker(CommonITILObject $item, int $groups_id): ?string
+    {
+        $group = new Group();
+        if ($groups_id <= 0 || !$group->getFromDB($groups_id)) {
+            return __('This group no longer exists.', 'moreoptions');
+        }
+
+        if ((int) $group->fields['is_assign'] !== 1) {
+            return __('This group can no longer be assigned.', 'moreoptions');
+        }
+
+        $item_entity  = (int) $item->fields['entities_id'];
+        $group_entity = (int) $group->fields['entities_id'];
+        if (
+            $group_entity !== $item_entity
+            && (
+                (int) $group->fields['is_recursive'] !== 1
+                || !in_array($group_entity, array_map(intval(...), getAncestorsOf('glpi_entities', $item_entity)), true)
+            )
+        ) {
+            return __('This group is not visible from the entity of the item.', 'moreoptions');
+        }
+
+        if (in_array($groups_id, self::getAssignedGroupIds($item), true)) {
+            return __('This group is already assigned.', 'moreoptions');
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<int>
+     */
+    private static function getAssignedGroupIds(CommonITILObject $item): array
+    {
+        $group_link = getItemForItemtype($item->grouplinkclass);
+        if (!$group_link instanceof CommonDBTM) {
+            return [];
+        }
+
+        return array_values(array_map(
+            static fn(array $row): int => (int) $row['groups_id'],
+            $group_link->find([
+                $item->getForeignKeyField() => $item->getID(),
+                'type'                      => CommonITILActor::ASSIGN,
+            ]),
+        ));
     }
 
     /**
@@ -211,7 +272,8 @@ class Escalation extends CommonDBTM
 
     /**
      * The author is always the current user, and the source groups are the groups assigned to
-     * the item before the escalation. Escalating to a group already assigned is refused.
+     * the item before the escalation. Escalating to a group the item cannot be escalated to (see
+     * self::getEscalationBlocker()) is refused.
      *
      * @param array<string, mixed> $input
      * @return array<string, mixed>|false
@@ -225,27 +287,13 @@ class Escalation extends CommonDBTM
 
         $input['users_id'] = Session::getLoginUserID();
 
-        $groups_ids_source = [];
-        $group_link = getItemForItemtype($item->grouplinkclass);
-        if ($group_link instanceof CommonDBTM) {
-            foreach (
-                $group_link->find([
-                    $item->getForeignKeyField() => $item->getID(),
-                    'type'                      => CommonITILActor::ASSIGN,
-                ]) as $assigned
-            ) {
-                $groups_ids_source[] = (int) $assigned['groups_id'];
-            }
-        }
-
-        if (in_array((int) ($input['groups_id'] ?? 0), $groups_ids_source, true)) {
-            Session::addMessageAfterRedirect(
-                __s('This group is already assigned.', 'moreoptions'),
-                false,
-                ERROR,
-            );
+        $blocker = self::getEscalationBlocker($item, (int) ($input['groups_id'] ?? 0));
+        if ($blocker !== null) {
+            Session::addMessageAfterRedirect(htmlescape($blocker), false, ERROR);
             return false;
         }
+
+        $groups_ids_source = self::getAssignedGroupIds($item);
 
         $input['groups_ids_source'] = json_encode($groups_ids_source);
 
@@ -313,15 +361,53 @@ class Escalation extends CommonDBTM
     public static function showEscalateButton(array $params): void
     {
         $item = $params['item'] ?? null;
-        if (!$item instanceof CommonITILObject || $item->isNewItem() || !$item->canAssign() || !self::isEnabledFor($item)) {
+        if (!$item instanceof CommonITILObject || $item->isNewItem() || !self::isEnabledFor($item)) {
+            return;
+        }
+
+        $can_escalate = $item->canAssign();
+        $history      = self::getHistory($item, $can_escalate);
+        if (!$can_escalate && $history === []) {
             return;
         }
 
         TemplateRenderer::getInstance()->display('@moreoptions/escalation_button.html.twig', [
-            'marker_id' => 'moreoptions-escalate-' . $item->getType() . '-' . $item->getID(),
-            'itemtype'  => $item->getType(),
-            'items_id'  => $item->getID(),
+            'marker_id'    => 'moreoptions-escalate-' . $item->getType() . '-' . $item->getID(),
+            'itemtype'     => $item->getType(),
+            'items_id'     => $item->getID(),
+            'can_escalate' => $can_escalate,
+            'history'      => $history,
         ]);
+    }
+
+    /**
+     * The escalations of the item, most recent first, as shown in the "Escalation history" popover
+     * (see escalation_button.html.twig). Each entry tells whether the item can be escalated again
+     * to its target group, and why not otherwise.
+     *
+     * @return array<int, array{id: int, date: string, author: string, sources: array<string>, target: string, groups_id: int, blocker: ?string}>
+     */
+    private static function getHistory(CommonITILObject $item, bool $can_escalate): array
+    {
+        $group_name = static fn(int $groups_id): string => Dropdown::getDropdownName(Group::getTable(), $groups_id);
+
+        $history = [];
+        foreach (self::getEscalationsOf($item, 'date_creation DESC, id DESC') as $row) {
+            $groups_id = (int) $row['groups_id'];
+            $history[] = [
+                'id'        => (int) $row['id'],
+                'date'      => (string) $row['date_creation'],
+                'author'    => getUserName((int) $row['users_id']),
+                'sources'   => array_map($group_name, self::getSourceGroupIds($row)),
+                'target'    => $group_name($groups_id),
+                'groups_id' => $groups_id,
+                'blocker'   => $can_escalate
+                    ? self::getEscalationBlocker($item, $groups_id)
+                    : __('You are not allowed to assign this item.', 'moreoptions'),
+            ];
+        }
+
+        return $history;
     }
 
     /**
