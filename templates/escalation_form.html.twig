@@ -81,6 +81,7 @@
                             'condition': {'is_assign': 1},
                             'rand': rand,
                             'aria_label': 'Group'|itemtype_name,
+                            'used' : groups_used,
                         }
                     ) }}
 
@@ -90,7 +91,7 @@
                     {% endset %}
                     {{ fields.sliderField(
                         'add_me_as_observer',
-                        0,
+                        config.assign_to_observer ? 1 : 0,
                         observer_lbl,
                         {
                             'full_width': true,
@@ -105,7 +106,7 @@
 
                     {{ fields.sliderField(
                         'is_private',
-                        1,
+                        config.is_private ? 1 : 0,
                         private_label,
                         {
                             'full_width': true,
@@ -119,7 +120,7 @@
 
         <div class="d-flex justify-content-end mt-3">
             <button class="btn btn-primary" type="submit" name="add">
-                <i class="ti ti-arrow-up"></i>
+                <i class="ti ti-escalator-up"></i>
                 <span>{{ __('Escalate', 'moreoptions') }}</span>
             </button>
         </div>

@@ -83,7 +83,9 @@
         display: none;
     }
 
-    .form-field:has(.mo-seg-inherit:checked) .mo-inherited {
+    // Same for the status dropdowns, whose "Inherit" option is Config::CONFIG_PARENT (-2).
+    .form-field:has(.mo-seg-inherit:checked) .mo-inherited,
+    .form-field:has(.mo-status option[value="-2"]:checked) .mo-inherited {
         display: inline-flex;
         align-items: center;
     }
