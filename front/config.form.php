@@ -39,7 +39,10 @@ $config = new Config();
 
 if (isset($_POST["update"])) {
     $config->check($_POST['id'], UPDATE);
-    $config->update($_POST);
+    $config->update(
+        ['id' => (int) $_POST['id']]
+        + array_intersect_key($_POST, array_flip(Config::getAllConfigFields())),
+    );
 }
 
 Html::back();
