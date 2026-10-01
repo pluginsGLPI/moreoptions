@@ -28,33 +28,47 @@
  * @copyright Copyright (C) 2025 by the MoreOptions plugin team.
  * @license   MIT https://opensource.org/licenses/mit-license.php
  * @link      https://github.com/pluginsGLPI/moreoptions
+ * @link      https://gitlab.teclib.com/glpi-network/moreoptions/
  * -------------------------------------------------------------------------
  */
 
-declare(strict_types=1);
+namespace GlpiPlugin\Moreoptions\LinkStrategy;
 
-use GlpiPlugin\Moreoptions\Config;
-use GlpiPlugin\Moreoptions\Escalation;
-use GlpiPlugin\Moreoptions\Group_Link;
-
-function plugin_moreoptions_install(): bool
+abstract class AbstractLinkStrategy
 {
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
+    /**
+     * Get the display options of the arrow representing the link between the two groups
+     *
+     * @return array<string, mixed>
+     */
+    public function getArrowOptions(): array
+    {
+        return [];
+    }
 
-    Config::install($migration);
-    Escalation::install($migration);
-    Group_Link::install($migration);
-    $migration->executeMigration();
-    return true;
-}
+    /**
+     * Whether the link is replicated in the sub-entities of its entity
+     */
+    public function appliesToSubEntities(): bool
+    {
+        return false;
+    }
 
-function plugin_moreoptions_uninstall(): bool
-{
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
+    /**
+     * Whether the link stops, from its entity, the replication of an inherited link
+     */
+    public function blocksInheritance(): bool
+    {
+        return false;
+    }
 
-    Config::uninstall($migration);
-    Escalation::uninstall($migration);
-    Group_Link::uninstall($migration);
+    /**
+     * Get the label of the link strategy
+     */
+    abstract public function getLabel(): string;
 
-    return true;
+    /**
+     * Get the icon of the link strategy
+     */
+    abstract public function getIcon(): string;
 }

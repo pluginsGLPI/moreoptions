@@ -83,7 +83,9 @@
         display: none;
     }
 
-    .form-field:has(.mo-seg-inherit:checked) .mo-inherited {
+    // Same for the status dropdowns, whose "Inherit" option is Config::CONFIG_PARENT (-2).
+    .form-field:has(.mo-seg-inherit:checked) .mo-inherited,
+    .form-field:has(.mo-status option[value="-2"]:checked) .mo-inherited {
         display: inline-flex;
         align-items: center;
     }
@@ -109,5 +111,160 @@
             flex: none;
             margin-top: 1px;
         }
+    }
+}
+
+:root {
+    --mo-escalation-color: #fff0f0ca;
+
+    --mo-escalation-background: var(--mo-escalation-color);
+    --mo-escalation-border: color-mix(in srgb, var(--mo-escalation-color), #a81313 50%);
+}
+
+// "Escalate" button, next to the "Assigned to" field (see escalation_button.html.twig).
+.moreoptions-escalate-btn,
+.moreoptions-escalate-btn:focus {
+    color: var(--mo-escalation-border) !important;
+    border-color: var(--mo-escalation-border) !important;
+}
+
+.moreoptions-escalate-btn:hover {
+    background-color: var(--mo-escalation-border) !important;
+    border-color: var(--mo-escalation-border) !important;
+    color: white !important;
+}
+
+// Escalation entries in the timeline (see Escalation::getTimelineContent() and
+// escalation_timeline.html.twig): a centered card, with a dashed border when private, holding the
+// "<icon> | <source groups> -> <target group>" summary next to the "Created: ... by ..." badge,
+// then the escalation comment, which can be collapsed.
+.timeline-item.moreoptions-escalation {
+    width: 100%;
+
+    .user-part {
+        display: none !important;
+    }
+
+    .content-part {
+        align-items: center;
+        margin-left: 75px;
+        margin-right: 83px;
+
+        .timeline-content {
+            flex-grow: 0 !important;
+            // Core stretches timeline entries to the full width: fit the content instead, so a
+            // collapsed (or comment-less) entry is no wider than its header line.
+            min-width: 0;
+            max-width: 100%;
+            background: var(--mo-escalation-background);
+            // Core squares the corner the (hidden) speech bubble arrow points to.
+            border-radius: var(--tblr-border-radius-lg) !important;
+            // Dashed only for "internal" entries (`.private-item`), replacing their thicker core border.
+            border: 1px solid var(--mo-escalation-border);
+            box-shadow: none;
+
+            // Speech bubble arrow pointing to the (hidden) avatar
+            &::before,
+            &::after {
+                display: none;
+            }
+
+            .card-body {
+                padding: 0.5rem 1rem !important;
+            }
+        }
+    }
+
+    &.private-item .content-part .timeline-content {
+        border-style: dashed;
+    }
+
+    .timeline-header {
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin: 0;
+    }
+
+    .timeline-item-buttons {
+        align-items: center;
+        gap: 0.5rem;
+        margin-left: 0 !important;
+    }
+
+    .moreoptions-escalation-separator {
+        opacity: 0.4;
+    }
+
+    .moreoptions-escalation-summary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--mo-escalation-border);
+    }
+
+    .moreoptions-escalation-groups {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        font-style: italic;
+    }
+
+    .moreoptions-escalation-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+
+        a {
+            color: inherit;
+
+            &:hover {
+                text-decoration: underline;
+            }
+        }
+    }
+
+    .moreoptions-escalation-toggle {
+        padding: 0 0.25rem;
+
+        i {
+            transition: transform 0.2s;
+        }
+
+        &.collapsed i {
+            transform: rotate(180deg);
+        }
+    }
+
+    .moreoptions-escalation-comment {
+        margin-top: 0.75rem;
+    }
+}
+
+// "Escalation history" popover, opened by the button next to the "Escalate" one (see
+// escalation_button.html.twig).
+.popover.moreoptions-escalation-history-popover {
+    --tblr-popover-max-width: 28rem;
+
+    .popover-body {
+        max-height: 20rem;
+        overflow-y: auto;
+    }
+
+    .moreoptions-escalation-groups {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.25rem 0.5rem;
+        font-style: italic;
+        color: var(--tblr-body-color);
+    }
+
+    .moreoptions-escalation-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
     }
 }

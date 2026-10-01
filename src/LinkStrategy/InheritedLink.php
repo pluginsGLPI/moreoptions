@@ -28,33 +28,29 @@
  * @copyright Copyright (C) 2025 by the MoreOptions plugin team.
  * @license   MIT https://opensource.org/licenses/mit-license.php
  * @link      https://github.com/pluginsGLPI/moreoptions
+ * @link      https://gitlab.teclib.com/glpi-network/moreoptions/
  * -------------------------------------------------------------------------
  */
 
-declare(strict_types=1);
+namespace GlpiPlugin\Moreoptions\LinkStrategy;
 
-use GlpiPlugin\Moreoptions\Config;
-use GlpiPlugin\Moreoptions\Escalation;
-use GlpiPlugin\Moreoptions\Group_Link;
-
-function plugin_moreoptions_install(): bool
+/**
+ * Link replicated in the sub-entities of its entity
+ */
+final class InheritedLink extends AbstractLinkStrategy
 {
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
+    public function appliesToSubEntities(): bool
+    {
+        return true;
+    }
 
-    Config::install($migration);
-    Escalation::install($migration);
-    Group_Link::install($migration);
-    $migration->executeMigration();
-    return true;
-}
+    public function getLabel(): string
+    {
+        return __('Inherited', 'moreoptions');
+    }
 
-function plugin_moreoptions_uninstall(): bool
-{
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
-
-    Config::uninstall($migration);
-    Escalation::uninstall($migration);
-    Group_Link::uninstall($migration);
-
-    return true;
+    public function getIcon(): string
+    {
+        return 'ti ti-sitemap';
+    }
 }
