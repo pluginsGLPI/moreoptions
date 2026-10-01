@@ -37,13 +37,17 @@
 namespace GlpiPlugin\Moreoptions;
 
 use DBmysql;
+use Change;
 use CommonDBTM;
 use CommonGLPI;
+use CommonITILObject;
 use Entity;
 use Glpi\Application\View\TemplateRenderer;
 use Migration;
 use Plugin;
+use Problem;
 use Session;
+use Ticket;
 
 class Config extends CommonDBTM
 {
@@ -141,7 +145,36 @@ class Config extends CommonDBTM
      */
     private static function getAllConfigFields(): array
     {
-        return array_merge(self::getItilConfigFields(), self::getActorGroupConfigFields());
+        return array_merge(
+            self::getItilConfigFields(),
+            self::getActorGroupConfigFields(),
+            array_keys(self::getStatusConfigFields()),
+        );
+    }
+
+    /**
+     * Fields of kind `status`, with the ITIL itemtype whose statuses they hold.
+     *
+     * @return array<string, class-string<CommonITILObject>>
+     */
+    private static function getStatusConfigFields(): array
+    {
+        return [
+            'escalade_status_after_escalation_ticket'  => Ticket::class,
+            'escalade_status_after_escalation_change'  => Change::class,
+            'escalade_status_after_escalation_problem' => Problem::class,
+        ];
+    }
+
+    /**
+     * Choices of a `status` field: "No change" (0), then every status of the itemtype.
+     *
+     * @param class-string<CommonITILObject> $itemtype
+     * @return array<int, string>
+     */
+    public static function getSelectableStatus(string $itemtype): array
+    {
+        return [0 => __('No change', 'moreoptions')] + $itemtype::getAllStatusArray();
     }
 
     /**
@@ -290,6 +323,14 @@ class Config extends CommonDBTM
             'entities_id' => $item->getID(),
         ]);
 
+        $status_options = [];
+        foreach (self::getStatusConfigFields() as $field => $itemtype) {
+            $status_options[$field] = self::getSelectableStatus($itemtype);
+            if ($item->getID() > 0) {
+                $status_options[$field] = [self::CONFIG_PARENT => __('Inherit', 'moreoptions')] + $status_options[$field];
+            }
+        }
+
         $tabs = self::getScreenTabs();
         $sections_by_tab = [];
         foreach ($tabs as $tab) {
@@ -305,6 +346,7 @@ class Config extends CommonDBTM
                 'parent_entity_id'   => $item->getID() > 0 ? (int) $item->fields['entities_id'] : null,
                 'parent_badges'      => self::getParentValueBadges($item),
                 'dropdown_options'   => self::getSelectableActorGroup(),
+                'status_options'     => $status_options,
                 'config_parent'      => self::CONFIG_PARENT,
                 'escalade_takes_technician_group' => self::isTechnicianGroupHandledByEscalade(),
                 'params'             => [
@@ -327,11 +369,11 @@ class Config extends CommonDBTM
     public static function getScreenTabs(): array
     {
         return [
-            ['id' => 'ticket', 'label' => __('Ticket'), 'icon' => 'ti-ticket'],
-            ['id' => 'change', 'label' => __('Change'), 'icon' => 'ti-git-branch'],
-            ['id' => 'problem', 'label' => __('Problem'), 'icon' => 'ti-alert-circle'],
+            ['id' => 'ticket', 'label' => __('Ticket'), 'icon' => Ticket::getIcon()],
+            ['id' => 'change', 'label' => __('Change'), 'icon' => Change::getIcon()],
+            ['id' => 'problem', 'label' => __('Problem'), 'icon' => Problem::getIcon()],
             ['id' => 'task', 'label' => _n('Task', 'Tasks', 2), 'icon' => 'ti-checklist'],
-            ['id' => 'escalate', 'label' => __('Escalate', 'moreoptions'), 'icon' => 'ti-arrow-up'],
+            ['id' => 'escalate', 'label' => __('Escalate', 'moreoptions'), 'icon' => Escalation::getIcon(),],
         ];
     }
 
@@ -401,9 +443,21 @@ class Config extends CommonDBTM
             'escalate' => [
                 [
                     'title' => __('Escalate', 'moreoptions'),
-                    'icon'  => 'ti-arrow-up',
+                    'icon'  => Escalation::getIcon(),
                     'rows'  => [
                         ['key' => 'escalate_is_active', 'kind' => 'yes_no', 'label' => __('Activate escalation', 'moreoptions')],
+                        ['key' => 'escalate_remove_technician', 'kind' => 'yes_no', 'label' => __('Remove technician after escalation', 'moreoptions')],
+                        ['key' => 'escalade_status_after_escalation_ticket', 'kind' => 'status', 'label' => __('Ticket status after escalation', 'moreoptions')],
+                        ['key' => 'escalade_status_after_escalation_change', 'kind' => 'status', 'label' => __('Change status after escalation', 'moreoptions')],
+                        ['key' => 'escalade_status_after_escalation_problem', 'kind' => 'status', 'label' => __('Problem status after escalation', 'moreoptions')],
+                    ],
+                ],
+                [
+                    'title' => __('Default options values', 'moreoptions'),
+                    'icon'  => 'ti-settings',
+                    'rows'  => [
+                        ['key' => 'escalade_assign_me_as_obsever_by_default', 'kind' => 'yes_no', 'label' => __('Assign me as observer after escalation', 'moreoptions')],
+                        ['key' => 'escalade_is_private_by_default', 'kind' => 'yes_no', 'label' => __('Escalate event is private', 'moreoptions')],
                     ],
                 ],
             ],
@@ -474,6 +528,11 @@ class Config extends CommonDBTM
 
         foreach (self::getActorGroupConfigFields() as $field) {
             $text = $actor_options[(int) ($parent_config->fields[$field] ?? 0)] ?? __('No');
+            $badges[$field] = Entity::inheritedValue(htmlescape($text), false, false);
+        }
+
+        foreach (self::getStatusConfigFields() as $field => $itemtype) {
+            $text = self::getSelectableStatus($itemtype)[(int) ($parent_config->fields[$field] ?? 0)] ?? __('No change', 'moreoptions');
             $badges[$field] = Entity::inheritedValue(htmlescape($text), false, false);
         }
 
@@ -577,6 +636,12 @@ class Config extends CommonDBTM
                 `assign_technician_from_task_change` tinyint NOT NULL DEFAULT '0',
                 `assign_technician_from_task_problem` tinyint NOT NULL DEFAULT '0',
                 `escalate_is_active` tinyint NOT NULL DEFAULT '0',
+                `escalate_remove_technician` tinyint NOT NULL DEFAULT '0',
+                `escalade_status_after_escalation_ticket` tinyint NOT NULL DEFAULT '0',
+                `escalade_status_after_escalation_change` tinyint NOT NULL DEFAULT '0',
+                `escalade_status_after_escalation_problem` tinyint NOT NULL DEFAULT '0',
+                `escalade_assign_me_as_obsever_by_default` tinyint NOT NULL DEFAULT '0',
+                `escalade_is_private_by_default` tinyint NOT NULL DEFAULT '0',
                 PRIMARY KEY (`id`),
                 KEY `entities_id` (`entities_id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
@@ -596,6 +661,12 @@ class Config extends CommonDBTM
                 'assign_technician_from_task_change',
                 'assign_technician_from_task_problem',
                 'escalate_is_active',
+                'escalate_remove_technician',
+                'escalade_status_after_escalation_ticket',
+                'escalade_status_after_escalation_change',
+                'escalade_status_after_escalation_problem',
+                'escalade_assign_me_as_obsever_by_default',
+                'escalade_is_private_by_default',
             ] as $field
         ) {
             if (!$DB->fieldExists($table, $field)) {
@@ -603,7 +674,24 @@ class Config extends CommonDBTM
             }
         }
 
+        // Status fields added to an existing table: child entities inherit by default.
+        $new_status_fields = [];
+        foreach (array_keys(self::getStatusConfigFields()) as $field) {
+            if (!$DB->fieldExists($table, $field)) {
+                $migration->addField($table, $field, 'bool', ['value' => '0']);
+                $new_status_fields[] = $field;
+            }
+        }
+
         $migration->executeMigration();
+
+        if ($new_status_fields !== []) {
+            $DB->update(
+                $table,
+                array_fill_keys($new_status_fields, self::CONFIG_PARENT),
+                ['entities_id' => ['>', 0]],
+            );
+        }
 
         $entities = new Entity();
         foreach ($entities->find() as $entity) {
