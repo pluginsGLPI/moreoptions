@@ -72,7 +72,7 @@ class Escalation extends CommonDBTM
 
     public static function getIcon(): string
     {
-        return 'ti ti-arrow-up';
+        return 'ti ti-escalator-up';
     }
 
     /**
@@ -275,6 +275,32 @@ class Escalation extends CommonDBTM
             'type'                         => CommonITILActor::ASSIGN,
             '_plugin_moreoptions_escalade' => true,
         ]);
+
+        if ((int) ($this->input['add_me_as_observer'] ?? 0) === 1) {
+            $this->addAuthorAsObserver($item);
+        }
+    }
+
+    /**
+     * Adds the author of the escalation as an observer of the escalated item, unless they already are.
+     */
+    private function addAuthorAsObserver(CommonITILObject $item): void
+    {
+        $user_link = getItemForItemtype($item->userlinkclass);
+        if (!$user_link instanceof CommonITILActor) {
+            return;
+        }
+
+        $input = [
+            $item->getForeignKeyField() => (int) $this->fields['items_id'],
+            'users_id'                  => (int) $this->fields['users_id'],
+            'type'                      => CommonITILActor::OBSERVER,
+        ];
+        if (countElementsInTable($user_link::getTable(), $input) > 0) {
+            return;
+        }
+
+        $user_link->add($input);
     }
 
     /**
@@ -342,9 +368,16 @@ class Escalation extends CommonDBTM
             $groups_used[$key] = (int) $row['groups_id'];
         }
 
+        $config = Config::getConfig((int) $item->fields['entities_id']);
+
         TemplateRenderer::getInstance()->display('@moreoptions/escalation_form.html.twig', [
             'item' => $item,
             'groups_used' => $groups_used ?? [],
+            // Default values of the form options
+            'config' => [
+                'assign_to_observer' => (int) ($config->fields['escalade_assign_me_as_obsever_by_default'] ?? 0) === 1,
+                'is_private'         => (int) ($config->fields['escalade_is_private_by_default'] ?? 0) === 1,
+            ],
         ]);
     }
 
@@ -364,6 +397,14 @@ class Escalation extends CommonDBTM
         }
 
         self::keepOnlyAssignedGroup($group_link);
+
+        $item = getItemForItemtype($group_link::$itemtype_1 ?? '');
+        if (!$item instanceof CommonITILObject || !$item->getFromDB((int) $group_link->fields[$group_link::$items_id_1])) {
+            return;
+        }
+
+        self::removeTechnician($item);
+        self::changeStatusAfterEscalation($item);
     }
 
     /**
@@ -381,6 +422,50 @@ class Escalation extends CommonDBTM
         foreach ($previous_links as $previous_link) {
             (new ($group_link::class)())->delete(['id' => $previous_link['id']]);
         }
+    }
+
+    /**
+     * Drop the technicians assigned to the escalated item, when the "remove technician" option
+     * is enabled for its entity.
+     */
+    private static function removeTechnician(CommonITILObject $item): void
+    {
+        $config = Config::getConfig((int) $item->fields['entities_id']);
+        if ((int) ($config->fields['escalate_remove_technician'] ?? 0) !== 1) {
+            return;
+        }
+
+        $user_link = getItemForItemtype($item->userlinkclass);
+        if (!$user_link instanceof CommonITILActor) {
+            return;
+        }
+
+        $technician_links = $user_link->find([
+            $item->getForeignKeyField() => $item->getID(),
+            'type'                      => CommonITILActor::ASSIGN,
+        ]);
+        foreach ($technician_links as $technician_link) {
+            (new ($user_link::class)())->delete(['id' => $technician_link['id']]);
+        }
+    }
+
+    /**
+     * Set the status configured for its entity on the escalated item, unless it already has it.
+     */
+    private static function changeStatusAfterEscalation(CommonITILObject $item): void
+    {
+        // Reload: removing the actors (see self::removeTechnician()) may have changed the status.
+        if (!$item->getFromDB($item->getID())) {
+            return;
+        }
+
+        $config = Config::getConfig((int) $item->fields['entities_id']);
+        $new_status = (int) ($config->fields['escalade_status_after_escalation_' . strtolower($item::class)] ?? 0);
+        if ($new_status === 0 || (int) $item->fields['status'] === $new_status) {
+            return;
+        }
+
+        $item->update(['id' => $item->getID(), 'status' => $new_status]);
     }
 
     public static function install(Migration $migration): void

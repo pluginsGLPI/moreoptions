@@ -24,4 +24,3 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fixed the issue where a ticket could be solved without a solution
 
 ## [1.0.0-rc1]
-

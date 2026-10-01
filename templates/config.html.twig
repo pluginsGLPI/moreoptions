@@ -81,7 +81,7 @@
                         aria-selected="{{ loop.first ? 'true' : 'false' }}"
                     >
                         <i class="ti {{ tab.icon }}"></i>
-                        {{ tab.label }}
+                        &nbsp;{{ tab.label }}
                     </a>
                 </li>
             {% endfor %}
@@ -121,7 +121,23 @@
                                         {% endif %}
                                     </div>
                                     <div class="col-6 d-flex align-items-center justify-content-end gap-2">
-                                        {{ mo.render(row.field, options, current, parent_badges[row.field]|default(null), disabled, canedit, rand) }}
+                                        {% if row.kind == 'status' %}
+                                            {% if parent_badges[row.field] is defined %}
+                                                <div class="mo-inherited">{{ parent_badges[row.field]|raw }}</div>
+                                            {% endif %}
+                                            <div class="mo-status">
+                                            {{ call('Dropdown::showFromArray', [row.field, status_options[row.field], {
+                                                'value': current,
+                                                'width': '220px',
+                                                'disabled': disabled or not canedit,
+                                                'templateResult': 'templateItilStatus',
+                                                'templateSelection': 'templateItilStatus',
+                                                'display': false,
+                                            }])|raw }}
+                                            </div>
+                                        {% else %}
+                                            {{ mo.render(row.field, options, current, parent_badges[row.field]|default(null), disabled, canedit, rand) }}
+                                        {% endif %}
                                     </div>
                                 </div>
                                 <div class="hr my-1" style="opacity: 0.075;"></div>
