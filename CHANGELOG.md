@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 
 - Fixed an issue where a group could be added to a ticket even though it did not have the necessary permissions
+- Fix config tab visibility and restrict config update fields
 
 ## Add
 
