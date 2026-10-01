@@ -36,6 +36,7 @@ namespace GlpiPlugin\Moreoptions\Tests\Units;
 use Change;
 use CommonITILActor;
 use CommonITILObject;
+use Entity;
 use Group;
 use ITILFollowup;
 use Log;
@@ -520,6 +521,68 @@ class EscalationTest extends MoreOptionsTestCase
         $_SESSION['glpiactiveprofile']['followup'] &= ~ITILFollowup::SEEPRIVATE;
         $this->assertEmpty(Session::haveRight('followup', ITILFollowup::SEEPRIVATE));
         $this->assertCount($is_private ? 0 : 1, $this->getEscalationTimelineEntries($item));
+    }
+
+    /**
+     * @return iterable<string, array{class-string<CommonITILObject>}>
+     */
+    public static function blockerItemtypeProvider(): iterable
+    {
+        foreach ([Ticket::class, Change::class, Problem::class] as $itemtype) {
+            yield $itemtype => [$itemtype];
+        }
+    }
+
+    /**
+     * An item can be escalated again to a group only when it still exists, is assignable, is
+     * visible from the item entity and is not already assigned.
+     *
+     * @param class-string<CommonITILObject> $itemtype
+     */
+    #[DataProvider('blockerItemtypeProvider')]
+    public function testEscalationBlocker(string $itemtype): void
+    {
+        $this->login();
+        $root_entity  = $this->getTestRootEntity(true);
+        $child_entity = getItemByTypeName(Entity::class, '_test_child_1', true);
+        $this->assertIsInt($root_entity);
+        $this->assertIsInt($child_entity);
+        $this->enableEscalation($root_entity);
+
+        $item = $this->createItem($itemtype, [
+            'name'        => 'Test escalation',
+            'content'     => 'Test content',
+            'entities_id' => $root_entity,
+        ]);
+        $this->assertInstanceOf(CommonITILObject::class, $item);
+
+        $group = $this->createGroup($root_entity, 'Target group');
+        $this->assertNull(Escalation::getEscalationBlocker($item, $group->getID()));
+
+        $this->assertSame('This group no longer exists.', Escalation::getEscalationBlocker($item, 0));
+
+        $this->updateItem(Group::class, $group->getID(), ['is_assign' => 0]);
+        $this->assertTrue($group->getFromDB($group->getID()));
+        $this->assertSame('This group can no longer be assigned.', Escalation::getEscalationBlocker($item, $group->getID()));
+
+        $child_group = $this->createGroup($child_entity, 'Child group');
+        $this->assertSame('This group is not visible from the entity of the item.', Escalation::getEscalationBlocker($item, $child_group->getID()));
+
+        $assigned_group = $this->createGroup($root_entity, 'Assigned group');
+        $this->assertNotFalse((new Escalation())->add([
+            'itemtype'  => $item::class,
+            'items_id'  => $item->getID(),
+            'groups_id' => $assigned_group->getID(),
+        ]));
+        $this->assertSame('This group is already assigned.', Escalation::getEscalationBlocker($item, $assigned_group->getID()));
+
+        // The escalation itself is refused as well
+        $this->assertFalse((new Escalation())->add([
+            'itemtype'  => $item::class,
+            'items_id'  => $item->getID(),
+            'groups_id' => $child_group->getID(),
+        ]));
+        $this->hasSessionMessages(ERROR, ['This group is not visible from the entity of the item.']);
     }
 
     /**
