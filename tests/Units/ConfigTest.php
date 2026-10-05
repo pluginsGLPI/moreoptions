@@ -67,6 +67,9 @@ use GlpiPlugin\Moreoptions\Config;
 use GlpiPlugin\Moreoptions\Tests\MoreOptionsTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
+use function Safe\ob_get_clean;
+use function Safe\ob_start;
+
 class ConfigTest extends MoreOptionsTestCase
 {
     /**
@@ -2862,5 +2865,98 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertTrue($this->updateTestConfig($conf, [
             'assign_technical_group_when_changing_category_ticket' => 0,
         ]));
+    }
+
+    public function testUpdateCannotMoveConfigToAnotherEntity(): void
+    {
+        $this->login();
+
+        $entity_a = $this->createItem(
+            Entity::class,
+            [
+                'name' => 'Entity A',
+                'entities_id' => 0,
+            ],
+            ['name'],
+        );
+        $entity_b = $this->createItem(
+            Entity::class,
+            [
+                'name' => 'Entity B',
+                'entities_id' => 0,
+            ],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $conf = Config::getConfig($entity_a->getID(), false);
+        $this->assertFalse($conf->isNewItem());
+
+        $this->assertTrue($conf->update([
+            'id'                     => $conf->getID(),
+            'entities_id'            => $entity_b->getID(),
+            'take_item_group_ticket' => 1,
+        ]));
+
+        $this->assertTrue($conf->getFromDB($conf->getID()));
+        $this->assertEquals($entity_a->getID(), $conf->fields['entities_id']);
+        $this->assertEquals(1, $conf->fields['take_item_group_ticket']);
+
+        // Entity B still has its own configuration, untouched
+        $conf_b = Config::getConfig($entity_b->getID(), false);
+        $this->assertFalse($conf_b->isNewItem());
+        $this->assertNotEquals($conf->getID(), $conf_b->getID());
+    }
+
+    public function testPrepareInputForUpdateKeepsOnlyConfigAndControlKeys(): void
+    {
+        $conf = new Config();
+
+        $input = $conf->prepareInputForUpdate([
+            'id'                     => 1,
+            'entities_id'            => 2,
+            'unknown_field'          => 'foo',
+            'take_item_group_ticket' => 1,
+            '_no_history'            => true,
+        ]);
+
+        $this->assertSame(
+            [
+                'id'                     => 1,
+                'take_item_group_ticket' => 1,
+                '_no_history'            => true,
+            ],
+            $input,
+        );
+    }
+
+    public function testConfigTabRequiresConfigRight(): void
+    {
+        $this->login();
+
+        $entity = new Entity();
+        $this->assertTrue($entity->getFromDB(0));
+        $conf = new Config();
+
+        // With the config right, the tab is shown
+        $this->assertNotEmpty($conf->getTabNameForItem($entity));
+        ob_start();
+        $result = Config::displayTabContentForItem($entity);
+        $output = ob_get_clean();
+        $this->assertTrue($result);
+        $this->assertNotEmpty($output);
+
+        // Without it, neither the tab nor its content
+        $config_right = $_SESSION['glpiactiveprofile']['config'];
+        $_SESSION['glpiactiveprofile']['config'] = 0;
+
+        $this->assertSame('', $conf->getTabNameForItem($entity));
+        ob_start();
+        $result = Config::displayTabContentForItem($entity);
+        $output = ob_get_clean();
+        $this->assertFalse($result);
+        $this->assertSame('', $output);
+
+        $_SESSION['glpiactiveprofile']['config'] = $config_right;
     }
 }

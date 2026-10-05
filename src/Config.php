@@ -116,7 +116,7 @@ class Config extends CommonDBTM
 
     /**
      * Only the configuration fields can be updated: a config row must never be
-     * moved to another entity.
+     * moved to another entity. Control keys (prefixed with `_`) are kept.
      *
      * @param array<string, mixed> $input
      *
@@ -124,9 +124,12 @@ class Config extends CommonDBTM
      */
     public function prepareInputForUpdate($input): array
     {
-        return array_intersect_key(
+        $allowed = array_merge(['id'], self::getAllConfigFields());
+
+        return array_filter(
             $input,
-            array_flip(array_merge(['id'], self::getAllConfigFields())),
+            static fn($key): bool => in_array($key, $allowed, true) || str_starts_with((string) $key, '_'),
+            ARRAY_FILTER_USE_KEY,
         );
     }
 
@@ -164,7 +167,7 @@ class Config extends CommonDBTM
     /**
      * @return array<string>
      */
-    public static function getAllConfigFields(): array
+    private static function getAllConfigFields(): array
     {
         return array_merge(self::getItilConfigFields(), self::getActorGroupConfigFields());
     }
