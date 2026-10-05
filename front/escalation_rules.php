@@ -28,47 +28,38 @@
  * @copyright Copyright (C) 2025 by the MoreOptions plugin team.
  * @license   MIT https://opensource.org/licenses/mit-license.php
  * @link      https://github.com/pluginsGLPI/moreoptions
+ * @link      https://gitlab.teclib.com/glpi-network/moreoptions/
  * -------------------------------------------------------------------------
  */
 
-declare(strict_types=1);
-
-use GlpiPlugin\Moreoptions\Config;
-use GlpiPlugin\Moreoptions\Escalation;
+use Glpi\Exception\Http\AccessDeniedHttpException;
 use GlpiPlugin\Moreoptions\EscalationRule;
-use GlpiPlugin\Moreoptions\Group_Link;
 
-function plugin_moreoptions_install(): bool
-{
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
+Session::checkLoginUser();
 
-    Config::install($migration);
-    Escalation::install($migration);
-    Group_Link::install($migration);
-    $migration->executeMigration();
-    return true;
+if (!EscalationRule::canManageRules()) {
+    throw new AccessDeniedHttpException();
 }
 
-function plugin_moreoptions_uninstall(): bool
-{
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
+if (isset($_POST['update'])) {
+    $result = EscalationRule::switchActions(is_array($_POST['fields'] ?? null) ? $_POST['fields'] : []);
+    if ($result['updated'] > 0) {
+        Session::addMessageAfterRedirect(htmlescape(sprintf(
+            _n('%d rule action has been updated.', '%d rule actions have been updated.', $result['updated'], 'moreoptions'),
+            $result['updated'],
+        )));
+    }
 
-    Config::uninstall($migration);
-    Escalation::uninstall($migration);
-    EscalationRule::uninstall($migration);
-    Group_Link::uninstall($migration);
+    if ($result['failed'] > 0) {
+        Session::addMessageAfterRedirect(htmlescape(sprintf(
+            _n('%d rule action cannot be updated.', '%d rule actions cannot be updated.', $result['failed'], 'moreoptions'),
+            $result['failed'],
+        )), false, ERROR);
+    }
 
-    return true;
+    Html::back();
 }
 
-/**
- * Adds the "Escalate to group" action to the ticket / change / problem rules (see the `use_rules`
- * hook in setup.php).
- *
- * @param array<string, mixed> $params
- * @return array<string, array<string, mixed>>
- */
-function plugin_moreoptions_getRuleActions(array $params = []): array
-{
-    return EscalationRule::getRuleActions($params);
-}
+Html::header(__('Escalation in business rules', 'moreoptions'), '', 'admin', 'rule');
+EscalationRule::showRulesList();
+Html::footer();

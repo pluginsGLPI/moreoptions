@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Add rector config
 - Implementation of the basic concept of escalation
+- Add the "Escalate to group" action to the ticket, change and problem business rules, and a page to switch the rules "Technician group" actions to it
 
 ## [1.0.0-rc2]
 
@@ -24,4 +25,3 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fixed the issue where a ticket could be solved without a solution
 
 ## [1.0.0-rc1]
-
