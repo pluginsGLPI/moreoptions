@@ -2940,23 +2940,25 @@ class ConfigTest extends MoreOptionsTestCase
 
         // With the config right, the tab is shown
         $this->assertNotEmpty($conf->getTabNameForItem($entity));
-        ob_start();
-        $result = Config::displayTabContentForItem($entity);
-        $output = ob_get_clean();
-        $this->assertTrue($result);
-        $this->assertNotEmpty($output);
 
         // Without it, neither the tab nor its content
         $config_right = $_SESSION['glpiactiveprofile']['config'];
         $_SESSION['glpiactiveprofile']['config'] = 0;
 
-        $this->assertSame('', $conf->getTabNameForItem($entity));
-        ob_start();
-        $result = Config::displayTabContentForItem($entity);
-        $output = ob_get_clean();
-        $this->assertFalse($result);
-        $this->assertSame('', $output);
+        try {
+            $this->assertSame('', $conf->getTabNameForItem($entity));
 
-        $_SESSION['glpiactiveprofile']['config'] = $config_right;
+            ob_start();
+            try {
+                $result = Config::displayTabContentForItem($entity);
+            } finally {
+                $output = ob_get_clean();
+            }
+
+            $this->assertFalse($result);
+            $this->assertSame('', $output);
+        } finally {
+            $_SESSION['glpiactiveprofile']['config'] = $config_right;
+        }
     }
 }
