@@ -35,6 +35,7 @@ declare(strict_types=1);
 
 use GlpiPlugin\Moreoptions\Config;
 use GlpiPlugin\Moreoptions\Escalation;
+use GlpiPlugin\Moreoptions\EscalationRule;
 use GlpiPlugin\Moreoptions\Group_Link;
 
 function plugin_moreoptions_install(): bool
@@ -54,7 +55,20 @@ function plugin_moreoptions_uninstall(): bool
 
     Config::uninstall($migration);
     Escalation::uninstall($migration);
+    EscalationRule::uninstall($migration);
     Group_Link::uninstall($migration);
 
     return true;
+}
+
+/**
+ * Adds the "Escalate to group" action to the ticket / change / problem rules (see the `use_rules`
+ * hook in setup.php).
+ *
+ * @param array<string, mixed> $params
+ * @return array<string, array<string, mixed>>
+ */
+function plugin_moreoptions_getRuleActions(array $params = []): array
+{
+    return EscalationRule::getRuleActions($params);
 }

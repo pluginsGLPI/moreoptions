@@ -37,6 +37,7 @@ use Glpi\Plugin\Hooks;
 use GlpiPlugin\Moreoptions\Config;
 use GlpiPlugin\Moreoptions\Controller;
 use GlpiPlugin\Moreoptions\Escalation;
+use GlpiPlugin\Moreoptions\EscalationRule;
 use GlpiPlugin\Moreoptions\Group_Link;
 
 /** @phpstan-ignore theCodingMachineSafe.function (safe to assume this isn't already defined) */
@@ -135,6 +136,25 @@ function plugin_init_moreoptions(): void
     $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][ChangeTask::class] = Controller::assignTechnicianFromTask(...);
 
     $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][ProblemTask::class] = Controller::assignTechnicianFromTask(...);
+
+    // "Escalate to group" rule action (see EscalationRule). The PRE_ITEM_UPDATE hooks of tickets,
+    // changes and problems are already taken above: only one callback per itemtype is possible, so
+    // the existing one is called first, then the escalation one.
+    $PLUGIN_HOOKS[Hooks::USE_RULES]['moreoptions'] = EscalationRule::getRuleClasses();
+
+    foreach ([Ticket::class, Change::class, Problem::class] as $itemtype) {
+        $PLUGIN_HOOKS[Hooks::PRE_ITEM_ADD]['moreoptions'][$itemtype] = EscalationRule::dropFromUserInput(...);
+
+        $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][$itemtype] = EscalationRule::escalateAfterAdd(...);
+
+        $pre_item_update = $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][$itemtype];
+        $PLUGIN_HOOKS[Hooks::PRE_ITEM_UPDATE]['moreoptions'][$itemtype] = static function (CommonDBTM $item) use ($pre_item_update): void {
+            $pre_item_update($item);
+            EscalationRule::dropFromUserInput($item);
+        };
+
+        $PLUGIN_HOOKS[Hooks::POST_PREPAREUPDATE]['moreoptions'][$itemtype] = EscalationRule::escalateBeforeUpdate(...);
+    }
 }
 
 /**

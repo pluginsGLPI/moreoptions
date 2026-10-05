@@ -1,0 +1,104 @@
+{#
+ # -------------------------------------------------------------------------
+ # MoreOptions plugin for GLPI
+ # -------------------------------------------------------------------------
+ #
+ # MIT License
+ #
+ # Permission is hereby granted, free of charge, to any person obtaining a copy
+ # of this software and associated documentation files (the "Software"), to deal
+ # in the Software without restriction, including without limitation the rights
+ # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ # copies of the Software, and to permit persons to whom the Software is
+ # furnished to do so, subject to the following conditions:
+ #
+ # The above copyright notice and this permission notice shall be included in all
+ # copies or substantial portions of the Software.
+ #
+ # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ # SOFTWARE.
+ # -------------------------------------------------------------------------
+ # @copyright Copyright (C) 2025 by the MoreOptions plugin team.
+ # @license   MIT https://opensource.org/licenses/mit-license.php
+ # @link      https://github.com/pluginsGLPI/moreoptions
+ # -------------------------------------------------------------------------
+ #}
+
+<form method="post" action="{{ path('/plugins/moreoptions/front/escalation_rules.php') }}" class="moreoptions-escalation-rules" data-track-changes="true" data-submit-once>
+    <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}" />
+
+    {% if actions_by_type is empty %}
+        <div class="alert alert-secondary">
+            {{ __('No rule assigns a technician group.', 'moreoptions') }}
+        </div>
+    {% endif %}
+
+    {% for rule_class, rule_type in actions_by_type %}
+        {% set entries = [] %}
+        {% for action in rule_type.actions %}
+            {% set field %}
+                {% if action.can_update %}
+                    {{ call('Dropdown::showFromArray', ['fields[' ~ action.id ~ ']', field_labels, {
+                        'value': action.field,
+                        'width': '100%',
+                        'display': false,
+                    }])|raw }}
+                {% else %}
+                    {{ field_labels[action.field] }}
+                {% endif %}
+            {% endset %}
+
+            {% set is_active %}
+                <i class="ti ti-circle-filled {{ action.is_active ? 'text-success' : 'text-danger' }}"
+                   title="{{ action.is_active ? __('Rule is active') : __('Rule is inactive') }}"></i>
+            {% endset %}
+
+            {% set entries = entries|merge([{
+                'name': action.rule_link,
+                'is_active': is_active,
+                'field': field,
+                'action_type': __('Assign'),
+                'value': action.group,
+            }]) %}
+        {% endfor %}
+
+        <div class="card mb-4">
+            {{ include('components/datatable.html.twig', {
+                'datatable_id': 'moreoptions_escalation_rules_' ~ loop.index,
+                'table_class_style': 'table-hover table-vcenter card-table',
+                'nofilter': true,
+                'nosort': true,
+                'super_header': rule_type.title,
+                'columns': {
+                    'name': __('Name'),
+                    'is_active': __('Active'),
+                    'field': _n('Field', 'Fields', 1),
+                    'action_type': __('Action type'),
+                    'value': __('Value'),
+                },
+                'formatters': {
+                    'name': 'raw_html',
+                    'is_active': 'raw_html',
+                    'field': 'raw_html',
+                },
+                'entries': entries,
+                'total_number': entries|length,
+                'filtered_number': entries|length,
+            }, with_context = false) }}
+        </div>
+    {% endfor %}
+
+    {% if can_update_any %}
+        <div class="d-flex justify-content-end">
+            <button type="submit" name="update" value="1" class="btn btn-primary">
+                <i class="ti ti-device-floppy"></i>
+                <span>{{ _x('button', 'Save') }}</span>
+            </button>
+        </div>
+    {% endif %}
+</form>

@@ -268,3 +268,25 @@
         gap: 0.25rem;
     }
 }
+
+// "Review rules" page (see escalation_rules.html.twig): fixed column widths, so that every rule type
+// table lines up the same way, and the field dropdown fills its column.
+.moreoptions-escalation-rules {
+    table {
+        table-layout: fixed;
+    }
+
+    // Name, Active, Field, Action type, Value
+    $column-widths: 30%, 8%, 27%, 12%, 23%;
+    @each $width in $column-widths {
+        th:nth-child(#{index($column-widths, $width)}) {
+            width: $width;
+        }
+    }
+
+    // Active
+    th:nth-child(2),
+    td:nth-child(2) {
+        text-align: center;
+    }
+}
