@@ -143,6 +143,10 @@
                             {% endfor %}
                         </div>
                     {% endfor %}
+
+                    {% if tab.id == 'escalate' %}
+                        {{ include('@moreoptions/escalation_rules_banner.html.twig') }}
+                    {% endif %}
                 </div>
             {% endfor %}
         </div>
