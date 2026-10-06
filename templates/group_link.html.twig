@@ -26,5 +26,51 @@
  # @copyright Copyright (C) 2025 by the MoreOptions plugin team.
  # @license   MIT https://opensource.org/licenses/mit-license.php
  # @link      https://github.com/pluginsGLPI/moreoptions
+ # @link      https://gitlab.teclib.com/glpi-network/moreoptions/
  # -------------------------------------------------------------------------
  #}
+
+{#
+ # "Escalation" tab of a group (see Group_Link::showForGroup()): the editor of the escalation tree
+ # of the active entity (see EscalationTree\TreeEditor), driven by public/js/escalation_graph.js.
+ # The graph is drawn with Cytoscape.js, the library of the impact analysis of GLPI.
+ #}
+<link rel="stylesheet" href="{{ css_path('lib/cytoscape.css') }}" />
+
+{% set container_id = 'mo-group-link-' ~ random() %}
+{% set config = {
+    'url': path('/plugins/moreoptions/ajax/group_link.php'),
+    'node': {
+        'width': constant('GlpiPlugin\\Moreoptions\\EscalationTree\\TreeLayout::NODE_WIDTH'),
+        'height': constant('GlpiPlugin\\Moreoptions\\EscalationTree\\TreeLayout::NODE_HEIGHT'),
+    },
+    'strategies': strategies,
+    'strings': {
+        'remove_node': __('Remove from the graph', 'moreoptions'),
+        'delete_link': __('Delete the link', 'moreoptions'),
+        'link_type': __('Link type: %s', 'moreoptions'),
+        'error': __('The change could not be applied. Reload the page and try again.', 'moreoptions'),
+        'level': __('L%d', 'moreoptions'),
+        'load_error': __('The graph could not be loaded. Reload the page and try again.', 'moreoptions'),
+    },
+} %}
+
+<div class="mo-group-link card" id="{{ container_id }}" data-mo-config="{{ config|json_encode }}">
+    {{ include('@moreoptions/components/group_link/editor.html.twig') }}
+</div>
+
+<script src="{{ js_path('/plugins/moreoptions/js/escalation_graph.js', {'version': script_version}) }}"></script>
+<script>
+    // The library of the impact analysis (see Impact::loadLibs()), loaded once in the page: loaded
+    // again when the tab is reloaded, it would fail to register its elements again.
+    (() => {
+        const start = () => new GlpiPluginMoreoptionsEscalationGraph(document.getElementById('{{ container_id|e('js') }}'));
+        if (window.cytoscape !== undefined) {
+            start();
+        } else {
+            $.ajax({ url: '{{ js_path('lib/cytoscape.js')|e('js') }}', dataType: 'script', cache: true })
+                .done(start)
+                .fail(() => glpi_toast_error('{{ config.strings.load_error|e('js') }}'));
+        }
+    })();
+</script>

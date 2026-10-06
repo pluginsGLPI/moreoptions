@@ -32,30 +32,24 @@
  * -------------------------------------------------------------------------
  */
 
-namespace GlpiPlugin\Moreoptions\LinkStrategy;
+namespace GlpiPlugin\Moreoptions\EscalationTree\Action;
+
+use GlpiPlugin\Moreoptions\EscalationTree\TreeEditor;
 
 /**
- * Link replicated in the sub-entities of its entity
+ * Resets the graph (see EscalationTree::reset()): the links of the entity are removed, the ones
+ * inherited from the parent entities are restored.
  */
-final class InheritedLink extends AbstractLinkStrategy
+final class ResetAction extends AbstractTreeAction
 {
-    public function appliesToSubEntities(): bool
+    public static function getName(): string
     {
-        return true;
+        return 'reset';
     }
 
-    public function getLabel(): string
+    public function apply(TreeEditor $editor, array $params): void
     {
-        return __('Inherited', 'moreoptions');
-    }
-
-    public function getDescription(): string
-    {
-        return __('Also replicated in the child entities', 'moreoptions');
-    }
-
-    public function getColor(): string
-    {
-        return 'var(--mo-gl-inherited)';
+        $editor->getTree()->reset();
+        $editor->select();
     }
 }

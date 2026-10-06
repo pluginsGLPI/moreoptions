@@ -32,30 +32,13 @@
  * -------------------------------------------------------------------------
  */
 
-namespace GlpiPlugin\Moreoptions\LinkStrategy;
+use GlpiPlugin\Moreoptions\EscalationTree\TreeEditor;
 
 /**
- * Link replicated in the sub-entities of its entity
+ * Applies a change made in the escalation graph of a group, or saves it, then renders the editor
+ * again (see TreeEditor::respond()).
  */
-final class InheritedLink extends AbstractLinkStrategy
-{
-    public function appliesToSubEntities(): bool
-    {
-        return true;
-    }
 
-    public function getLabel(): string
-    {
-        return __('Inherited', 'moreoptions');
-    }
+Session::checkLoginUser();
 
-    public function getDescription(): string
-    {
-        return __('Also replicated in the child entities', 'moreoptions');
-    }
-
-    public function getColor(): string
-    {
-        return 'var(--mo-gl-inherited)';
-    }
-}
+TreeEditor::respond($_POST)->display();

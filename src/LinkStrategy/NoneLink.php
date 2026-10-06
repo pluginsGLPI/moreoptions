@@ -48,9 +48,4 @@ final class NoneLink extends AbstractLinkStrategy
     {
         return __('None', 'moreoptions');
     }
-
-    public function getIcon(): string
-    {
-        return 'ti ti-unlink';
-    }
 }

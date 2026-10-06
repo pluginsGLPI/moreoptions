@@ -71,6 +71,10 @@ function plugin_init_moreoptions(): void
 
     Plugin::registerClass(Group_Link::class, ['addtabon' => 'Group']);
 
+    $PLUGIN_HOOKS[Hooks::ITEM_PURGE]['moreoptions'][Group::class] = Group_Link::cleanForGroup(...);
+
+    $PLUGIN_HOOKS[Hooks::ITEM_PURGE]['moreoptions'][Entity::class] = Group_Link::cleanForEntity(...);
+
     $PLUGIN_HOOKS[Hooks::ADD_CSS]['moreoptions'][] = 'css/moreoptions.scss';
 
     $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Entity::class] = Config::addConfig(...);

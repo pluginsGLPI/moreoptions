@@ -32,30 +32,64 @@
  * -------------------------------------------------------------------------
  */
 
-namespace GlpiPlugin\Moreoptions\LinkStrategy;
+namespace GlpiPlugin\Moreoptions\EscalationTree\Action;
 
 /**
- * Link replicated in the sub-entities of its entity
+ * The actions of the escalation graph, by name (see AbstractTreeAction::getName()). Other plugins
+ * can add their own with register(). The actions keep no state: one instance of each is enough.
  */
-final class InheritedLink extends AbstractLinkStrategy
+final class TreeActionRegistry
 {
-    public function appliesToSubEntities(): bool
+    /**
+     * Actions added by other plugins, by name.
+     *
+     * @var array<string, AbstractTreeAction>
+     */
+    private static array $registered = [];
+
+    /**
+     * Adds an action, or replaces the one of the same name.
+     */
+    public static function register(AbstractTreeAction $action): void
     {
-        return true;
+        self::$registered[$action::getName()] = $action;
     }
 
-    public function getLabel(): string
+    /**
+     * The action of the given name, null for an unknown one.
+     */
+    public static function get(string $name): ?AbstractTreeAction
     {
-        return __('Inherited', 'moreoptions');
+        return self::getActions()[$name] ?? null;
     }
 
-    public function getDescription(): string
+    /**
+     * @return array<string, AbstractTreeAction> By name
+     */
+    public static function getActions(): array
     {
-        return __('Also replicated in the child entities', 'moreoptions');
-    }
+        $actions = [];
+        foreach (
+            [
+                new RenderAction(),
+                new ClearAction(),
+                new SelectNodeAction(),
+                new SelectLinkAction(),
+                new OrientationAction(),
+                new DrawingStrategyAction(),
+                new AddNodeAction(),
+                new RemoveNodeAction(),
+                new LinkAction(),
+                new AddLinkAction(),
+                new SetLinkTypeAction(),
+                new DeleteLinkAction(),
+                new DeleteSelectionAction(),
+                new ResetAction(),
+            ] as $action
+        ) {
+            $actions[$action::getName()] = $action;
+        }
 
-    public function getColor(): string
-    {
-        return 'var(--mo-gl-inherited)';
+        return self::$registered + $actions;
     }
 }

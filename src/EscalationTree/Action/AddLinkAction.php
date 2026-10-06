@@ -32,30 +32,46 @@
  * -------------------------------------------------------------------------
  */
 
-namespace GlpiPlugin\Moreoptions\LinkStrategy;
+namespace GlpiPlugin\Moreoptions\EscalationTree\Action;
+
+use GlpiPlugin\Moreoptions\EscalationTree\EscalationLink;
+use GlpiPlugin\Moreoptions\EscalationTree\TreeEditor;
+use GlpiPlugin\Moreoptions\LinkStrategy\LinkStrategyEnum;
 
 /**
- * Link replicated in the sub-entities of its entity
+ * Adds a link from the panel of the selected group, with the group and the strategy chosen in one
+ * of its two forms: a child group (`direction` `to`), linked from the selected group, or a parent
+ * group (`from`), the same link with both groups swapped. A group not placed yet is placed. The
+ * group stays selected, for other links to be added.
  */
-final class InheritedLink extends AbstractLinkStrategy
+final class AddLinkAction extends AbstractTreeAction
 {
-    public function appliesToSubEntities(): bool
+    public static function getName(): string
     {
-        return true;
+        return 'add_link';
     }
 
-    public function getLabel(): string
+    public function apply(TreeEditor $editor, array $params): void
     {
-        return __('Inherited', 'moreoptions');
-    }
+        $selected  = $editor->getSelectedNode();
+        $direction = (string) ($params['direction'] ?? '');
+        if ($selected === null || !in_array($direction, EscalationLink::DIRECTIONS, true)) {
+            return;
+        }
 
-    public function getDescription(): string
-    {
-        return __('Also replicated in the child entities', 'moreoptions');
-    }
+        $other       = (int) ($params['_link_' . $direction . '_group'] ?? 0);
+        $strategy    = LinkStrategyEnum::tryFromDrawn((string) ($params['_link_' . $direction . '_strategy'] ?? '')) ?? LinkStrategyEnum::BASIC;
+        [$from, $to] = $direction === 'to' ? [$selected, $other] : [$other, $selected];
 
-    public function getColor(): string
-    {
-        return 'var(--mo-gl-inherited)';
+        // The group chosen is placed for the link: it stays placed if the link is refused, as only
+        // a link it already has can make a loop.
+        $tree = $editor->getTree();
+        $tree->addNode($other);
+        $link = $tree->link($from, $to);
+        if ($link === null) {
+            $editor->refuseLink($from, $to);
+            return;
+        }
+        $tree->setStrategy($link->getKey(), $strategy);
     }
 }
