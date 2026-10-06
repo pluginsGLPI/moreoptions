@@ -32,30 +32,32 @@
  * -------------------------------------------------------------------------
  */
 
-namespace GlpiPlugin\Moreoptions\LinkStrategy;
+namespace GlpiPlugin\Moreoptions\EscalationTree\Action;
+
+use GlpiPlugin\Moreoptions\EscalationTree\TreeEditor;
 
 /**
- * Link replicated in the sub-entities of its entity
+ * An action that can be applied to the draft of the editor (see TreeEditor::apply()).
  */
-final class InheritedLink extends AbstractLinkStrategy
+abstract class AbstractTreeAction
 {
-    public function appliesToSubEntities(): bool
+    /**
+     * Name of the action, as sent by the page (`data-mo-action` of its button or field).
+     */
+    abstract public static function getName(): string;
+
+    /**
+     * Whether the action changes the links, and so requires the right to edit them
+     */
+    public function requiresEdit(): bool
     {
         return true;
     }
 
-    public function getLabel(): string
-    {
-        return __('Inherited', 'moreoptions');
-    }
-
-    public function getDescription(): string
-    {
-        return __('Also replicated in the child entities', 'moreoptions');
-    }
-
-    public function getColor(): string
-    {
-        return 'var(--mo-gl-inherited)';
-    }
+    /**
+     * Applies the action to the draft of the editor.
+     *
+     * @param array<mixed> $params Parameters sent by the page, single values (see TreeEditor::respond())
+     */
+    abstract public function apply(TreeEditor $editor, array $params): void;
 }

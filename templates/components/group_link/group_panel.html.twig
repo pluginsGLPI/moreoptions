@@ -1,0 +1,156 @@
+{#
+ # -------------------------------------------------------------------------
+ # MoreOptions plugin for GLPI
+ # -------------------------------------------------------------------------
+ #
+ # MIT License
+ #
+ # Permission is hereby granted, free of charge, to any person obtaining a copy
+ # of this software and associated documentation files (the "Software"), to deal
+ # in the Software without restriction, including without limitation the rights
+ # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ # copies of the Software, and to permit persons to whom the Software is
+ # furnished to do so, subject to the following conditions:
+ #
+ # The above copyright notice and this permission notice shall be included in all
+ # copies or substantial portions of the Software.
+ #
+ # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ # SOFTWARE.
+ # -------------------------------------------------------------------------
+ # @copyright Copyright (C) 2025 by the MoreOptions plugin team.
+ # @license   MIT https://opensource.org/licenses/mit-license.php
+ # @link      https://github.com/pluginsGLPI/moreoptions
+ # @link      https://gitlab.teclib.com/glpi-network/moreoptions/
+ # -------------------------------------------------------------------------
+ #}
+
+{#
+ # Side panel of the selected group (included by editor.html.twig): all its links, to the groups it
+ # escalates to and from the groups escalating to it. Clicking a link selects it, its cross deletes
+ # it. Below each list, a folded form adds a link to or from another group: only the groups it can
+ # be linked with are offered (see EscalationTree::getLinkCandidates()).
+ #
+ # @param selected_node See TreeView::getTemplateVariables()
+ # @param strategies    Strategies a link can have
+ # @param canedit
+ #}
+{% import '@moreoptions/components/group_link/macros.html.twig' as macros %}
+
+{% macro links(title, icon, empty, direction, add_label, selected_node, strategies, canedit) %}
+    {% import '@moreoptions/components/group_link/macros.html.twig' as macros %}
+    {% set links = selected_node[direction] %}
+    {% set candidates = selected_node['candidates_' ~ direction] %}
+    {% set form_id = 'mo-gl-add-' ~ direction ~ '-' ~ selected_node.id %}
+
+    <div class="card-header py-2">
+        <div class="subheader">
+            <i class="ti {{ icon }} me-1"></i>
+            {{ title }}
+        </div>
+        <div class="card-actions">
+            <span class="badge bg-secondary-lt">{{ links|length }}</span>
+        </div>
+    </div>
+
+    <div class="list-group list-group-flush">
+        {% for link in links %}
+            <div class="list-group-item d-flex align-items-center gap-1 py-1 px-2">
+                <button type="button" class="btn btn-ghost-secondary text-body fw-normal flex-grow-1 justify-content-start gap-2 px-2 text-start"
+                        data-mo-action="select_link" data-mo-link="{{ link.key }}"
+                        title="{{ link.replicated ? __('%1$s link replicated from the entity %2$s', 'moreoptions')|format(link.label, link.entity_name) : link.label }}">
+                    {{ macros.arrow(link.color, link.replicated) }}
+                    <span class="flex-grow-1 text-break">{{ direction == 'to' ? link.to_name : link.from_name }}</span>
+                    <span class="badge bg-secondary-lt">
+                        {% if link.replicated %}<i class="ti ti-corner-right-down me-1"></i>{% endif %}
+                        {{ link.label }}
+                    </span>
+                </button>
+                {% if canedit %}
+                    <button type="button" class="btn btn-sm btn-icon btn-ghost-danger" data-mo-action="delete_link" data-mo-link="{{ link.key }}"
+                            data-bs-toggle="tooltip" title="{{ __('Delete the link', 'moreoptions') }}" aria-label="{{ __('Delete the link', 'moreoptions') }}">
+                        <i class="ti ti-x"></i>
+                    </button>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="list-group-item text-secondary small fst-italic py-2">{{ empty }}</div>
+        {% endfor %}
+
+        {% if canedit and candidates is not empty %}
+            <div class="list-group-item py-2">
+                <button type="button" class="btn btn-sm btn-ghost-secondary collapsed"
+                        data-bs-toggle="collapse" data-bs-target="#{{ form_id }}" aria-expanded="false" aria-controls="{{ form_id }}">
+                    <i class="ti ti-plus"></i>
+                    <span>{{ add_label }}</span>
+                </button>
+                <div class="collapse" id="{{ form_id }}">
+                    <div class="d-flex flex-column gap-2 pt-2">
+                        {% do call('Dropdown::showFromArray', ['_link_' ~ direction ~ '_group', candidates, {
+                            'display_emptychoice': true,
+                            'width': '100%',
+                            'aria_label': add_label,
+                        }]) %}
+                        <div class="d-flex gap-2">
+                            <div class="flex-grow-1">
+                                {% do call('Dropdown::showFromArray', [
+                                    '_link_' ~ direction ~ '_strategy',
+                                    strategies|reduce((choices, strategy) => choices|merge({(strategy.value): strategy.label}), {}),
+                                    {'value': (strategies|first).value, 'width': '100%', 'aria_label': __('Link type', 'moreoptions')},
+                                ]) %}
+                            </div>
+                            {# The add button of GLPI #}
+                            <button type="button" class="btn btn-primary" data-mo-action="add_link" data-mo-direction="{{ direction }}">
+                                <i class="ti ti-plus"></i>
+                                <span>{{ _x('button', 'Add') }}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endmacro %}
+
+<div class="mo-gl-selection">
+    <div class="card-header">
+        <h3 class="card-title d-flex align-items-center gap-2 text-break" tabindex="-1" data-mo-panel-title>
+            <i class="{{ 'Group'|itemtype_icon }}"></i>
+            <a href="{{ 'Group'|itemtype_form_path(selected_node.id) }}">{{ selected_node.name }}</a>
+        </h3>
+        <div class="card-actions">
+            {{ macros.level_badge(selected_node.level) }}
+        </div>
+    </div>
+
+    {{ _self.links(
+        __('Escalates to', 'moreoptions'),
+        'ti-arrow-narrow-right',
+        __('This group does not escalate to any group.', 'moreoptions'),
+        'to',
+        __('Add a group to escalate to', 'moreoptions'),
+        selected_node,
+        strategies,
+        canedit,
+    ) }}
+    {{ _self.links(
+        __('Receives escalations from', 'moreoptions'),
+        'ti-arrow-narrow-left',
+        __('No group escalates to it: it is a first level.', 'moreoptions'),
+        'from',
+        __('Add a group escalating to it', 'moreoptions'),
+        selected_node,
+        strategies,
+        canedit,
+    ) }}
+
+    {% if canedit %}
+        {# From the graph only: the GLPI group itself is not deleted. #}
+        {{ macros.delete_button('remove_node', __('Remove the group from the graph, with its links', 'moreoptions'), selected_node.id) }}
+    {% endif %}
+</div>

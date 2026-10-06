@@ -1,0 +1,70 @@
+{#
+ # -------------------------------------------------------------------------
+ # MoreOptions plugin for GLPI
+ # -------------------------------------------------------------------------
+ #
+ # MIT License
+ #
+ # Permission is hereby granted, free of charge, to any person obtaining a copy
+ # of this software and associated documentation files (the "Software"), to deal
+ # in the Software without restriction, including without limitation the rights
+ # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ # copies of the Software, and to permit persons to whom the Software is
+ # furnished to do so, subject to the following conditions:
+ #
+ # The above copyright notice and this permission notice shall be included in all
+ # copies or substantial portions of the Software.
+ #
+ # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ # SOFTWARE.
+ # -------------------------------------------------------------------------
+ # @copyright Copyright (C) 2025 by the MoreOptions plugin team.
+ # @license   MIT https://opensource.org/licenses/mit-license.php
+ # @link      https://github.com/pluginsGLPI/moreoptions
+ # @link      https://gitlab.teclib.com/glpi-network/moreoptions/
+ # -------------------------------------------------------------------------
+ #}
+
+{#
+ # Arrows of the graph, in its toolbar (included by editor.html.twig). With the right to edit the
+ # links, the arrows of the strategies are the choice of the strategy of the links drawn; then
+ # comes the dashed arrow of the links replicated from a parent entity. Each one is explained in
+ # its tooltip.
+ #
+ # @param strategies       See TreeView::getTemplateVariables()
+ # @param drawing_strategy Strategy of the links drawn in the graph
+ # @param canedit
+ # @param uid              Unique part of the ids of the fields
+ #}
+{% import '@moreoptions/components/group_link/macros.html.twig' as macros %}
+
+<div class="d-flex align-items-center gap-2">
+    {% if canedit %}
+        {{ macros.choices(
+            'drawing_strategy',
+            'drawing_strategy',
+            strategies|map(strategy => strategy|merge({'title': __('Link to draw', 'moreoptions') ~ ': ' ~ strategy.label ~ '. ' ~ strategy.description})),
+            drawing_strategy,
+            uid,
+            __('Link to draw', 'moreoptions'),
+        ) }}
+    {% else %}
+        {% for strategy in strategies %}
+            <span class="d-inline-flex align-items-center gap-2 small text-secondary" data-bs-toggle="tooltip" title="{{ strategy.description }}">
+                {{ macros.arrow(strategy.color) }}
+                {{ strategy.label }}
+            </span>
+        {% endfor %}
+    {% endif %}
+    {% for strategy in strategies|filter(strategy => strategy.replicable) %}
+        {% set label = __('%s, replicated from a parent entity', 'moreoptions')|format(strategy.label) %}
+        <span class="d-inline-flex align-items-center px-1" data-bs-toggle="tooltip" title="{{ label }}" aria-label="{{ label }}">
+            {{ macros.arrow(strategy.color, true) }}
+        </span>
+    {% endfor %}
+</div>

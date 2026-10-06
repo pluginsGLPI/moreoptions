@@ -1,0 +1,171 @@
+{#
+ # -------------------------------------------------------------------------
+ # MoreOptions plugin for GLPI
+ # -------------------------------------------------------------------------
+ #
+ # MIT License
+ #
+ # Permission is hereby granted, free of charge, to any person obtaining a copy
+ # of this software and associated documentation files (the "Software"), to deal
+ # in the Software without restriction, including without limitation the rights
+ # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ # copies of the Software, and to permit persons to whom the Software is
+ # furnished to do so, subject to the following conditions:
+ #
+ # The above copyright notice and this permission notice shall be included in all
+ # copies or substantial portions of the Software.
+ #
+ # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ # SOFTWARE.
+ # -------------------------------------------------------------------------
+ # @copyright Copyright (C) 2025 by the MoreOptions plugin team.
+ # @license   MIT https://opensource.org/licenses/mit-license.php
+ # @link      https://github.com/pluginsGLPI/moreoptions
+ # @link      https://gitlab.teclib.com/glpi-network/moreoptions/
+ # -------------------------------------------------------------------------
+ #}
+
+{#
+ # Escalation tree editor (see EscalationTree\TreeEditor): the part of the "Escalation" tab rendered
+ # again by ajax/group_link.php after each change. The form holds the draft being edited, sent back
+ # with each change. The graph is drawn by Cytoscape.js, as the impact analysis of GLPI, from the
+ # elements given in `data-mo-elements` (see public/js/escalation_graph.js).
+ #}
+{% import 'components/alerts_macros.html.twig' as alerts %}
+{% import '@moreoptions/components/group_link/macros.html.twig' as macros %}
+
+<form data-mo-graph data-mo-orientation="{{ orientation }}" data-mo-drawing-strategy="{{ drawing_strategy }}" {{ canedit ? 'data-mo-canedit' }}
+      {{ has_selection ? 'data-mo-has-selection' }} {% if scroll_to is not null %}data-mo-scroll-to="{{ scroll_to }}"{% endif %}>
+    <input type="hidden" name="groups_id" value="{{ group.getID() }}" />
+    <input type="hidden" name="state" value="{{ state|json_encode }}" />
+
+    {# One toolbar, with icons: what each button does is in its tooltip, the gestures in the help. #}
+    <div class="card-header flex-wrap gap-3">
+        {% if canedit %}
+            {# Undone and redone in the page (see public/js/escalation_graph.js), which enables them #}
+            <div class="btn-group" role="group" aria-label="{{ __('History', 'moreoptions') }}">
+                <button type="button" class="btn btn-sm btn-icon btn-ghost-secondary" data-mo-undo disabled
+                        data-bs-toggle="tooltip" title="{{ __('Undo') }} (Ctrl+Z)" aria-label="{{ __('Undo') }}">
+                    <i class="ti ti-arrow-back-up"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-icon btn-ghost-secondary" data-mo-redo disabled
+                        data-bs-toggle="tooltip" title="{{ __('Redo') }} (Ctrl+Y)" aria-label="{{ __('Redo') }}">
+                    <i class="ti ti-arrow-forward-up"></i>
+                </button>
+            </div>
+        {% endif %}
+
+        {# View of the graph #}
+        {{ macros.choices('orientation', 'orientation', [
+            {'value': 'horizontal', 'label': __('Horizontal', 'moreoptions'), 'title': __('Horizontal', 'moreoptions'), 'icon': 'ti-layout-distribute-vertical'},
+            {'value': 'vertical', 'label': __('Vertical', 'moreoptions'), 'title': __('Vertical', 'moreoptions'), 'icon': 'ti-layout-distribute-horizontal'},
+        ], orientation, group.getID(), __('Orientation', 'moreoptions')) }}
+        <button type="button" class="btn btn-sm btn-icon btn-ghost-secondary" data-mo-fit
+                data-bs-toggle="tooltip" title="{{ __('Fit the graph to the view', 'moreoptions') }}" aria-label="{{ __('Fit the graph to the view', 'moreoptions') }}">
+            <i class="ti ti-arrows-maximize"></i>
+        </button>
+        {% if canedit %}
+            {# Applied to the draft, as the other changes: saved with the "Save" button. #}
+            {% set reset_label = entity_is_root
+                ? __('Remove all the links', 'moreoptions')
+                : __('Remove the links of this entity, and restore the ones inherited from the parent entities', 'moreoptions') %}
+            <button type="button" class="btn btn-sm btn-icon btn-ghost-danger" data-mo-action="reset" {{ not can_reset ? 'disabled' }}
+                    data-mo-confirm="{{ entity_is_root
+                        ? __('Remove all the links of the graph?', 'moreoptions')
+                        : __('Remove all the links of this entity? The links inherited from the parent entities are restored.', 'moreoptions') }}"
+                    data-bs-toggle="tooltip" title="{{ __('Reset') }}: {{ reset_label }}" aria-label="{{ __('Reset') }}">
+                <i class="ti ti-restore"></i>
+            </button>
+        {% endif %}
+
+        {{ include('@moreoptions/components/group_link/legend.html.twig', {
+            'strategies': strategies,
+            'drawing_strategy': drawing_strategy,
+            'canedit': canedit,
+            'uid': group.getID(),
+        }, with_context = false) }}
+
+        <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
+            {# The gestures of the graph, instead of always written on it #}
+            {% set gestures = (canedit ? [
+                __('Drag a group onto another group to link them.', 'moreoptions'),
+                __('Drag a group of the list onto the graph to place it.', 'moreoptions'),
+                __('Right-click a group or a link for more actions.', 'moreoptions'),
+                __('Delete: removes the selection. Ctrl+Z / Ctrl+Y: undo / redo.', 'moreoptions'),
+            ] : [])|merge([
+                __('Escape: closes the selection.', 'moreoptions'),
+                __('Drag the background to move around, scroll to zoom.', 'moreoptions'),
+                __('Dashed links are inherited from a parent entity.', 'moreoptions'),
+            ]) %}
+            {# A link, not a button: Safari does not focus a clicked button, the "focus" trigger needs it. #}
+            <a role="button" tabindex="0" class="btn btn-sm btn-icon btn-ghost-secondary" aria-label="{{ __('Help') }}"
+               data-bs-toggle="popover" data-bs-trigger="focus" data-bs-placement="bottom" data-bs-html="true"
+               title="{{ __('Help') }}" data-bs-content="{{ ("<ul class='ps-3 mb-0'><li>" ~ gestures|map(gesture => gesture|e)|join('</li><li>') ~ '</li></ul>')|e('html_attr') }}">
+                <i class="ti ti-help"></i>
+            </a>
+
+            <span class="badge bg-secondary-lt" data-bs-toggle="tooltip" title="{{ __('The links shown and saved are the ones of the active entity', 'moreoptions') }}">
+                <i class="{{ 'Entity'|itemtype_icon }} me-1"></i>
+                {{ entity_name }}
+            </span>
+            {% if canedit %}
+                <button type="button" class="btn btn-sm btn-primary" data-mo-action="save">
+                    <i class="ti ti-device-floppy"></i>
+                    <span>{{ _x('button', 'Save') }}</span>
+                </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mo-gl-body">
+        <div class="mo-gl-canvas" {{ canedit ? 'data-mo-drop-zone' }} data-mo-cy></div>
+        <script type="application/json" data-mo-elements>{{ elements|json_encode(constant('JSON_HEX_TAG') b-or constant('JSON_HEX_AMP'))|raw }}</script>
+
+        <div class="mo-gl-side">
+            {% if error is not null %}
+                <div class="p-2">
+                    {{ alerts.alert_danger('', [error]) }}
+                </div>
+            {% endif %}
+
+            {% if selected_node is not null %}
+                {{ include('@moreoptions/components/group_link/group_panel.html.twig', {
+                    'selected_node': selected_node,
+                    'strategies': strategies,
+                    'canedit': canedit,
+                }, with_context = false) }}
+            {% endif %}
+
+            {% if selected_link is not null %}
+                {{ include('@moreoptions/components/group_link/link_panel.html.twig', {
+                    'selected_link': selected_link,
+                    'strategies': strategies,
+                    'canedit': canedit,
+                }, with_context = false) }}
+            {% endif %}
+
+            {# The list of the groups gives way to the panel of the selected group or link. #}
+            {% if not has_selection %}
+                {{ include('@moreoptions/components/group_link/group_list.html.twig', {
+                    'placed': placed,
+                    'pool': pool,
+                    'query': query,
+                    'canedit': canedit,
+                }, with_context = false) }}
+            {% else %}
+                <div class="flex-grow-1"></div>
+            {% endif %}
+
+            <div class="card-footer d-flex justify-content-between text-secondary small">
+                <span>{{ _n('%d group', '%d groups', placed|length, 'moreoptions')|format(placed|length) }}</span>
+                <span>{{ _n('%d link', '%d links', elements.edges|length, 'moreoptions')|format(elements.edges|length) }}</span>
+            </div>
+        </div>
+    </div>
+
+</form>

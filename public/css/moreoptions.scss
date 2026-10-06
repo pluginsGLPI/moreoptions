@@ -236,3 +236,157 @@
         margin-top: 0.75rem;
     }
 }
+
+// Escalation graph of the "Escalation" tab of a group (see group_link.html.twig).
+.mo-group-link {
+    --mo-gl-accent: #3a5693;
+    // Height of the graph, and of the side panel next to it
+    --mo-gl-height: 640px;
+    // Arrows of the link strategies (see AbstractLinkStrategy::getColor())
+    // Basic: neutral; inherited: the azure of the GLPI badge of the values inherited from a parent entity (see Entity::inheritedValue()).
+    --mo-gl-basic: var(--tblr-body-color);
+    --mo-gl-inherited: var(--tblr-azure, #4299e1);
+
+    overflow: hidden;
+
+    &.mo-gl-busy {
+        cursor: progress;
+    }
+
+    [data-glpi-theme-dark="1"] & {
+        --mo-gl-accent: #8aa5dc;
+    }
+
+    // Choices of the editor (strategy, orientation): the arrows stay readable on the chosen one.
+    // GLPI styles a checked button with these variables (and !important).
+    .btn-check:checked + .btn {
+        --tblr-btn-hover-color: var(--tblr-body-color);
+        --tblr-btn-active-bg: color-mix(in srgb, var(--mo-gl-accent), var(--tblr-bg-surface) 88%);
+        border-color: var(--mo-gl-accent);
+    }
+
+    .mo-gl-body {
+        display: flex;
+        align-items: stretch;
+    }
+
+    // Container of the Cytoscape.js graph (see public/js/escalation_graph.js).
+    .mo-gl-canvas {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+        height: var(--mo-gl-height);
+        // A fixed grid: it does not follow the moves and the zoom of the graph, nothing to redraw.
+        background-color: var(--tblr-bg-surface-secondary);
+        background-image:
+            linear-gradient(to right, var(--tblr-border-color) 1px, transparent 1px),
+            linear-gradient(to bottom, var(--tblr-border-color) 1px, transparent 1px);
+        background-size: 24px 24px;
+
+        // A group of the list is dragged over it.
+        &.mo-gl-drop-target {
+            outline: 2px dashed var(--mo-gl-accent);
+            outline-offset: -4px;
+        }
+    }
+
+    // Link replicated from a parent entity, in the legend and in the panels: dashed as in the graph
+    // (see `line-dash-pattern` in public/js/escalation_graph.js).
+    .mo-gl-edge-replicated {
+        stroke-dasharray: 7 5;
+    }
+
+    // Side panel, made of Tabler card parts (card-header, list-group, card-footer).
+    .mo-gl-side {
+        display: flex;
+        flex: 0 0 300px;
+        flex-direction: column;
+        height: var(--mo-gl-height);
+        border-left: 1px solid var(--tblr-border-color);
+    }
+
+    // Scrolls when long, rather than pushing the group list out of the panel.
+    .mo-gl-selection {
+        flex: 0 1 auto;
+        min-height: 0;
+        overflow: auto;
+        border-bottom: 1px solid var(--tblr-border-color);
+    }
+
+    .mo-gl-pool {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        gap: 8px;
+        min-height: 0;
+        padding: 4px 16px 16px;
+        overflow: auto;
+    }
+
+    // Folded section of the group list
+    .mo-gl-section-chevron {
+        transition: transform 0.15s;
+    }
+
+    .collapsed .mo-gl-section-chevron {
+        transform: rotate(-90deg);
+    }
+
+    // A group to place: a small card, as the groups of the graph, which can be dragged onto it.
+    .mo-gl-pool-item {
+        display: flex;
+        flex: none;
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        margin: 0;
+        padding: 8px 10px 8px 6px;
+        color: inherit;
+        text-align: start;
+        cursor: grab;
+        transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+
+        &:hover,
+        &:focus-visible {
+            border-color: var(--mo-gl-accent);
+            box-shadow: 0 2px 6px rgba(16, 25, 35, 0.12);
+            transform: translateY(-1px);
+        }
+
+        &:active {
+            cursor: grabbing;
+        }
+
+        &.mo-gl-dragging {
+            opacity: 0.5;
+            border-style: dashed;
+        }
+
+        .mo-gl-pool-item-grip {
+            color: var(--tblr-secondary);
+            opacity: 0.6;
+        }
+
+        &:hover .mo-gl-pool-item-grip {
+            opacity: 1;
+        }
+    }
+
+    // Narrow screens: the side panel goes below the graph.
+    @media (max-width: 767.98px) {
+        --mo-gl-height: 420px;
+
+        .mo-gl-body {
+            flex-direction: column;
+        }
+
+        .mo-gl-side {
+            flex-basis: auto;
+            height: auto;
+            max-height: var(--mo-gl-height);
+            border-top: 1px solid var(--tblr-border-color);
+            border-left: 0;
+        }
+    }
+}

@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Add rector config
 - Implementation of the basic concept of escalation
+- Add the escalation hierarchy between groups: graph editor in the "Escalation" tab of the groups, with basic links (limited to their entity) and inherited links (replicated in the child entities). Changing it requires the right to update the GLPI configuration
 
 ## [1.0.0-rc2]
 

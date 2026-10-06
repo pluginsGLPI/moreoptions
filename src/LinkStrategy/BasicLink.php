@@ -44,8 +44,13 @@ final class BasicLink extends AbstractLinkStrategy
         return __('Basic', 'moreoptions');
     }
 
-    public function getIcon(): string
+    public function getDescription(): string
     {
-        return 'ti ti-arrow-right';
+        return __('Limited to the entity where it was created', 'moreoptions');
+    }
+
+    public function getColor(): string
+    {
+        return 'var(--mo-gl-basic)';
     }
 }
