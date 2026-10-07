@@ -72,13 +72,10 @@
         </button>
         {% if canedit %}
             {# Applied to the draft, as the other changes: saved with the "Save" button. #}
-            {% set reset_label = entity_is_root
-                ? __('Remove all the links', 'moreoptions')
-                : __('Remove the links of this entity, and restore the ones inherited from the parent entities', 'moreoptions') %}
+            {% set reset_label = entity_is_root ? __('Remove all the links', 'moreoptions') : __('Remove the links of this entity, and restore the ones inherited from the parent entities', 'moreoptions') %}
+            {% set reset_confirm = entity_is_root ? __('Remove all the links of the graph?', 'moreoptions') : __('Remove all the links of this entity? The links inherited from the parent entities are restored.', 'moreoptions') %}
             <button type="button" class="btn btn-sm btn-icon btn-ghost-danger" data-mo-action="reset" {{ not can_reset ? 'disabled' }}
-                    data-mo-confirm="{{ entity_is_root
-                        ? __('Remove all the links of the graph?', 'moreoptions')
-                        : __('Remove all the links of this entity? The links inherited from the parent entities are restored.', 'moreoptions') }}"
+                    data-mo-confirm="{{ reset_confirm }}"
                     data-bs-toggle="tooltip" title="{{ __('Reset') }}: {{ reset_label }}" aria-label="{{ __('Reset') }}">
                 <i class="ti ti-restore"></i>
             </button>
