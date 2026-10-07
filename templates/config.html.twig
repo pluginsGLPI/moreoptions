@@ -66,13 +66,14 @@
  #}
 
 <div class="asset mo-config">
-    <form action="{{ path('plugins/moreoptions/front/config.form.php') }}" method="post">
+    <form id="mo-config-form-{{ rand }}" action="{{ path('plugins/moreoptions/front/config.form.php') }}" method="post">
         <ul class="nav nav-tabs" role="tablist">
             {% for tab in tabs %}
                 <li class="nav-item">
                     <a
                         class="nav-link {{ loop.first ? 'active' : '' }}"
                         id="mo-tab-{{ tab.id }}-{{ rand }}"
+                        data-mo-tab="{{ tab.id }}"
                         data-bs-toggle="tab"
                         href="#mo-pane-{{ tab.id }}-{{ rand }}"
                         role="tab"
@@ -134,3 +135,29 @@
         {{ include('components/form/buttons.html.twig') }}
     </form>
 </div>
+
+<script>
+    (() => {
+        // The page is reloaded once saved: back on the tab it was saved from.
+        const form = document.getElementById('mo-config-form-{{ rand }}');
+        const key = 'moreoptions_config_tab';
+        try {
+            const saved = sessionStorage.getItem(key);
+            sessionStorage.removeItem(key);
+            const tab = saved !== null ? form.querySelector(`[data-mo-tab="${CSS.escape(saved)}"]`) : null;
+            if (tab !== null) {
+                bootstrap.Tab.getOrCreateInstance(tab).show();
+            }
+        } catch {
+            // No storage (private browsing): the first tab is shown.
+        }
+
+        form.addEventListener('submit', () => {
+            try {
+                sessionStorage.setItem(key, form.querySelector('.nav-link.active')?.dataset.moTab ?? '');
+            } catch {
+                // Same
+            }
+        });
+    })();
+</script>
