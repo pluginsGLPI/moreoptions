@@ -59,15 +59,17 @@ final class LinkAction extends AbstractTreeAction
         }
 
         $tree    = $editor->getTree();
-        $existed = $tree->getLink(EscalationLink::key($from, $to)) !== null;
+        $existed = $tree->getLink(EscalationLink::key($from, $to)) instanceof EscalationLink;
         $link    = $tree->link($from, $to);
-        if ($link === null) {
+        if (!$link instanceof EscalationLink) {
             $editor->refuseLink($from, $to);
             return;
         }
+
         if (!$existed && !$link->isReplicated()) {
             $tree->setStrategy($link->getKey(), $editor->getDrawingStrategy());
         }
+
         $editor->select(link: $link->getKey());
     }
 }

@@ -133,7 +133,7 @@ final class TreeEditor
         $selected_node = (int) ($state['selected_node'] ?? 0);
         $editor->selected_node = $editor->tree->hasNode($selected_node) ? $selected_node : null;
         $selected_link = is_string($state['selected_link'] ?? null) ? $state['selected_link'] : '';
-        $editor->selected_link = $editor->tree->getLink($selected_link) !== null ? $selected_link : null;
+        $editor->selected_link = $editor->tree->getLink($selected_link) instanceof EscalationLink ? $selected_link : null;
 
         return $editor;
     }
@@ -151,7 +151,7 @@ final class TreeEditor
     public static function respond(array $input): self
     {
         // The page only sends single values (the draft is a JSON string).
-        if (array_filter($input, 'is_array') !== []) {
+        if (array_filter($input, is_array(...)) !== []) {
             throw new BadRequestHttpException();
         }
 
@@ -159,6 +159,7 @@ final class TreeEditor
         if (!$entity->getFromDB((int) ($input['entities_id'] ?? -1)) || !$entity->can($entity->getID(), READ)) {
             throw new AccessDeniedHttpException();
         }
+
         $entities_id = $entity->getID();
 
         $name   = (string) ($input['action'] ?? '');
@@ -168,13 +169,14 @@ final class TreeEditor
         } catch (JsonException) {
             throw new BadRequestHttpException();
         }
+
         // The draft is only applied to the entity it was made for.
         if (!is_array($state) || (int) ($state['entities_id'] ?? -1) !== $entities_id) {
             throw new BadRequestHttpException();
         }
 
         $editor = self::fromState($entities_id, $state, $input);
-        if ($action !== null) {
+        if ($action instanceof AbstractTreeAction) {
             $editor->apply($action, $input);
             return $editor;
         }
@@ -182,6 +184,7 @@ final class TreeEditor
         if (!$editor->canedit) {
             throw new AccessDeniedHttpException();
         }
+
         if (!$editor->tree->isUpToDate()) {
             return self::fromDatabase(
                 $entities_id,
@@ -189,10 +192,12 @@ final class TreeEditor
                 $input,
             );
         }
+
         if (!$editor->save()) {
             return $editor;
         }
-        Session::addMessageAfterRedirect(__('Escalation links saved.', 'moreoptions'));
+
+        Session::addMessageAfterRedirect(__s('Escalation links saved.', 'moreoptions'));
 
         return self::fromDatabase($entities_id, null, $input);
     }
@@ -228,6 +233,7 @@ final class TreeEditor
         foreach (Group_Link::getGroupNames($loop['groups']) as $group) {
             $names[] = $group['name'];
         }
+
         $names[] = $names[0];
 
         $this->error = sprintf(
@@ -250,6 +256,7 @@ final class TreeEditor
         if ($action->requiresEdit() && !$this->canedit) {
             return;
         }
+
         $this->query = trim((string) ($params['query'] ?? ''));
         $action->apply($this, $params);
     }
@@ -296,7 +303,7 @@ final class TreeEditor
     {
         $this->setOrientation((string) ($preferences['_orientation'] ?? ''));
         $strategy = LinkStrategyEnum::tryFromDrawn((string) ($preferences['_drawing_strategy'] ?? ''));
-        if ($strategy !== null) {
+        if ($strategy instanceof LinkStrategyEnum) {
             $this->setDrawingStrategy($strategy);
         }
     }
@@ -331,7 +338,7 @@ final class TreeEditor
     {
         $source      = $this->tree->getNode($from);
         $destination = $this->tree->getNode($to);
-        if ($source !== null && $destination !== null) {
+        if ($source instanceof GroupNode && $destination instanceof GroupNode) {
             $this->error = sprintf(
                 __('%1$s already escalates to %2$s, directly or not: linking them the other way would create a loop.', 'moreoptions'),
                 $destination->name,

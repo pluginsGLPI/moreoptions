@@ -50,7 +50,7 @@ final class DrawingStrategyAction extends AbstractViewAction
     public function apply(TreeEditor $editor, array $params): void
     {
         $strategy = LinkStrategyEnum::tryFromDrawn((string) ($params['value'] ?? ''));
-        if ($strategy !== null) {
+        if ($strategy instanceof LinkStrategyEnum) {
             $editor->setDrawingStrategy($strategy);
         }
     }

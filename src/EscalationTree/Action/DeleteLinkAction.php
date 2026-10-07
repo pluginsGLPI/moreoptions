@@ -54,6 +54,7 @@ final class DeleteLinkAction extends AbstractTreeAction
         if ($link === null) {
             return;
         }
+
         $editor->getTree()->unlink($link);
         if ($editor->getSelectedNode() === null || $given === '') {
             $editor->select();

@@ -94,6 +94,7 @@ abstract class EscalationTestCase extends MoreOptionsTestCase
         foreach ($links as $link) {
             $inputs[] = ['entities_id' => $entities_id] + (new EscalationLink(...$link))->toRow();
         }
+
         $this->createItems(Group_Link::class, $inputs);
     }
 
@@ -106,6 +107,7 @@ abstract class EscalationTestCase extends MoreOptionsTestCase
         foreach ((new Group_Link())->find(['entities_id' => $entities_id]) as $row) {
             $links[EscalationLink::fromRow($row)->getKey()] = $row['link_type'];
         }
+
         ksort($links);
 
         return $links;

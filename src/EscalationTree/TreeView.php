@@ -42,23 +42,23 @@ use GlpiPlugin\Moreoptions\LinkStrategy\LinkStrategyEnum;
  * What the editor of an escalation tree shows (see TreeEditor): the variables of
  * templates/components/group_link/editor.html.twig.
  */
-final class TreeView
+final readonly class TreeView
 {
     /**
      * @var array<int, int> Level of each group
      */
-    private readonly array $levels;
+    private array $levels;
 
     public function __construct(
-        private readonly EscalationTree $tree,
-        private readonly bool $canedit,
-        private readonly bool $vertical,
-        private readonly LinkStrategyEnum $drawing_strategy,
-        private readonly ?int $selected_node,
-        private readonly ?string $selected_link,
-        private readonly string $query,
-        private readonly ?string $error,
-        private readonly ?int $scroll_to,
+        private EscalationTree $tree,
+        private bool $canedit,
+        private bool $vertical,
+        private LinkStrategyEnum $drawing_strategy,
+        private ?int $selected_node,
+        private ?string $selected_link,
+        private string $query,
+        private ?string $error,
+        private ?int $scroll_to,
     ) {
         $this->levels = $tree->getLevels();
     }
@@ -86,7 +86,7 @@ final class TreeView
             'error'            => $this->error,
             'has_selection'    => $this->selected_node !== null || $this->selected_link !== null,
             'scroll_to'        => $this->scroll_to,
-            'strategies'       => array_map(self::describeStrategy(...), LinkStrategyEnum::getDrawnCases()),
+            'strategies'       => array_map($this->describeStrategy(...), LinkStrategyEnum::getDrawnCases()),
         ];
     }
 
@@ -95,7 +95,7 @@ final class TreeView
      *
      * @return array{value: string, label: string, description: string, color: string|null, replicable: bool}
      */
-    private static function describeStrategy(LinkStrategyEnum $strategy): array
+    private function describeStrategy(LinkStrategyEnum $strategy): array
     {
         return [
             'value'       => $strategy->value,
@@ -125,7 +125,7 @@ final class TreeView
                 // The level is shown as a badge on the group
                 'data'     => ['id' => (string) $node->id, 'label' => $node->name, 'level' => $this->levels[$node->id]],
                 'position' => $centers[$node->id],
-                'classes'  => self::classes(['selected' => $this->selected_node === $node->id]),
+                'classes'  => $this->classes(['selected' => $this->selected_node === $node->id]),
             ];
         }
 
@@ -141,15 +141,15 @@ final class TreeView
                     // from the center of its groups (see TreeLayout::getRoutes())
                     'route'      => $routes[$key],
                     'endpoints'  => [
-                        'source' => self::offset($routes[$key]['from'], $centers[$link->source]),
-                        'target' => self::offset($routes[$key]['to'], $centers[$link->destination]),
+                        'source' => $this->offset($routes[$key]['from'], $centers[$link->source]),
+                        'target' => $this->offset($routes[$key]['to'], $centers[$link->destination]),
                     ],
                     'replicated' => $link->isReplicated(),
                     // The context menu only offers the other strategies
                     'type'       => $link->strategy->value,
                     'color'      => $link->strategy->getStrategy()->getColor() ?? 'currentColor',
                 ],
-                'classes' => self::classes(['selected' => $this->selected_link === $key]),
+                'classes' => $this->classes(['selected' => $this->selected_link === $key]),
             ];
         }
 
@@ -165,7 +165,7 @@ final class TreeView
     private function describeSelectedNode(): ?array
     {
         $node = $this->selected_node !== null ? $this->tree->getNode($this->selected_node) : null;
-        if ($node === null) {
+        if (!$node instanceof GroupNode) {
             return null;
         }
 
@@ -191,7 +191,7 @@ final class TreeView
     {
         $link = $this->selected_link !== null ? $this->tree->getLink($this->selected_link) : null;
 
-        return $link !== null ? $this->describeLink($link) : null;
+        return $link instanceof EscalationLink ? $this->describeLink($link) : null;
     }
 
     /**
@@ -232,7 +232,8 @@ final class TreeView
                 'matches' => $this->matches($node->name),
             ];
         }
-        usort($placed, self::compareByLevelAndName(...));
+
+        usort($placed, $this->compareByLevelAndName(...));
 
         return $placed;
     }
@@ -241,7 +242,7 @@ final class TreeView
      * @param array{level: int, name: string} $a
      * @param array{level: int, name: string} $b
      */
-    private static function compareByLevelAndName(array $a, array $b): int
+    private function compareByLevelAndName(array $a, array $b): int
     {
         return [$a['level'], $a['name']] <=> [$b['level'], $b['name']];
     }
@@ -273,7 +274,7 @@ final class TreeView
      * @param array{x: int, y: int} $point
      * @param array{x: int, y: int} $center
      */
-    private static function offset(array $point, array $center): string
+    private function offset(array $point, array $center): string
     {
         return sprintf('%dpx %dpx', $point['x'] - $center['x'], $point['y'] - $center['y']);
     }
@@ -281,7 +282,7 @@ final class TreeView
     /**
      * @param array<string, bool> $classes
      */
-    private static function classes(array $classes): string
+    private function classes(array $classes): string
     {
         return implode(' ', array_keys(array_filter($classes)));
     }

@@ -83,6 +83,7 @@ final class Group_LinkTest extends EscalationTestCase
         foreach (Group_Link::getLinksForEntity($entities_id) as $link) {
             $entities[$link->getKey()] = $link->entities_id;
         }
+
         ksort($entities);
 
         return $entities;
@@ -103,8 +104,8 @@ final class Group_LinkTest extends EscalationTestCase
             [$a, $not_assignable, LinkStrategyEnum::BASIC],
         ]));
         $this->assertSame([
-            "$a-$b" => LinkStrategyEnum::BASIC->value,
-            "$b-$c" => LinkStrategyEnum::INHERITED->value,
+            sprintf('%d-%d', $a, $b) => LinkStrategyEnum::BASIC->value,
+            sprintf('%d-%d', $b, $c) => LinkStrategyEnum::INHERITED->value,
         ], $this->getEntityLinks($entities_id));
 
         $link = new Group_Link();
@@ -113,7 +114,7 @@ final class Group_LinkTest extends EscalationTestCase
 
         // Updated in place, the other one is deleted.
         Group_Link::saveLinksForEntity($entities_id, $this->toLinks([[$a, $b, LinkStrategyEnum::INHERITED]]));
-        $this->assertSame(["$a-$b" => LinkStrategyEnum::INHERITED->value], $this->getEntityLinks($entities_id));
+        $this->assertSame([sprintf('%d-%d', $a, $b) => LinkStrategyEnum::INHERITED->value], $this->getEntityLinks($entities_id));
         $this->assertTrue($link->getFromDB($link_id));
 
         Group_Link::saveLinksForEntity($entities_id, []);
@@ -128,11 +129,11 @@ final class Group_LinkTest extends EscalationTestCase
         $this->createLinks($entities_id, [[$a, $b, LinkStrategyEnum::NONE]]);
 
         Group_Link::saveLinksForEntity($entities_id, []);
-        $this->assertSame(["$a-$b" => LinkStrategyEnum::NONE->value], $this->getEntityLinks($entities_id));
+        $this->assertSame([sprintf('%d-%d', $a, $b) => LinkStrategyEnum::NONE->value], $this->getEntityLinks($entities_id));
 
         // Drawing the link again replaces it.
         Group_Link::saveLinksForEntity($entities_id, $this->toLinks([[$a, $b, LinkStrategyEnum::BASIC]]));
-        $this->assertSame(["$a-$b" => LinkStrategyEnum::BASIC->value], $this->getEntityLinks($entities_id));
+        $this->assertSame([sprintf('%d-%d', $a, $b) => LinkStrategyEnum::BASIC->value], $this->getEntityLinks($entities_id));
     }
 
     public function testRootEntityInheritsNothing(): void
@@ -142,8 +143,8 @@ final class Group_LinkTest extends EscalationTestCase
         $this->createLinks(0, [[$a, $b, LinkStrategyEnum::INHERITED]]);
 
         // The links of the root entity are its own, not replicated from itself.
-        $this->assertNotContains("$a-$b", $this->getKeys(Group_Link::getInheritedLinks(0)));
-        $this->assertContains("$a-$b", $this->getKeys(Group_Link::getLinksForEntity(0)));
+        $this->assertNotContains(sprintf('%d-%d', $a, $b), $this->getKeys(Group_Link::getInheritedLinks(0)));
+        $this->assertContains(sprintf('%d-%d', $a, $b), $this->getKeys(Group_Link::getLinksForEntity(0)));
     }
 
     public function testGetLinksForEntity(): void
@@ -163,18 +164,18 @@ final class Group_LinkTest extends EscalationTestCase
             [$c, $a, LinkStrategyEnum::BASIC],
         ]);
 
-        $expected = ["$a-$b" => $root_id, "$a-$c" => $root_id, "$b-$c" => $root_id];
+        $expected = [sprintf('%d-%d', $a, $b) => $root_id, sprintf('%d-%d', $a, $c) => $root_id, sprintf('%d-%d', $b, $c) => $root_id];
         ksort($expected);
         $this->assertSame($expected, $this->getApplyingEntities($root_id));
 
         // Only the inherited links of the root apply, minus the one removed by the "none" link.
-        $expected = ["$a-$b" => $root_id, "$c-$a" => $child_id];
+        $expected = [sprintf('%d-%d', $a, $b) => $root_id, sprintf('%d-%d', $c, $a) => $child_id];
         ksort($expected);
         $this->assertSame($expected, $this->getApplyingEntities($child_id));
 
         // The basic link of the child does not apply to its sub-entities, and the "none" link
         // still stops the inherited one.
-        $this->assertSame(["$a-$b" => $root_id], $this->getApplyingEntities($grandchild_id));
+        $this->assertSame([sprintf('%d-%d', $a, $b) => $root_id], $this->getApplyingEntities($grandchild_id));
     }
 
     public function testBasicLinkOfAMiddleEntityDoesNotHideAnInheritedOne(): void
@@ -205,7 +206,7 @@ final class Group_LinkTest extends EscalationTestCase
         $this->updateItem(Group::class, $c, ['is_assign' => 0]);
 
         Group_Link::saveLinksForEntity($entities_id, [], [EscalationLink::key($a, $b)]);
-        $this->assertSame(["$a-$c" => LinkStrategyEnum::BASIC->value], $this->getEntityLinks($entities_id));
+        $this->assertSame([sprintf('%d-%d', $a, $c) => LinkStrategyEnum::BASIC->value], $this->getEntityLinks($entities_id));
     }
 
     public function testSaveLinksForEntityReplacingAllDeletesUnmanagedLinks(): void
@@ -384,11 +385,11 @@ final class Group_LinkTest extends EscalationTestCase
 
         // The links of a purged group, from it or to it, are deleted.
         $this->deleteItem(Group::class, $a, true);
-        $this->assertSame(["$b-$c" => LinkStrategyEnum::BASIC->value], $this->getEntityLinks($root_id));
+        $this->assertSame([sprintf('%d-%d', $b, $c) => LinkStrategyEnum::BASIC->value], $this->getEntityLinks($root_id));
 
         // The links of a purged entity are deleted.
         $this->deleteItem(Entity::class, $child_id, true);
         $this->assertSame([], $this->getEntityLinks($child_id));
-        $this->assertSame(["$b-$c" => LinkStrategyEnum::BASIC->value], $this->getEntityLinks($root_id));
+        $this->assertSame([sprintf('%d-%d', $b, $c) => LinkStrategyEnum::BASIC->value], $this->getEntityLinks($root_id));
     }
 }

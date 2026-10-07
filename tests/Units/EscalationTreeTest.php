@@ -69,6 +69,7 @@ final class EscalationTreeTest extends EscalationTestCase
         foreach ($nodes as $node) {
             $ids[] = $node->id;
         }
+
         sort($ids);
 
         return $ids;
@@ -107,18 +108,18 @@ final class EscalationTreeTest extends EscalationTestCase
 
         // The links of N2, to the groups it escalates to and from the groups escalating to it
         $this->assertSame(
-            ["{$ids['N2']}-{$ids['N3a']}", "{$ids['N2']}-{$ids['N3b']}"],
+            [sprintf('%d-%d', $ids['N2'], $ids['N3a']), sprintf('%d-%d', $ids['N2'], $ids['N3b'])],
             array_keys($tree->getLinksOf($ids['N2'], 'to')),
         );
         $this->assertSame(
-            ["{$ids['N1a']}-{$ids['N2']}", "{$ids['N1b']}-{$ids['N2']}"],
+            [sprintf('%d-%d', $ids['N1a'], $ids['N2']), sprintf('%d-%d', $ids['N1b'], $ids['N2'])],
             array_keys($tree->getLinksOf($ids['N2'], 'from')),
         );
 
         // Removing a group removes its links: N3b stays below N1a only.
         $tree->removeNode($ids['N2']);
         $this->assertNull($tree->getNode($ids['N2']));
-        $this->assertSame(["{$ids['N1a']}-{$ids['N3b']}"], array_keys($tree->getLinks()));
+        $this->assertSame([sprintf('%d-%d', $ids['N1a'], $ids['N3b'])], array_keys($tree->getLinks()));
         $this->assertSame([], $tree->getNode($ids['N1b'])?->getChildren());
         $this->assertSame(2, $tree->getLevels()[$ids['N3b']]);
         $this->assertSame(1, $tree->getLevels()[$ids['N3a']]);
@@ -151,13 +152,13 @@ final class EscalationTreeTest extends EscalationTestCase
         $this->assertTrue($tree->canLink($ids['A'], $ids['C']));
         $this->assertTrue($tree->canLink($ids['C'], $ids['D']));
         $this->assertTrue($tree->canLink($ids['A'], $ids['B']));
-        $this->assertSame(["{$ids['A']}-{$ids['B']}", "{$ids['B']}-{$ids['C']}"], array_keys($tree->getLinks()));
+        $this->assertSame([sprintf('%d-%d', $ids['A'], $ids['B']), sprintf('%d-%d', $ids['B'], $ids['C'])], array_keys($tree->getLinks()));
 
         // A draft making a loop loses the link closing it.
         $state = $tree->toState();
         $state['links'][] = ['from' => $ids['C'], 'to' => $ids['A'], 'type' => LinkStrategyEnum::BASIC->value];
         $copy = EscalationTree::fromState($tree->entities_id, $state);
-        $this->assertSame(["{$ids['A']}-{$ids['B']}", "{$ids['B']}-{$ids['C']}"], array_keys($copy->getLinks()));
+        $this->assertSame([sprintf('%d-%d', $ids['A'], $ids['B']), sprintf('%d-%d', $ids['B'], $ids['C'])], array_keys($copy->getLinks()));
     }
 
     public function testLoopAlreadySaved(): void
@@ -200,7 +201,7 @@ final class EscalationTreeTest extends EscalationTestCase
         $tree = EscalationTree::fromState($child_id, ['nodes' => [$a]]);
         $this->assertSame([], $tree->getLinks());
         $tree->addNode($b);
-        $this->assertSame(["$a-$b"], array_keys($tree->getLinks()));
+        $this->assertSame([sprintf('%d-%d', $a, $b)], array_keys($tree->getLinks()));
         $this->assertFalse($tree->canLink($b, $a));
     }
 
@@ -209,11 +210,11 @@ final class EscalationTreeTest extends EscalationTestCase
         $this->login();
         [$child_id, $a, $b] = $this->createInheritedLink();
         $root_id = $this->getRootEntityId();
-        $this->assertStringNotContainsString('#', (string) EscalationTree::load($child_id)->getLink("$a-$b")?->origin);
+        $this->assertStringNotContainsString('#', (string) EscalationTree::load($child_id)->getLink(sprintf('%d-%d', $a, $b))?->origin);
 
         // Without access to the root entity, its name is not shown.
         $this->setEntity($child_id, false);
-        $this->assertSame(sprintf('Hidden entity #%d', $root_id), EscalationTree::load($child_id)->getLink("$a-$b")?->origin);
+        $this->assertSame(sprintf('Hidden entity #%d', $root_id), EscalationTree::load($child_id)->getLink(sprintf('%d-%d', $a, $b))?->origin);
     }
 
     public function testStrategyAndState(): void
@@ -243,8 +244,8 @@ final class EscalationTreeTest extends EscalationTestCase
 
         $tree = EscalationTree::load($child_id);
         $tree->removeNode($a);
-        $this->assertNull($tree->getLink("$a-$b"));
-        $this->assertSame(["$a-$b"], $tree->toState()['removed']);
+        $this->assertNull($tree->getLink(sprintf('%d-%d', $a, $b)));
+        $this->assertSame([sprintf('%d-%d', $a, $b)], $tree->toState()['removed']);
 
         // Saved, the replicated link does not come back with the group.
         $this->assertNull($tree->save());
@@ -262,17 +263,17 @@ final class EscalationTreeTest extends EscalationTestCase
         $tree = EscalationTree::fromState($child_id, [
             'nodes'   => [$a, $b],
             'links'   => array_fill(0, 3, ['from' => $a, 'to' => $b, 'type' => LinkStrategyEnum::BASIC->value]),
-            'removed' => ["$a-$b"],
+            'removed' => [sprintf('%d-%d', $a, $b)],
         ]);
         $this->assertSame([], $tree->toState()['links']);
-        $this->assertSame(["$a-$b"], $tree->toState()['removed']);
+        $this->assertSame([sprintf('%d-%d', $a, $b)], $tree->toState()['removed']);
         $this->assertSame([], $tree->getLinks());
 
         // A link given several times is read once.
         $tree = EscalationTree::fromState($child_id, [
             'nodes'   => [$a, $b],
             'links'   => array_fill(0, 3, ['from' => $b, 'to' => $a, 'type' => LinkStrategyEnum::BASIC->value]),
-            'removed' => ["$a-$b"],
+            'removed' => [sprintf('%d-%d', $a, $b)],
         ]);
         $this->assertSame([['from' => $b, 'to' => $a, 'type' => LinkStrategyEnum::BASIC->value]], $tree->toState()['links']);
     }
@@ -293,7 +294,7 @@ final class EscalationTreeTest extends EscalationTestCase
         $this->assertTrue($tree->link($a, $b)?->isReplicated());
         $loop = $tree->save();
         $this->assertSame($grandchild_id, $loop['entities_id'] ?? null);
-        $this->assertSame(["$a-$b" => LinkStrategyEnum::NONE->value], $this->getEntityLinks($child_id));
+        $this->assertSame([sprintf('%d-%d', $a, $b) => LinkStrategyEnum::NONE->value], $this->getEntityLinks($child_id));
     }
 
     public function testEscalationLink(): void

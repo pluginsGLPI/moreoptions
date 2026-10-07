@@ -36,6 +36,7 @@
 
 namespace GlpiPlugin\Moreoptions\Tests\Units;
 
+use Throwable;
 use Config;
 use Glpi\Exception\Http\AccessDeniedHttpException;
 use Glpi\Exception\Http\BadRequestHttpException;
@@ -172,13 +173,13 @@ final class TreeEditorTest extends EscalationTestCase
         // Drawn with the color of their strategy
         $this->assertSame(
             [
-                "{$ids['Current']}-{$ids['C']}" => LinkStrategyEnum::BASIC->getStrategy()->getColor(),
-                "{$ids['A']}-{$ids['B']}"       => LinkStrategyEnum::INHERITED->getStrategy()->getColor(),
+                sprintf('%d-%d', $ids['Current'], $ids['C']) => LinkStrategyEnum::BASIC->getStrategy()->getColor(),
+                sprintf('%d-%d', $ids['A'], $ids['B'])       => LinkStrategyEnum::INHERITED->getStrategy()->getColor(),
             ],
             $this->getEdgeData($vars, 'color'),
         );
         $this->assertSame(
-            ["{$ids['Current']}-{$ids['C']}" => false, "{$ids['A']}-{$ids['B']}" => true],
+            [sprintf('%d-%d', $ids['Current'], $ids['C']) => false, sprintf('%d-%d', $ids['A'], $ids['B']) => true],
             $this->getEdgeData($vars, 'replicated'),
         );
         // Only the strategies drawn can be chosen, the inherited one being replicated.
@@ -204,7 +205,7 @@ final class TreeEditorTest extends EscalationTestCase
         $this->assertSame('C', $selected['name']);
         $this->assertSame(2, $selected['level']);
         $this->assertSame([], $selected['to']);
-        $this->assertSame(["{$ids['Current']}-{$ids['C']}"], array_column($selected['from'], 'key'));
+        $this->assertSame([sprintf('%d-%d', $ids['Current'], $ids['C'])], array_column($selected['from'], 'key'));
         $this->assertSame(['Current'], array_column($selected['from'], 'from_name'));
 
         $editor->apply(new SelectNodeAction(), ['group' => $ids['A']]);
@@ -243,13 +244,13 @@ final class TreeEditorTest extends EscalationTestCase
 
         // In the child entity, only the inherited link of the root entity is replicated.
         $vars = TreeEditor::fromDatabase($this->getEntity($group))->getTemplateVariables();
-        $this->assertSame(["{$ids['A']}-{$ids['B']}" => true], $this->getEdgeData($vars, 'replicated'));
+        $this->assertSame([sprintf('%d-%d', $ids['A'], $ids['B']) => true], $this->getEdgeData($vars, 'replicated'));
 
         // In the root entity, both links are its own.
         $this->setEntity($this->getRootEntityId(), true);
         $vars = TreeEditor::fromDatabase($this->getRootEntityId())->getTemplateVariables();
         $this->assertSame(
-            ["{$ids['A']}-{$ids['B']}" => false, "{$ids['C']}-{$ids['D']}" => false],
+            [sprintf('%d-%d', $ids['A'], $ids['B']) => false, sprintf('%d-%d', $ids['C'], $ids['D']) => false],
             $this->getEdgeData($vars, 'replicated'),
         );
     }
@@ -338,6 +339,7 @@ final class TreeEditorTest extends EscalationTestCase
 
         // Remove the inherited link A -> B
         $editor = $this->handle($this->getEntity($group), $editor, new SelectLinkAction(), ['link' => $a_b]);
+
         $selected = $editor->getTemplateVariables()['selected_link'];
         $this->assertTrue($selected['replicated']);
         $this->assertSame([$ids['A'], $ids['B']], [$selected['from_id'], $selected['to_id']]);
@@ -481,6 +483,7 @@ final class TreeEditorTest extends EscalationTestCase
         [$group, $ids] = $this->createGraphData();
         $editor = TreeEditor::fromDatabase($this->getEntity($group));
         $editor->apply(new OrientationAction(), ['value' => 'vertical']);
+
         $vars = $editor->getTemplateVariables();
         $this->assertSame('vertical', $vars['orientation']);
 
@@ -489,6 +492,7 @@ final class TreeEditorTest extends EscalationTestCase
         foreach ($vars['elements']['nodes'] as $node) {
             $positions[(int) $node['data']['id']] = $node['position'];
         }
+
         $this->assertLessThan($positions[$ids['B']]['y'], $positions[$ids['A']]['y']);
 
         $editor->apply(new OrientationAction(), ['value' => 'diagonal']);
@@ -587,6 +591,7 @@ final class TreeEditorTest extends EscalationTestCase
         [$group, $ids] = $this->createGraphData();
         $editor = TreeEditor::fromDatabase($this->getEntity($group));
         $editor->apply(new SelectLinkAction(), ['link' => EscalationLink::key($ids['A'], $ids['B'])]);
+
         $html = $this->render($editor);
 
         // The graph, drawn by Cytoscape.js from its elements
@@ -657,7 +662,7 @@ final class TreeEditorTest extends EscalationTestCase
     }
 
     /**
-     * @return iterable<string, array{array<string, mixed>, class-string<\Throwable>}>
+     * @return iterable<string, array{array<string, mixed>, class-string<Throwable>}>
      */
     public static function invalidRequestProvider(): iterable
     {
@@ -673,7 +678,7 @@ final class TreeEditorTest extends EscalationTestCase
 
     /**
      * @param array<string, mixed>      $input
-     * @param class-string<\Throwable> $exception
+     * @param class-string<Throwable> $exception
      */
     #[DataProvider('invalidRequestProvider')]
     public function testRespondRefusesInvalidRequests(array $input, string $exception): void

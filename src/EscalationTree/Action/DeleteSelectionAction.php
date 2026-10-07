@@ -54,6 +54,7 @@ final class DeleteSelectionAction extends AbstractTreeAction
         } elseif ($editor->getSelectedNode() !== null) {
             $tree->removeNode($editor->getSelectedNode());
         }
+
         $editor->select();
     }
 }

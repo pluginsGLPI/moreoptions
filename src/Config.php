@@ -812,6 +812,7 @@ class Config extends CommonDBTM
             $migration->addField($table, 'escalate_group_filter_is_active', 'bool', ['value' => '0']);
             $new_inherited_fields[] = 'escalate_group_filter_is_active';
         }
+
         if (!$DB->fieldExists($table, 'escalate_group_filter_bypass_profiles')) {
             $migration->addField($table, 'escalate_group_filter_bypass_profiles', 'text');
             $new_inherited_fields[] = 'escalate_group_filter_bypass_profiles';

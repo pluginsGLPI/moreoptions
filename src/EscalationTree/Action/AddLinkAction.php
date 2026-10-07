@@ -67,11 +67,13 @@ final class AddLinkAction extends AbstractTreeAction
         // a link it already has can make a loop.
         $tree = $editor->getTree();
         $tree->addNode($other);
+
         $link = $tree->link($from, $to);
-        if ($link === null) {
+        if (!$link instanceof EscalationLink) {
             $editor->refuseLink($from, $to);
             return;
         }
+
         $tree->setStrategy($link->getKey(), $strategy);
     }
 }

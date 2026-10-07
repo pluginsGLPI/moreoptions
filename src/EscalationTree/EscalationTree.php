@@ -143,6 +143,7 @@ final class EscalationTree
             $tree->addNode($link->source);
             $tree->addNode($link->destination);
         }
+
         $tree->changed();
 
         return $tree;
@@ -165,11 +166,13 @@ final class EscalationTree
                 $tree->addNode((int) $id);
             }
         }
+
         foreach ((array) ($state['removed'] ?? []) as $key) {
             if (is_string($key) && isset($tree->replicated[$key])) {
                 $tree->removed[$key] = true;
             }
         }
+
         $tree->changed();
 
         // Each link added is added to the graph too, for the next ones to be checked against it.
@@ -178,18 +181,20 @@ final class EscalationTree
             if (!is_array($link)) {
                 continue;
             }
+
             [$source, $destination] = [(int) ($link['from'] ?? 0), (int) ($link['to'] ?? 0)];
             $key      = EscalationLink::key($source, $destination);
             $strategy = is_string($link['type'] ?? null) ? LinkStrategyEnum::tryFromDrawn($link['type']) : null;
             // A removed replicated link is restored by link() only: it is not a link of the entity.
             if (
-                $strategy !== null && !isset($tree->links[$key]) && !isset($tree->removed[$key])
+                $strategy instanceof LinkStrategyEnum && !isset($tree->links[$key]) && !isset($tree->removed[$key])
                 && $tree->canLink($source, $destination)
             ) {
                 $tree->links[$key] = new EscalationLink($source, $destination, $strategy);
                 $graph->addEdge($source, $destination);
             }
         }
+
         // The links shown so far stay valid for canLink(): the links added are checked by key.
         $tree->links_cache = null;
 
@@ -264,14 +269,16 @@ final class EscalationTree
                 array_keys($this->replicated),
             );
             $loop = Group_Link::findLoop($this->entities_id);
-        } catch (Throwable $e) {
+        } catch (Throwable $throwable) {
             $DB->rollBack();
-            throw $e;
+            throw $throwable;
         }
+
         if ($loop !== null) {
             $DB->rollBack();
             return $loop;
         }
+
         $DB->commit();
 
         return null;
@@ -300,10 +307,12 @@ final class EscalationTree
             $placed[$link->source]      = true;
             $placed[$link->destination] = true;
         }
+
         $this->nodes = array_intersect_key($this->nodes, $placed);
         foreach (array_keys($placed) as $id) {
             $this->addNode($id);
         }
+
         $this->changed();
     }
 
@@ -382,6 +391,7 @@ final class EscalationTree
                 }
             }
         }
+
         unset($this->nodes[$id]);
         $this->changed();
     }
@@ -445,7 +455,8 @@ final class EscalationTree
         if (!$this->hasNode($source) || !$this->hasNode($destination) || $source === $destination) {
             return false;
         }
-        if ($this->getLink(EscalationLink::key($source, $destination)) !== null) {
+
+        if ($this->getLink(EscalationLink::key($source, $destination)) instanceof EscalationLink) {
             return true;
         }
 
@@ -468,7 +479,7 @@ final class EscalationTree
         $candidates = [];
         foreach ($this->nodes as $other => $node) {
             [$from, $to] = $direction === 'to' ? [$id, $other] : [$other, $id];
-            if ($other !== $id && !isset($forbidden[$other]) && $this->getLink(EscalationLink::key($from, $to)) === null) {
+            if ($other !== $id && !isset($forbidden[$other]) && !$this->getLink(EscalationLink::key($from, $to)) instanceof EscalationLink) {
                 $candidates[$other] = $node->name;
             }
         }
@@ -489,12 +500,13 @@ final class EscalationTree
         }
 
         $key = EscalationLink::key($source, $destination);
-        if ($this->getLink($key) === null) {
+        if (!$this->getLink($key) instanceof EscalationLink) {
             if (isset($this->removed[$key])) {
                 unset($this->removed[$key]);
             } else {
                 $this->links[$key] = new EscalationLink($source, $destination, LinkStrategyEnum::BASIC);
             }
+
             $this->changed();
         }
 
@@ -512,6 +524,7 @@ final class EscalationTree
         } elseif (isset($this->replicated[$key])) {
             $this->removed[$key] = true;
         }
+
         $this->changed();
     }
 

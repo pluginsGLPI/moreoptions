@@ -34,6 +34,7 @@
 
 namespace GlpiPlugin\Moreoptions\EscalationTree\Action;
 
+use GlpiPlugin\Moreoptions\EscalationTree\EscalationLink;
 use GlpiPlugin\Moreoptions\EscalationTree\TreeEditor;
 
 /**
@@ -49,7 +50,7 @@ final class SelectLinkAction extends AbstractViewAction
     public function apply(TreeEditor $editor, array $params): void
     {
         $link = (string) ($params['link'] ?? '');
-        if ($editor->getTree()->getLink($link) !== null) {
+        if ($editor->getTree()->getLink($link) instanceof EscalationLink) {
             $editor->select(link: $link);
         }
     }

@@ -41,7 +41,7 @@ use GlpiPlugin\Moreoptions\LinkStrategy\LinkStrategyEnum;
  * either one of the entity of the tree, or replicated from a parent entity (see
  * LinkStrategyEnum::INHERITED).
  */
-final class EscalationLink
+final readonly class EscalationLink
 {
     /**
      * Directions of a link from a group: to the group it escalates to, from the group escalating to it.
@@ -53,11 +53,11 @@ final class EscalationLink
      * @param int|null    $entities_id Entity the link is stored in, null for a link not stored yet
      */
     public function __construct(
-        public readonly int $source,
-        public readonly int $destination,
-        public readonly LinkStrategyEnum $strategy,
-        public readonly ?string $origin = null,
-        public readonly ?int $entities_id = null,
+        public int $source,
+        public int $destination,
+        public LinkStrategyEnum $strategy,
+        public ?string $origin = null,
+        public ?int $entities_id = null,
     ) {}
 
     /**

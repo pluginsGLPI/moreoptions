@@ -78,7 +78,7 @@ final class TreeLayoutTest extends EscalationTestCase
      * @param array{from: array{x: int, y: int}, to: array{x: int, y: int}, points: list<array{x: int, y: int}>} $route
      * @return list<array{x: int, y: int}>
      */
-    private static function getPath(array $route): array
+    private function getPath(array $route): array
     {
         return [$route['from'], ...$route['points'], $route['to']];
     }
@@ -112,6 +112,7 @@ final class TreeLayoutTest extends EscalationTestCase
             $this->assertSame($in[$primary] - $half, $routes[$key]['to'][$primary]);
             $this->assertContains($routes[$key]['to'][$secondary] - $in[$secondary], [0, TreeLayout::ARRIVAL_SHIFT]);
         }
+
         $this->assertNoOverlap($tree, $routes);
         // The link skipping a level goes around the group in between.
         $this->assertCount(4, $routes[EscalationLink::key($ids['A1'], $ids['C'])]['points']);
@@ -122,8 +123,9 @@ final class TreeLayoutTest extends EscalationTestCase
             ['x' => $x, 'y' => $y] = $layout->getPosition($node);
             $boxes[$node->id] = [$x - TreeLayout::NODE_WIDTH / 2, $y - TreeLayout::NODE_HEIGHT / 2, $x + TreeLayout::NODE_WIDTH / 2, $y + TreeLayout::NODE_HEIGHT / 2];
         }
+
         foreach ($routes as $key => $route) {
-            $path = self::getPath($route);
+            $path = $this->getPath($route);
             for ($i = 0; $i < count($path) - 1; $i++) {
                 for ($t = 0.05; $t < 1; $t += 0.05) {
                     $x = $path[$i]['x'] + ($path[$i + 1]['x'] - $path[$i]['x']) * $t;
@@ -169,7 +171,7 @@ final class TreeLayoutTest extends EscalationTestCase
     {
         $segments = [];
         foreach ($routes as $key => $route) {
-            $path = self::getPath($route);
+            $path = $this->getPath($route);
             for ($i = 0; $i < count($path) - 1; $i++) {
                 $segments[$key][] = [$path[$i], $path[$i + 1]];
             }
@@ -185,12 +187,14 @@ final class TreeLayoutTest extends EscalationTestCase
                 ) {
                     continue;
                 }
+
                 foreach ($own as [$a1, $a2]) {
                     foreach ($others as [$b1, $b2]) {
                         foreach (['x' => 'y', 'y' => 'x'] as $fixed => $along) {
                             if ($a1[$fixed] !== $a2[$fixed] || $b1[$fixed] !== $b2[$fixed] || $a1[$fixed] !== $b1[$fixed]) {
                                 continue;
                             }
+
                             $shared = min(max($a1[$along], $a2[$along]), max($b1[$along], $b2[$along]))
                                 - max(min($a1[$along], $a2[$along]), min($b1[$along], $b2[$along]));
                             $this->assertLessThanOrEqual(0, $shared, sprintf('Links %s and %s overlap', $key, $other_key));

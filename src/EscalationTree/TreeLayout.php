@@ -50,6 +50,7 @@ namespace GlpiPlugin\Moreoptions\EscalationTree;
 final class TreeLayout
 {
     public const NODE_WIDTH  = 150;
+
     public const NODE_HEIGHT = 76;
 
     /** Distance from the input point of a group where a link arrives, when it would overlap another one */
@@ -136,11 +137,14 @@ final class TreeLayout
                     : 0;
                 $users['lane'][$path['lane']][] = $key;
             }
+
             foreach (array_unique($path['corridors']) as $corridor) {
                 $users['corridor'][$corridor][] = $key;
             }
+
             $paths[$key] = $path;
         }
+
         // Position of each link among the users of each corridor and lane
         /** @var array{corridor: array<int, array<string, int>>, lane: array<int, array<string, int>>} $positions */
         $positions = ['corridor' => [], 'lane' => []];
@@ -157,8 +161,10 @@ final class TreeLayout
             foreach ($path['corridors'] as $corridor) {
                 $paths[$key]['tracks'][] = $this->corridorCenter($corridor) + $this->track($key, $positions['corridor'][$corridor], self::SPACE_BETWEEN_LEVELS);
             }
+
             $leaving[$path['corridors'][0]][$path['start']][] = $key;
         }
+
         foreach ($paths as $key => $path) {
             foreach ($leaving[$path['corridors'][1]][$path['end']] ?? [] as $other_key) {
                 $other = $paths[$other_key];

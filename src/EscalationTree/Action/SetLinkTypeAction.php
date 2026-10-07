@@ -53,7 +53,7 @@ final class SetLinkTypeAction extends AbstractTreeAction
         $given    = (string) ($params['link'] ?? '');
         $link     = $given !== '' ? $given : $editor->getSelectedLink();
         $strategy = LinkStrategyEnum::tryFromDrawn((string) ($params['value'] ?? ''));
-        if ($link !== null && $strategy !== null) {
+        if ($link !== null && $strategy instanceof LinkStrategyEnum) {
             $editor->getTree()->setStrategy($link, $strategy);
         }
     }

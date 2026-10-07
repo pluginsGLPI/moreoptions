@@ -180,6 +180,7 @@ class Group_Link extends CommonDBRelation
         foreach ($ids as $id) {
             $names[$id] = ['name' => sprintf(__('Hidden group #%d', 'moreoptions'), $id), 'visible' => false];
         }
+
         $groups = $ids !== [] ? (new Group())->find(['id' => $ids]) : [];
         foreach ($groups as $id => $group) {
             if (Session::haveAccessToEntity((int) $group['entities_id'], (bool) $group['is_recursive'])) {
@@ -300,6 +301,7 @@ class Group_Link extends CommonDBRelation
                 $inherited[] = $link->getKey();
             }
         }
+
         $inherited = array_flip($inherited);
         $applying  = array_flip($applying);
 
@@ -317,15 +319,19 @@ class Group_Link extends CommonDBRelation
             if (!$replace_all && !self::manages($stored, $groups, $inherited)) {
                 continue;
             }
+
             if (!isset($wanted[$key])) {
                 if ($replace_all || $stored->strategy !== LinkStrategyEnum::NONE || isset($applying[$key])) {
                     $group_link->delete(['id' => $row['id'], '_no_message' => true]);
                 }
+
                 continue;
             }
+
             if ($stored->strategy !== $wanted[$key]->strategy) {
                 $group_link->update(['id' => $row['id'], 'link_type' => $wanted[$key]->strategy->value, '_no_message' => true]);
             }
+
             unset($wanted[$key]);
         }
 
@@ -345,7 +351,7 @@ class Group_Link extends CommonDBRelation
      */
     public static function findLoop(int $entities_id): ?array
     {
-        $sons    = array_map('intval', array_values(getSonsOf(Entity::getTable(), $entities_id)));
+        $sons    = array_map(intval(...), array_values(getSonsOf(Entity::getTable(), $entities_id)));
         $by_pair = self::getLinksByPair([...self::getParentEntities($entities_id), ...$sons]);
         $scopes  = self::getGroupScopes($by_pair);
         foreach ($sons as $entity) {
@@ -436,7 +442,7 @@ class Group_Link extends CommonDBRelation
     {
         // getAncestorsOf() gives the root entity as its own ancestor.
         return array_values(array_diff(
-            array_map('intval', array_values(getAncestorsOf(Entity::getTable(), $entities_id))),
+            array_map(intval(...), array_values(getAncestorsOf(Entity::getTable(), $entities_id))),
             [$entities_id],
         ));
     }
