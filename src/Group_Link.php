@@ -36,12 +36,10 @@ namespace GlpiPlugin\Moreoptions;
 
 use CommonDBRelation;
 use CommonDBTM;
-use CommonGLPI;
 use DBConnection;
 use DBmysql;
 use Dropdown;
 use Entity;
-use Glpi\Application\View\TemplateRenderer;
 use GlpiPlugin\Moreoptions\EscalationTree\EscalationGraph;
 use GlpiPlugin\Moreoptions\EscalationTree\EscalationLink;
 use GlpiPlugin\Moreoptions\EscalationTree\TreeEditor;
@@ -55,7 +53,7 @@ use function Safe\filemtime;
 /**
  * Links of the escalation hierarchy between groups: the destination groups a source group can
  * escalate to, in an entity. Edited as a tree (see EscalationTree\TreeEditor) from the
- * "Escalation" tab of the groups.
+ * "Escalate" tab of the configuration of the entity (see Config::showForEntity()).
  *
  * The links are only changed from this tab, which checks the rights and keeps the tree
  * consistent (no loop, entity of the links): never directly, from the generic form, list,
@@ -131,36 +129,19 @@ class Group_Link extends CommonDBRelation
         return false;
     }
 
-    public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0): string
-    {
-        if (!$item instanceof Group || $item->isNewItem()) {
-            return '';
-        }
-
-        return self::createTabEntry(self::getTypeName(), 0, $item::class, self::getIcon());
-    }
-
-    public static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
-    {
-        if ($item instanceof Group) {
-            self::showForGroup($item);
-        }
-
-        return true;
-    }
-
     /**
-     * Renders the "Escalation" tab of the given group.
+     * Variables of the editor of the escalation tree of the given entity (see
+     * templates/group_link.html.twig), shown in the "Escalate" tab of its configuration (see
+     * Config::showForEntity()).
+     *
+     * @return array<string, mixed>
      */
-    public static function showForGroup(Group $group): void
+    public static function getEditorVariables(Entity $entity): array
     {
-        TemplateRenderer::getInstance()->display(
-            '@moreoptions/group_link.html.twig',
-            TreeEditor::fromDatabase($group)->getTemplateVariables() + [
-                // Changes with the script, for the browser not to keep an outdated one in its cache.
-                'script_version' => PLUGIN_MOREOPTIONS_VERSION . '-' . filemtime(dirname(__DIR__) . '/public/js/escalation_graph.js'),
-            ],
-        );
+        return TreeEditor::fromDatabase($entity->getID())->getTemplateVariables() + [
+            // Changes with the script, for the browser not to keep an outdated one in its cache.
+            'script_version' => PLUGIN_MOREOPTIONS_VERSION . '-' . filemtime(dirname(__DIR__) . '/public/js/escalation_graph.js'),
+        ];
     }
 
     /**
@@ -285,7 +266,7 @@ class Group_Link extends CommonDBRelation
     }
 
     /**
-     * Replaces the links of the given entity by the given ones, as drawn in the "Escalation" tab.
+     * Replaces the links of the given entity by the given ones, as drawn in the "Escalate" tab of its configuration.
      *
      * Only the links between groups that can be linked in the entity, and the ones inherited from
      * its parent entities, are managed: the given ones between other groups are ignored, and the

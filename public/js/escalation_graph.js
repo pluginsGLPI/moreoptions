@@ -71,6 +71,8 @@ window.GlpiPluginMoreoptionsEscalationGraph = class {
         // Changes are sent one at a time, in order: each one with the draft of the previous response.
         this.queue = [];
         this.pending = false;
+        // Resolves the promise of save(), once the draft is saved or refused
+        this.saved = null;
         this.colors = new Map();
         this.badges = new Map();
         this.segments = new WeakMap();
@@ -333,7 +335,6 @@ window.GlpiPluginMoreoptionsEscalationGraph = class {
                     'background-clip': 'none',
                 },
             },
-            { selector: 'node.current', style: { 'border-width': 2 } },
             // Light feedback while pressed (Cytoscape draws a large gray overlay by default)
             { selector: 'node:active, edge:active', style: { 'overlay-color': accent, 'overlay-opacity': 0.08, 'overlay-padding': 4 } },
             { selector: 'node.source', style: highlight },
@@ -540,13 +541,16 @@ window.GlpiPluginMoreoptionsEscalationGraph = class {
             this.writeStorage(this.constructor.PREFERENCES_KEY, this.preferences);
             if (next.action === 'save') {
                 displayAjaxMessageAfterRedirect();
+                // Refused (a loop, links saved by someone else meanwhile): the error is shown.
+                this.resolveSave(this.form.querySelector('[data-mo-error]') === null);
             }
         }).fail(() => {
             if (this.cy.destroyed()) {
                 return;
             }
-            // The changes waiting were made on the draft the server refused.
+            // The changes waiting were made on the draft the server refused, the save among them.
             this.queue = [];
+            this.resolveSave(false);
             if (restored !== undefined) {
                 this.history[next.kind].push(restored);
             }
@@ -555,6 +559,29 @@ window.GlpiPluginMoreoptionsEscalationGraph = class {
             this.updateHistoryButtons();
             this.sendNext();
         });
+    }
+
+    /**
+     * Saves the draft, after the changes being sent: the "Save" button of the configuration saves
+     * the graph with the settings (see config.html.twig).
+     *
+     * @returns {Promise<boolean>} Whether it was saved
+     */
+    save() {
+        this.resolveSave(false);
+        return new Promise((resolve) => {
+            this.saved = resolve;
+            this.send('save');
+        });
+    }
+
+    /**
+     * @param {boolean} saved
+     */
+    resolveSave(saved) {
+        const resolve = this.saved;
+        this.saved = null;
+        resolve?.(saved);
     }
 
     // ----------------------------------------------------------------------------------------

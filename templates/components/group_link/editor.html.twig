@@ -31,17 +31,18 @@
  #}
 
 {#
- # Escalation tree editor (see EscalationTree\TreeEditor): the part of the "Escalation" tab rendered
- # again by ajax/group_link.php after each change. The form holds the draft being edited, sent back
- # with each change. The graph is drawn by Cytoscape.js, as the impact analysis of GLPI, from the
- # elements given in `data-mo-elements` (see public/js/escalation_graph.js).
+ # Escalation tree editor (see EscalationTree\TreeEditor): the part of the "Escalate" tab of the
+ # entity configuration rendered again by ajax/group_link.php after each change. The form holds the
+ # draft being edited, sent back with each change. The graph is drawn by Cytoscape.js, as the
+ # impact analysis of GLPI, from the elements given in `data-mo-elements` (see
+ # public/js/escalation_graph.js).
  #}
 {% import 'components/alerts_macros.html.twig' as alerts %}
 {% import '@moreoptions/components/group_link/macros.html.twig' as macros %}
 
 <form data-mo-graph data-mo-orientation="{{ orientation }}" data-mo-drawing-strategy="{{ drawing_strategy }}" {{ canedit ? 'data-mo-canedit' }}
       {{ has_selection ? 'data-mo-has-selection' }} {% if scroll_to is not null %}data-mo-scroll-to="{{ scroll_to }}"{% endif %}>
-    <input type="hidden" name="groups_id" value="{{ group.getID() }}" />
+    <input type="hidden" name="entities_id" value="{{ entities_id }}" />
     <input type="hidden" name="state" value="{{ state|json_encode }}" />
 
     {# One toolbar, with icons: what each button does is in its tooltip, the gestures in the help. #}
@@ -64,7 +65,7 @@
         {{ macros.choices('orientation', 'orientation', [
             {'value': 'horizontal', 'label': __('Horizontal', 'moreoptions'), 'title': __('Horizontal', 'moreoptions'), 'icon': 'ti-layout-distribute-vertical'},
             {'value': 'vertical', 'label': __('Vertical', 'moreoptions'), 'title': __('Vertical', 'moreoptions'), 'icon': 'ti-layout-distribute-horizontal'},
-        ], orientation, group.getID(), __('Orientation', 'moreoptions')) }}
+        ], orientation, entities_id, __('Orientation', 'moreoptions')) }}
         <button type="button" class="btn btn-sm btn-icon btn-ghost-secondary" data-mo-fit
                 data-bs-toggle="tooltip" title="{{ __('Fit the graph to the view', 'moreoptions') }}" aria-label="{{ __('Fit the graph to the view', 'moreoptions') }}">
             <i class="ti ti-arrows-maximize"></i>
@@ -87,7 +88,7 @@
             'strategies': strategies,
             'drawing_strategy': drawing_strategy,
             'canedit': canedit,
-            'uid': group.getID(),
+            'uid': entities_id,
         }, with_context = false) }}
 
         <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
@@ -109,16 +110,10 @@
                 <i class="ti ti-help"></i>
             </a>
 
-            <span class="badge bg-secondary-lt" data-bs-toggle="tooltip" title="{{ __('The links shown and saved are the ones of the active entity', 'moreoptions') }}">
+            <span class="badge bg-secondary-lt" data-bs-toggle="tooltip" title="{{ __('The links shown and saved are the ones of this entity', 'moreoptions') }}">
                 <i class="{{ 'Entity'|itemtype_icon }} me-1"></i>
                 {{ entity_name }}
             </span>
-            {% if canedit %}
-                <button type="button" class="btn btn-sm btn-primary" data-mo-action="save">
-                    <i class="ti ti-device-floppy"></i>
-                    <span>{{ _x('button', 'Save') }}</span>
-                </button>
-            {% endif %}
         </div>
     </div>
 
@@ -128,7 +123,7 @@
 
         <div class="mo-gl-side">
             {% if error is not null %}
-                <div class="p-2">
+                <div class="p-2" data-mo-error>
                     {{ alerts.alert_danger('', [error]) }}
                 </div>
             {% endif %}

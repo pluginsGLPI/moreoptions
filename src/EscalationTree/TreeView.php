@@ -37,7 +37,6 @@ namespace GlpiPlugin\Moreoptions\EscalationTree;
 use Dropdown;
 use Entity;
 use GlpiPlugin\Moreoptions\LinkStrategy\LinkStrategyEnum;
-use Group;
 
 /**
  * What the editor of an escalation tree shows (see TreeEditor): the variables of
@@ -51,7 +50,6 @@ final class TreeView
     private readonly array $levels;
 
     public function __construct(
-        private readonly Group $group,
         private readonly EscalationTree $tree,
         private readonly bool $canedit,
         private readonly bool $vertical,
@@ -71,7 +69,7 @@ final class TreeView
     public function getTemplateVariables(): array
     {
         return [
-            'group'            => $this->group,
+            'entities_id'      => $this->tree->entities_id,
             'entity_name'      => Dropdown::getDropdownName(Entity::getTable(), $this->tree->entities_id),
             'canedit'          => $this->canedit,
             'can_reset'        => $this->canedit && $this->tree->canReset(),
@@ -127,10 +125,7 @@ final class TreeView
                 // The level is shown as a badge on the group
                 'data'     => ['id' => (string) $node->id, 'label' => $node->name, 'level' => $this->levels[$node->id]],
                 'position' => $centers[$node->id],
-                'classes'  => self::classes([
-                    'selected' => $this->selected_node === $node->id,
-                    'current'  => $this->group->getID() === $node->id,
-                ]),
+                'classes'  => self::classes(['selected' => $this->selected_node === $node->id]),
             ];
         }
 

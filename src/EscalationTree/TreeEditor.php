@@ -42,15 +42,15 @@ use GlpiPlugin\Moreoptions\EscalationTree\Action\AbstractTreeAction;
 use GlpiPlugin\Moreoptions\EscalationTree\Action\TreeActionRegistry;
 use GlpiPlugin\Moreoptions\Group_Link;
 use GlpiPlugin\Moreoptions\LinkStrategy\LinkStrategyEnum;
-use Group;
+use Entity;
 use JsonException;
 use Session;
 
 use function Safe\json_decode;
 
 /**
- * Editor of the escalation tree of the active entity, in the "Escalation" tab of a group: the
- * tree being edited, the selection, and the changes made in the page.
+ * Editor of the escalation tree of an entity, in the "Escalate" tab of its configuration (see
+ * Config::showForEntity()): the tree being edited, the selection, and the changes made in the page.
  *
  * The editor is rendered server side (see TreeView); each change made in the page is sent to
  * ajax/group_link.php, along with the draft (see getState()), which applies it (see respond())
@@ -99,22 +99,20 @@ final class TreeEditor
     private readonly bool $canedit;
 
     private function __construct(
-        private readonly Group $group,
         private readonly EscalationTree $tree,
     ) {
         $this->canedit = Config::canUpdate();
     }
 
     /**
-     * The tree of the active entity as saved: the groups of its links. The group of the tab is not
-     * placed for being the one of the tab: only when it has links (it is then highlighted).
+     * The tree of the given entity as saved: the groups of its links.
      *
      * @param string|null  $error       Message to show, why the draft of the page was discarded for instance
      * @param array<mixed> $preferences See setPreferences()
      */
-    public static function fromDatabase(Group $group, ?string $error = null, array $preferences = []): self
+    public static function fromDatabase(int $entities_id, ?string $error = null, array $preferences = []): self
     {
-        $editor = new self($group, EscalationTree::load(self::getActiveEntity()));
+        $editor = new self(EscalationTree::load($entities_id));
         $editor->error = $error;
         $editor->setPreferences($preferences);
 
@@ -122,14 +120,14 @@ final class TreeEditor
     }
 
     /**
-     * The tree of the active entity being edited, as sent back by the page (see getState()).
+     * The tree of the given entity being edited, as sent back by the page (see getState()).
      *
      * @param array<mixed> $state
      * @param array<mixed> $preferences See setPreferences()
      */
-    public static function fromState(Group $group, array $state, array $preferences = []): self
+    public static function fromState(int $entities_id, array $state, array $preferences = []): self
     {
-        $editor = new self($group, EscalationTree::fromState(self::getActiveEntity(), $state));
+        $editor = new self(EscalationTree::fromState($entities_id, $state));
         $editor->setPreferences($preferences);
 
         $selected_node = (int) ($state['selected_node'] ?? 0);
@@ -145,9 +143,9 @@ final class TreeEditor
      * or saves it, and gives the editor to render. The draft is only applied to the entity it was
      * made for, and only saved over the links it was made from.
      *
-     * @param array<mixed> $input `groups_id` (group of the tab), `action` (see Action\TreeActionRegistry, or SAVE_ACTION), `state` (draft, see getState()), the preferences of the user (see setPreferences()), and the parameters of the action
+     * @param array<mixed> $input `entities_id` (entity of the tree), `action` (see Action\TreeActionRegistry, or SAVE_ACTION), `state` (draft, see getState()), the preferences of the user (see setPreferences()), and the parameters of the action
      *
-     * @throws AccessDeniedHttpException For a group the user cannot see, or a save without the right to edit
+     * @throws AccessDeniedHttpException For an entity the user cannot see, or a save without the right to edit
      * @throws BadRequestHttpException   For a parameter that is not a single value, an unknown action or an invalid draft
      */
     public static function respond(array $input): self
@@ -157,10 +155,11 @@ final class TreeEditor
             throw new BadRequestHttpException();
         }
 
-        $group = new Group();
-        if (!$group->getFromDB((int) ($input['groups_id'] ?? 0)) || !$group->can($group->getID(), READ)) {
+        $entity = new Entity();
+        if (!$entity->getFromDB((int) ($input['entities_id'] ?? -1)) || !$entity->can($entity->getID(), READ)) {
             throw new AccessDeniedHttpException();
         }
+        $entities_id = $entity->getID();
 
         $name   = (string) ($input['action'] ?? '');
         $action = $name === self::SAVE_ACTION ? null : (TreeActionRegistry::get($name) ?? throw new BadRequestHttpException());
@@ -169,20 +168,12 @@ final class TreeEditor
         } catch (JsonException) {
             throw new BadRequestHttpException();
         }
-        if (!is_array($state)) {
+        // The draft is only applied to the entity it was made for.
+        if (!is_array($state) || (int) ($state['entities_id'] ?? -1) !== $entities_id) {
             throw new BadRequestHttpException();
         }
 
-        if (!self::isStateOfActiveEntity($state)) {
-            // The active entity changed since the page was loaded (in another browser tab, for instance).
-            return self::fromDatabase(
-                $group,
-                __('The active entity changed: the graph was reloaded, the unsaved changes were discarded.', 'moreoptions'),
-                $input,
-            );
-        }
-
-        $editor = self::fromState($group, $state, $input);
+        $editor = self::fromState($entities_id, $state, $input);
         if ($action !== null) {
             $editor->apply($action, $input);
             return $editor;
@@ -193,7 +184,7 @@ final class TreeEditor
         }
         if (!$editor->tree->isUpToDate()) {
             return self::fromDatabase(
-                $group,
+                $entities_id,
                 __('The links were saved by someone else meanwhile: the graph was reloaded, the unsaved changes were discarded.', 'moreoptions'),
                 $input,
             );
@@ -203,18 +194,7 @@ final class TreeEditor
         }
         Session::addMessageAfterRedirect(__('Escalation links saved.', 'moreoptions'));
 
-        return self::fromDatabase($group, null, $input);
-    }
-
-    /**
-     * Whether the draft was made for the active entity: the active entity may have changed since
-     * the page was loaded (in another browser tab, for instance).
-     *
-     * @param array<mixed> $state See getState()
-     */
-    public static function isStateOfActiveEntity(array $state): bool
-    {
-        return (int) ($state['entities_id'] ?? -1) === self::getActiveEntity();
+        return self::fromDatabase($entities_id, null, $input);
     }
 
     /**
@@ -379,7 +359,6 @@ final class TreeEditor
     public function getTemplateVariables(): array
     {
         return (new TreeView(
-            group: $this->group,
             tree: $this->tree,
             canedit: $this->canedit,
             vertical: $this->vertical,
@@ -391,10 +370,4 @@ final class TreeEditor
             scroll_to: $this->scroll_to,
         ))->getTemplateVariables() + ['state' => $this->getState()];
     }
-
-    private static function getActiveEntity(): int
-    {
-        return (int) Session::getActiveEntity();
-    }
-
 }

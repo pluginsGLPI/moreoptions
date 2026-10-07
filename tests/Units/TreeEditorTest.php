@@ -68,7 +68,7 @@ use function Safe\json_encode;
 final class TreeEditorTest extends EscalationTestCase
 {
     /**
-     * A child entity holding the group of the tab, and four groups of its parent entity, linked
+     * A child entity holding a group of its own, Current, and four groups of its parent entity, linked
      * there by an inherited link, A -> B, and a basic one, C -> D. The child entity is the active one.
      *
      * @return array{Group, array<string, int>}
@@ -92,7 +92,7 @@ final class TreeEditorTest extends EscalationTestCase
     }
 
     /**
-     * @return int Entity of the group of the tab
+     * @return int Entity of the tree edited: the one of the group Current
      */
     private function getEntity(Group $group): int
     {
@@ -126,11 +126,11 @@ final class TreeEditorTest extends EscalationTestCase
      *
      * @param array<string, mixed> $params
      */
-    private function handle(Group $group, TreeEditor $editor, AbstractTreeAction $action, array $params = []): TreeEditor
+    private function handle(int $entities_id, TreeEditor $editor, AbstractTreeAction $action, array $params = []): TreeEditor
     {
         // The page sends the preferences of the user with each change.
         $vars   = $editor->getTemplateVariables();
-        $editor = TreeEditor::fromState($group, $editor->getState(), [
+        $editor = TreeEditor::fromState($entities_id, $editor->getState(), [
             '_orientation'      => $vars['orientation'],
             '_drawing_strategy' => $vars['drawing_strategy'],
         ]);
@@ -145,9 +145,9 @@ final class TreeEditorTest extends EscalationTestCase
      * @param array<string, mixed> $params Action and its parameters
      * @return array<string, mixed>
      */
-    private function request(Group $group, TreeEditor $editor, array $params): array
+    private function request(int $entities_id, TreeEditor $editor, array $params): array
     {
-        return $params + ['groups_id' => $group->getID(), 'state' => json_encode($editor->getState())];
+        return $params + ['entities_id' => $entities_id, 'state' => json_encode($editor->getState())];
     }
 
     public function testFromDatabase(): void
@@ -156,7 +156,7 @@ final class TreeEditorTest extends EscalationTestCase
         [$group, $ids] = $this->createGraphData();
         $this->createLinks($this->getEntity($group), [[$ids['Current'], $ids['C'], LinkStrategyEnum::BASIC]]);
 
-        $editor = TreeEditor::fromDatabase($group);
+        $editor = TreeEditor::fromDatabase($this->getEntity($group));
         $this->assertSame([
             'entities_id'   => $this->getEntity($group),
             'version'       => Group_Link::getVersion(Group_Link::getRowsOfEntity($this->getEntity($group))),
@@ -219,40 +219,35 @@ final class TreeEditorTest extends EscalationTestCase
         $this->assertNotContains($ids['A'], $pool);
     }
 
-    public function testGroupOfTheTabIsNotPlacedByItself(): void
+    public function testGroupWithoutLinksIsNotPlaced(): void
     {
         $this->login();
         [$group, $ids] = $this->createGraphData();
 
-        // Without links, the group of the tab is not in the graph: only the groups of the replicated link.
-        $editor = TreeEditor::fromDatabase($group);
+        // Without links, a group of the entity is not in the graph: only the groups of the replicated link.
+        $editor = TreeEditor::fromDatabase($this->getEntity($group));
         $this->assertSame([$ids['A'], $ids['B']], $editor->getState()['nodes']);
         $this->assertContains($ids['Current'], array_column($editor->getTemplateVariables()['pool'], 'id'));
 
-        // Once linked and saved, it is, and highlighted.
-        $editor = $this->handle($group, $editor, new AddNodeAction(), ['group' => $ids['Current']]);
-        $editor = $this->handle($group, $editor, new LinkAction(), ['from' => $ids['Current'], 'to' => $ids['A']]);
+        // Once linked and saved, it is.
+        $editor = $this->handle($this->getEntity($group), $editor, new AddNodeAction(), ['group' => $ids['Current']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new LinkAction(), ['from' => $ids['Current'], 'to' => $ids['A']]);
         $this->assertTrue($editor->save());
-        $vars = TreeEditor::fromDatabase($group)->getTemplateVariables();
-        $classes = [];
-        foreach ($vars['elements']['nodes'] as $node) {
-            $classes[$node['data']['id']] = $node['classes'] ?? '';
-        }
-        $this->assertSame('current', $classes[(string) $ids['Current']]);
+        $this->assertContains($ids['Current'], TreeEditor::fromDatabase($this->getEntity($group))->getState()['nodes']);
     }
 
-    public function testLinksOfTheActiveEntity(): void
+    public function testLinksOfTheGivenEntity(): void
     {
         $this->login();
         [$group, $ids] = $this->createGraphData();
 
         // In the child entity, only the inherited link of the root entity is replicated.
-        $vars = TreeEditor::fromDatabase($group)->getTemplateVariables();
+        $vars = TreeEditor::fromDatabase($this->getEntity($group))->getTemplateVariables();
         $this->assertSame(["{$ids['A']}-{$ids['B']}" => true], $this->getEdgeData($vars, 'replicated'));
 
         // In the root entity, both links are its own.
         $this->setEntity($this->getRootEntityId(), true);
-        $vars = TreeEditor::fromDatabase($group)->getTemplateVariables();
+        $vars = TreeEditor::fromDatabase($this->getRootEntityId())->getTemplateVariables();
         $this->assertSame(
             ["{$ids['A']}-{$ids['B']}" => false, "{$ids['C']}-{$ids['D']}" => false],
             $this->getEdgeData($vars, 'replicated'),
@@ -263,8 +258,8 @@ final class TreeEditorTest extends EscalationTestCase
     {
         $this->login();
         [$group, $ids] = $this->createGraphData();
-        $editor = $this->handle($group, TreeEditor::fromDatabase($group), new AddNodeAction(), ['group' => $ids['Current']]);
-        $editor = $this->handle($group, $editor, new SelectNodeAction(), ['group' => $ids['Current']]);
+        $editor = $this->handle($this->getEntity($group), TreeEditor::fromDatabase($this->getEntity($group)), new AddNodeAction(), ['group' => $ids['Current']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new SelectNodeAction(), ['group' => $ids['Current']]);
 
         // Only the group itself is left out of the group dropdowns: every other one can be linked.
         $selected = $editor->getTemplateVariables()['selected_node'];
@@ -274,7 +269,7 @@ final class TreeEditorTest extends EscalationTestCase
         $this->assertSame('D', $selected['candidates_to'][$ids['D']]);
 
         // Current -> D, inherited: D is placed, Current stays selected.
-        $editor = $this->handle($group, $editor, new AddLinkAction(), [
+        $editor = $this->handle($this->getEntity($group), $editor, new AddLinkAction(), [
             'direction'          => 'to',
             '_link_to_group'     => $ids['D'],
             '_link_to_strategy'  => LinkStrategyEnum::INHERITED->value,
@@ -284,18 +279,18 @@ final class TreeEditorTest extends EscalationTestCase
         $this->assertSame(['D'], array_column($editor->getTemplateVariables()['selected_node']['to'], 'to_name'));
 
         // A -> Current, basic (the default strategy)
-        $editor = $this->handle($group, $editor, new AddLinkAction(), ['direction' => 'from', '_link_from_group' => $ids['A']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new AddLinkAction(), ['direction' => 'from', '_link_from_group' => $ids['A']]);
         $this->assertSame(['A'], array_column($editor->getTemplateVariables()['selected_node']['from'], 'from_name'));
         $this->assertSame(LinkStrategyEnum::BASIC->value, $editor->getState()['links'][1]['type']);
 
         // Deleting a link from the panel of the selected group keeps it selected.
-        $editor = $this->handle($group, $editor, new AddLinkAction(), ['direction' => 'to', '_link_to_group' => $ids['B']]);
-        $editor = $this->handle($group, $editor, new DeleteLinkAction(), ['link' => EscalationLink::key($ids['Current'], $ids['B'])]);
+        $editor = $this->handle($this->getEntity($group), $editor, new AddLinkAction(), ['direction' => 'to', '_link_to_group' => $ids['B']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new DeleteLinkAction(), ['link' => EscalationLink::key($ids['Current'], $ids['B'])]);
         $this->assertSame($ids['Current'], $editor->getState()['selected_node']);
         $this->assertCount(2, $editor->getState()['links']);
 
         // From D, neither Current nor A (its ancestors) are offered, and forcing them is refused.
-        $editor = $this->handle($group, $editor, new SelectNodeAction(), ['group' => $ids['D']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new SelectNodeAction(), ['group' => $ids['D']]);
         $selected = $editor->getTemplateVariables()['selected_node'];
         $this->assertArrayNotHasKey($ids['Current'], $selected['candidates_to']);
         $this->assertArrayNotHasKey($ids['A'], $selected['candidates_to']);
@@ -303,7 +298,7 @@ final class TreeEditorTest extends EscalationTestCase
         $this->assertArrayHasKey($ids['B'], $selected['candidates_to']);
         // Current, already linked to D, is not offered either the other way.
         $this->assertArrayNotHasKey($ids['Current'], $selected['candidates_from']);
-        $editor = $this->handle($group, $editor, new AddLinkAction(), ['direction' => 'to', '_link_to_group' => $ids['A']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new AddLinkAction(), ['direction' => 'to', '_link_to_group' => $ids['A']]);
         $this->assertIsString($editor->getTemplateVariables()['error']);
         $this->assertCount(2, $editor->getState()['links']);
     }
@@ -312,42 +307,42 @@ final class TreeEditorTest extends EscalationTestCase
     {
         $this->login();
         [$group, $ids] = $this->createGraphData();
-        $editor = $this->handle($group, TreeEditor::fromDatabase($group), new AddNodeAction(), ['group' => $ids['Current']]);
+        $editor = $this->handle($this->getEntity($group), TreeEditor::fromDatabase($this->getEntity($group)), new AddNodeAction(), ['group' => $ids['Current']]);
         $current_c = EscalationLink::key($ids['Current'], $ids['C']);
         $a_b       = EscalationLink::key($ids['A'], $ids['B']);
 
         // Place D, then draw Current -> D, by dragging Current onto D
-        $editor = $this->handle($group, $editor, new AddNodeAction(), ['group' => $ids['D']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new AddNodeAction(), ['group' => $ids['D']]);
         $this->assertContains($ids['D'], $editor->getState()['nodes']);
         $this->assertNull($editor->getState()['selected_node']);
         $this->assertSame($ids['D'], $editor->getTemplateVariables()['scroll_to']);
-        $editor = $this->handle($group, $editor, new LinkAction(), ['from' => $ids['Current'], 'to' => $ids['D']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new LinkAction(), ['from' => $ids['Current'], 'to' => $ids['D']]);
         $key = EscalationLink::key($ids['Current'], $ids['D']);
         $this->assertSame($key, $editor->getState()['selected_link']);
-        $editor = $this->handle($group, $editor, new SetLinkTypeAction(), ['value' => LinkStrategyEnum::INHERITED->value]);
+        $editor = $this->handle($this->getEntity($group), $editor, new SetLinkTypeAction(), ['value' => LinkStrategyEnum::INHERITED->value]);
 
         // Draw Current -> C, then delete it from the context menu, without selecting it
-        $editor = $this->handle($group, $editor, new AddNodeAction(), ['group' => $ids['C']]);
-        $editor = $this->handle($group, $editor, new LinkAction(), ['from' => $ids['Current'], 'to' => $ids['C']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new AddNodeAction(), ['group' => $ids['C']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new LinkAction(), ['from' => $ids['Current'], 'to' => $ids['C']]);
         $this->assertSame($current_c, $editor->getState()['selected_link']);
-        $editor = $this->handle($group, $editor, new ClearAction());
-        $editor = $this->handle($group, $editor, new SetLinkTypeAction(), ['link' => $current_c, 'value' => LinkStrategyEnum::INHERITED->value]);
+        $editor = $this->handle($this->getEntity($group), $editor, new ClearAction());
+        $editor = $this->handle($this->getEntity($group), $editor, new SetLinkTypeAction(), ['link' => $current_c, 'value' => LinkStrategyEnum::INHERITED->value]);
         $this->assertSame([LinkStrategyEnum::INHERITED->value, LinkStrategyEnum::INHERITED->value], array_column($editor->getState()['links'], 'type'));
-        $editor = $this->handle($group, $editor, new DeleteLinkAction(), ['link' => $current_c]);
+        $editor = $this->handle($this->getEntity($group), $editor, new DeleteLinkAction(), ['link' => $current_c]);
 
         // D cannot escalate to Current, which escalates to it: the link is refused, with an explanation.
-        $editor = $this->handle($group, $editor, new LinkAction(), ['from' => $ids['D'], 'to' => $ids['Current']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new LinkAction(), ['from' => $ids['D'], 'to' => $ids['Current']]);
         $this->assertIsString($editor->getTemplateVariables()['error']);
         $this->assertCount(1, $editor->getState()['links']);
-        $editor = $this->handle($group, $editor, new ClearAction());
+        $editor = $this->handle($this->getEntity($group), $editor, new ClearAction());
 
         // Remove the inherited link A -> B
-        $editor = $this->handle($group, $editor, new SelectLinkAction(), ['link' => $a_b]);
+        $editor = $this->handle($this->getEntity($group), $editor, new SelectLinkAction(), ['link' => $a_b]);
         $selected = $editor->getTemplateVariables()['selected_link'];
         $this->assertTrue($selected['replicated']);
         $this->assertSame([$ids['A'], $ids['B']], [$selected['from_id'], $selected['to_id']]);
         $this->assertSame(LinkStrategyEnum::INHERITED->getStrategy()->getColor(), $selected['color']);
-        $editor = $this->handle($group, $editor, new DeleteLinkAction());
+        $editor = $this->handle($this->getEntity($group), $editor, new DeleteLinkAction());
 
         $state = $editor->getState();
         $this->assertSame([['from' => $ids['Current'], 'to' => $ids['D'], 'type' => LinkStrategyEnum::INHERITED->value]], $state['links']);
@@ -355,27 +350,27 @@ final class TreeEditorTest extends EscalationTestCase
 
         // Nothing is saved until the "save" action.
         $this->assertSame([], $this->getEntityLinks($this->getEntity($group)));
-        $this->assertTrue(TreeEditor::fromState($group, $state)->save());
+        $this->assertTrue(TreeEditor::fromState($this->getEntity($group), $state)->save());
         $this->assertSame([
             $a_b => LinkStrategyEnum::NONE->value,
             $key => LinkStrategyEnum::INHERITED->value,
         ], $this->getEntityLinks($this->getEntity($group)));
 
         // Once saved, the removed inherited link is loaded as removed, and drawing it again restores it.
-        $editor = TreeEditor::fromDatabase($group);
+        $editor = TreeEditor::fromDatabase($this->getEntity($group));
         $this->assertSame([$a_b], $editor->getState()['removed']);
-        $editor = $this->handle($group, $editor, new AddNodeAction(), ['group' => $ids['A']]);
-        $editor = $this->handle($group, $editor, new AddNodeAction(), ['group' => $ids['B']]);
-        $editor = $this->handle($group, $editor, new LinkAction(), ['from' => $ids['A'], 'to' => $ids['B']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new AddNodeAction(), ['group' => $ids['A']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new AddNodeAction(), ['group' => $ids['B']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new LinkAction(), ['from' => $ids['A'], 'to' => $ids['B']]);
         $this->assertSame([], $editor->getState()['removed']);
 
         // Once saved, the restored link applies again: its "none" link is gone.
-        $this->assertTrue(TreeEditor::fromState($group, $editor->getState())->save());
+        $this->assertTrue(TreeEditor::fromState($this->getEntity($group), $editor->getState())->save());
         $this->assertArrayNotHasKey($a_b, $this->getEntityLinks($this->getEntity($group)));
-        $this->assertSame([], TreeEditor::fromDatabase($group)->getState()['removed']);
+        $this->assertSame([], TreeEditor::fromDatabase($this->getEntity($group))->getState()['removed']);
 
         // Removing a group removes its links.
-        $editor = $this->handle($group, $editor, new RemoveNodeAction(), ['group' => $ids['D']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new RemoveNodeAction(), ['group' => $ids['D']]);
         $this->assertSame([], $editor->getState()['links']);
         $this->assertNotContains($ids['D'], $editor->getState()['nodes']);
     }
@@ -390,7 +385,7 @@ final class TreeEditorTest extends EscalationTestCase
         $sibling = $this->createGroups(['Sibling group'], $this->createChildEntity('Sibling', $root_id))['Sibling group'];
         $parent  = $this->createGroups(['Parent group'], $root_id)['Parent group'];
 
-        $editor = TreeEditor::fromState($group, [
+        $editor = TreeEditor::fromState($this->getEntity($group), [
             'nodes'   => [$ids['A'], $ids['C'], $not_assignable, $sibling, $parent, 'foo'],
             'links'   => [
                 ['from' => $ids['A'], 'to' => $ids['C'], 'type' => LinkStrategyEnum::BASIC->value],
@@ -441,7 +436,7 @@ final class TreeEditorTest extends EscalationTestCase
         // Without the right to update the configuration
         $_SESSION['glpiactiveprofile']['config'] = READ;
 
-        $editor = TreeEditor::fromDatabase($group);
+        $editor = TreeEditor::fromDatabase($this->getEntity($group));
         $this->assertFalse($editor->getTemplateVariables()['canedit']);
         $this->assertFalse($editor->getTemplateVariables()['can_reset']);
         // Whatever the action changing the links, with all the parameters it could use
@@ -468,24 +463,23 @@ final class TreeEditorTest extends EscalationTestCase
         $this->assertSame(EscalationLink::key($ids['A'], $ids['B']), $editor->getState()['selected_link']);
     }
 
-    public function testStateOfAnotherEntity(): void
+    public function testDraftOfAnotherEntityIsRefused(): void
     {
         $this->login();
         [$group] = $this->createGraphData();
-        $state = TreeEditor::fromDatabase($group)->getState();
-        $this->assertTrue(TreeEditor::isStateOfActiveEntity($state));
-
-        // The active entity changed since the page was loaded.
         $this->setEntity($this->getRootEntityId(), true);
-        $this->assertFalse(TreeEditor::isStateOfActiveEntity($state));
-        $this->assertFalse(TreeEditor::isStateOfActiveEntity([]));
+        $draft = TreeEditor::fromDatabase($this->getEntity($group));
+
+        // The draft is only applied to the entity it was made for.
+        $this->expectException(BadRequestHttpException::class);
+        TreeEditor::respond($this->request($this->getRootEntityId(), $draft, ['action' => RenderAction::getName()]));
     }
 
     public function testOrientation(): void
     {
         $this->login();
         [$group, $ids] = $this->createGraphData();
-        $editor = TreeEditor::fromDatabase($group);
+        $editor = TreeEditor::fromDatabase($this->getEntity($group));
         $editor->apply(new OrientationAction(), ['value' => 'vertical']);
         $vars = $editor->getTemplateVariables();
         $this->assertSame('vertical', $vars['orientation']);
@@ -507,11 +501,11 @@ final class TreeEditorTest extends EscalationTestCase
     {
         $this->login();
         [$group] = $this->createGraphData();
-        $editor = TreeEditor::fromDatabase($group);
+        $editor = TreeEditor::fromDatabase($this->getEntity($group));
         $this->assertSame('horizontal', $editor->getTemplateVariables()['orientation']);
         $this->assertSame(LinkStrategyEnum::BASIC->value, $editor->getTemplateVariables()['drawing_strategy']);
 
-        $vars = TreeEditor::respond($this->request($group, $editor, [
+        $vars = TreeEditor::respond($this->request($this->getEntity($group), $editor, [
             'action'            => 'render',
             '_orientation'      => 'vertical',
             '_drawing_strategy' => LinkStrategyEnum::INHERITED->value,
@@ -520,7 +514,7 @@ final class TreeEditorTest extends EscalationTestCase
         $this->assertSame(LinkStrategyEnum::INHERITED->value, $vars['drawing_strategy']);
 
         // Kept by the page only, and unknown values are ignored.
-        $vars = TreeEditor::respond($this->request($group, $editor, [
+        $vars = TreeEditor::respond($this->request($this->getEntity($group), $editor, [
             'action'            => 'render',
             '_orientation'      => 'diagonal',
             '_drawing_strategy' => LinkStrategyEnum::NONE->value,
@@ -533,20 +527,20 @@ final class TreeEditorTest extends EscalationTestCase
     {
         $this->login();
         [$group, $ids] = $this->createGraphData();
-        $editor = $this->handle($group, TreeEditor::fromDatabase($group), new AddNodeAction(), ['group' => $ids['Current']]);
+        $editor = $this->handle($this->getEntity($group), TreeEditor::fromDatabase($this->getEntity($group)), new AddNodeAction(), ['group' => $ids['Current']]);
         $this->assertSame(LinkStrategyEnum::BASIC->value, $editor->getTemplateVariables()['drawing_strategy']);
 
         // Links drawn take the strategy chosen above the graph; a strategy that is not drawn is ignored.
-        $editor = $this->handle($group, $editor, new DrawingStrategyAction(), ['value' => LinkStrategyEnum::INHERITED->value]);
-        $editor = $this->handle($group, $editor, new DrawingStrategyAction(), ['value' => LinkStrategyEnum::NONE->value]);
+        $editor = $this->handle($this->getEntity($group), $editor, new DrawingStrategyAction(), ['value' => LinkStrategyEnum::INHERITED->value]);
+        $editor = $this->handle($this->getEntity($group), $editor, new DrawingStrategyAction(), ['value' => LinkStrategyEnum::NONE->value]);
         $this->assertSame(LinkStrategyEnum::INHERITED->value, $editor->getTemplateVariables()['drawing_strategy']);
-        $editor = $this->handle($group, $editor, new AddNodeAction(), ['group' => $ids['C']]);
-        $editor = $this->handle($group, $editor, new LinkAction(), ['from' => $ids['Current'], 'to' => $ids['C']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new AddNodeAction(), ['group' => $ids['C']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new LinkAction(), ['from' => $ids['Current'], 'to' => $ids['C']]);
         $this->assertSame([['from' => $ids['Current'], 'to' => $ids['C'], 'type' => LinkStrategyEnum::INHERITED->value]], $editor->getState()['links']);
 
         // A link already there keeps its strategy.
-        $editor = $this->handle($group, $editor, new DrawingStrategyAction(), ['value' => LinkStrategyEnum::BASIC->value]);
-        $editor = $this->handle($group, $editor, new LinkAction(), ['from' => $ids['Current'], 'to' => $ids['C']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new DrawingStrategyAction(), ['value' => LinkStrategyEnum::BASIC->value]);
+        $editor = $this->handle($this->getEntity($group), $editor, new LinkAction(), ['from' => $ids['Current'], 'to' => $ids['C']]);
         $this->assertSame(LinkStrategyEnum::INHERITED->value, $editor->getState()['links'][0]['type']);
     }
 
@@ -563,27 +557,27 @@ final class TreeEditorTest extends EscalationTestCase
             [$ids['A'], $ids['B'], LinkStrategyEnum::NONE],
             [$ids['B'], $ids['C'], LinkStrategyEnum::BASIC],
         ]);
-        $this->assertTrue(TreeEditor::fromDatabase($group)->getTemplateVariables()['can_reset']);
+        $this->assertTrue(TreeEditor::fromDatabase($this->getEntity($group))->getTemplateVariables()['can_reset']);
 
         // Reset: the links of the entity are gone, the inherited ones are back, as they are in the root entity.
-        $editor = $this->handle($group, TreeEditor::fromDatabase($group), new ResetAction());
+        $editor = $this->handle($this->getEntity($group), TreeEditor::fromDatabase($this->getEntity($group)), new ResetAction());
         $this->assertSame([], $editor->getState()['links']);
         $this->assertSame([], $editor->getState()['removed']);
         $this->assertNotContains($ids['Current'], $editor->getState()['nodes']);
         $this->assertFalse($editor->getTemplateVariables()['can_reset']);
         // Nothing is saved until the "save" action.
         $this->assertCount(3, $this->getEntityLinks($this->getEntity($group)));
-        $this->assertTrue(TreeEditor::fromState($group, $editor->getState())->save());
+        $this->assertTrue(TreeEditor::fromState($this->getEntity($group), $editor->getState())->save());
         $this->assertSame([], $this->getEntityLinks($this->getEntity($group)));
         $this->assertSame(
             [EscalationLink::key($ids['A'], $ids['B']) => true, EscalationLink::key($ids['B'], $ids['C']) => true],
-            $this->getEdgeData(TreeEditor::fromDatabase($group)->getTemplateVariables(), 'replicated'),
+            $this->getEdgeData(TreeEditor::fromDatabase($this->getEntity($group))->getTemplateVariables(), 'replicated'),
         );
 
         // In the root entity, no link is left.
         $this->setEntity($root_id, true);
-        $editor = $this->handle($group, TreeEditor::fromDatabase($group), new ResetAction());
-        $this->assertTrue(TreeEditor::fromState($group, $editor->getState())->save());
+        $editor = $this->handle($root_id, TreeEditor::fromDatabase($root_id), new ResetAction());
+        $this->assertTrue(TreeEditor::fromState($root_id, $editor->getState())->save());
         $this->assertSame([], $this->getEntityLinks($root_id));
     }
 
@@ -591,7 +585,7 @@ final class TreeEditorTest extends EscalationTestCase
     {
         $this->login();
         [$group, $ids] = $this->createGraphData();
-        $editor = TreeEditor::fromDatabase($group);
+        $editor = TreeEditor::fromDatabase($this->getEntity($group));
         $editor->apply(new SelectLinkAction(), ['link' => EscalationLink::key($ids['A'], $ids['B'])]);
         $html = $this->render($editor);
 
@@ -619,20 +613,20 @@ final class TreeEditorTest extends EscalationTestCase
         [$group, $ids] = $this->createGraphData();
 
         // The selected link
-        $editor = $this->handle($group, TreeEditor::fromDatabase($group), new SelectLinkAction(), ['link' => EscalationLink::key($ids['A'], $ids['B'])]);
-        $editor = $this->handle($group, $editor, new DeleteSelectionAction());
+        $editor = $this->handle($this->getEntity($group), TreeEditor::fromDatabase($this->getEntity($group)), new SelectLinkAction(), ['link' => EscalationLink::key($ids['A'], $ids['B'])]);
+        $editor = $this->handle($this->getEntity($group), $editor, new DeleteSelectionAction());
         $this->assertSame([EscalationLink::key($ids['A'], $ids['B'])], $editor->getState()['removed']);
         $this->assertNull($editor->getState()['selected_link']);
 
         // The selected group
-        $editor = $this->handle($group, $editor, new AddNodeAction(), ['group' => $ids['Current']]);
-        $editor = $this->handle($group, $editor, new SelectNodeAction(), ['group' => $ids['Current']]);
-        $editor = $this->handle($group, $editor, new DeleteSelectionAction());
+        $editor = $this->handle($this->getEntity($group), $editor, new AddNodeAction(), ['group' => $ids['Current']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new SelectNodeAction(), ['group' => $ids['Current']]);
+        $editor = $this->handle($this->getEntity($group), $editor, new DeleteSelectionAction());
         $this->assertNotContains($ids['Current'], $editor->getState()['nodes']);
 
         // Nothing selected: nothing to delete
         $state = $editor->getState();
-        $editor = $this->handle($group, $editor, new DeleteSelectionAction());
+        $editor = $this->handle($this->getEntity($group), $editor, new DeleteSelectionAction());
         $this->assertSame($state, $editor->getState());
     }
 
@@ -642,12 +636,12 @@ final class TreeEditorTest extends EscalationTestCase
         [$group, $ids] = $this->createGraphData();
 
         // A change, applied to the draft sent
-        $editor = TreeEditor::respond($this->request($group, TreeEditor::fromDatabase($group), ['action' => 'add_node', 'group' => $ids['Current']]));
+        $editor = TreeEditor::respond($this->request($this->getEntity($group), TreeEditor::fromDatabase($this->getEntity($group)), ['action' => 'add_node', 'group' => $ids['Current']]));
         $this->assertContains($ids['Current'], $editor->getState()['nodes']);
 
         // Saved, then reloaded
-        $editor = TreeEditor::respond($this->request($group, $editor, ['action' => 'link', 'from' => $ids['Current'], 'to' => $ids['A']]));
-        $editor = TreeEditor::respond($this->request($group, $editor, ['action' => 'save']));
+        $editor = TreeEditor::respond($this->request($this->getEntity($group), $editor, ['action' => 'link', 'from' => $ids['Current'], 'to' => $ids['A']]));
+        $editor = TreeEditor::respond($this->request($this->getEntity($group), $editor, ['action' => 'save']));
         $this->assertSame(
             [EscalationLink::key($ids['Current'], $ids['A']) => LinkStrategyEnum::BASIC->value],
             $this->getEntityLinks($this->getEntity($group)),
@@ -655,17 +649,11 @@ final class TreeEditorTest extends EscalationTestCase
         $this->assertSame(Group_Link::getVersion(Group_Link::getRowsOfEntity($this->getEntity($group))), $editor->getState()['version']);
 
         // A draft made before links were saved by someone else is not saved over them.
-        $outdated = $this->request($group, TreeEditor::fromDatabase($group), ['action' => 'save']);
+        $outdated = $this->request($this->getEntity($group), TreeEditor::fromDatabase($this->getEntity($group)), ['action' => 'save']);
         $this->createLinks($this->getEntity($group), [[$ids['Current'], $ids['C'], LinkStrategyEnum::BASIC]]);
         $editor = TreeEditor::respond($outdated);
         $this->assertStringContainsString('saved by someone else', (string) $editor->getTemplateVariables()['error']);
         $this->assertCount(2, $this->getEntityLinks($this->getEntity($group)));
-
-        // A draft of another entity is not applied.
-        $other = $this->request($group, TreeEditor::fromDatabase($group), ['action' => 'reset']);
-        $this->setEntity($this->getRootEntityId(), true);
-        $editor = TreeEditor::respond($other);
-        $this->assertStringContainsString('The active entity changed', (string) $editor->getTemplateVariables()['error']);
     }
 
     /**
@@ -673,12 +661,12 @@ final class TreeEditorTest extends EscalationTestCase
      */
     public static function invalidRequestProvider(): iterable
     {
-        yield 'unknown group' => [['groups_id' => 0], AccessDeniedHttpException::class];
+        yield 'unknown entity' => [['entities_id' => -1], AccessDeniedHttpException::class];
         yield 'unknown action' => [['action' => 'foo'], BadRequestHttpException::class];
         yield 'invalid draft' => [['state' => '{'], BadRequestHttpException::class];
         yield 'draft not an object' => [['state' => '"foo"'], BadRequestHttpException::class];
         // The page only sends single values.
-        foreach (['groups_id', 'action', 'state', 'query', 'group', 'link', 'from', 'value'] as $name) {
+        foreach (['entities_id', 'action', 'state', 'query', 'group', 'link', 'from', 'value'] as $name) {
             yield $name . ' not a single value' => [[$name => ['x']], BadRequestHttpException::class];
         }
     }
@@ -694,7 +682,7 @@ final class TreeEditorTest extends EscalationTestCase
         [$group] = $this->createGraphData();
 
         $this->expectException($exception);
-        TreeEditor::respond($input + $this->request($group, TreeEditor::fromDatabase($group), ['action' => RenderAction::getName()]));
+        TreeEditor::respond($input + $this->request($this->getEntity($group), TreeEditor::fromDatabase($this->getEntity($group)), ['action' => RenderAction::getName()]));
     }
 
     public function testEditingNeedsTheRightToUpdateTheConfiguration(): void
@@ -708,13 +696,13 @@ final class TreeEditorTest extends EscalationTestCase
         $this->assertFalse(Config::canUpdate());
 
         // The links cannot be changed...
-        $editor = TreeEditor::respond($this->request($group, TreeEditor::fromDatabase($group), ['action' => 'add_node', 'group' => $ids['Current']]));
+        $editor = TreeEditor::respond($this->request($this->getEntity($group), TreeEditor::fromDatabase($this->getEntity($group)), ['action' => 'add_node', 'group' => $ids['Current']]));
         $this->assertFalse($editor->getTemplateVariables()['canedit']);
         $this->assertNotContains($ids['Current'], $editor->getState()['nodes']);
 
         // ...nor saved.
         $this->expectException(AccessDeniedHttpException::class);
-        TreeEditor::respond($this->request($group, $editor, ['action' => TreeEditor::SAVE_ACTION]));
+        TreeEditor::respond($this->request($this->getEntity($group), $editor, ['action' => TreeEditor::SAVE_ACTION]));
     }
 
     public function testEditingWithTheRightToUpdateTheConfiguration(): void
@@ -726,10 +714,10 @@ final class TreeEditorTest extends EscalationTestCase
         $_SESSION['glpiactiveprofile']['config'] = READ | UPDATE;
         $this->assertFalse(Group::canUpdate());
 
-        $editor = TreeEditor::respond($this->request($group, TreeEditor::fromDatabase($group), ['action' => 'add_node', 'group' => $ids['Current']]));
+        $editor = TreeEditor::respond($this->request($this->getEntity($group), TreeEditor::fromDatabase($this->getEntity($group)), ['action' => 'add_node', 'group' => $ids['Current']]));
         $this->assertTrue($editor->getTemplateVariables()['canedit']);
-        $editor = TreeEditor::respond($this->request($group, $editor, ['action' => 'link', 'from' => $ids['Current'], 'to' => $ids['A']]));
-        TreeEditor::respond($this->request($group, $editor, ['action' => 'save']));
+        $editor = TreeEditor::respond($this->request($this->getEntity($group), $editor, ['action' => 'link', 'from' => $ids['Current'], 'to' => $ids['A']]));
+        TreeEditor::respond($this->request($this->getEntity($group), $editor, ['action' => 'save']));
         $this->assertSame(
             [EscalationLink::key($ids['Current'], $ids['A']) => LinkStrategyEnum::BASIC->value],
             $this->getEntityLinks($this->getEntity($group)),
@@ -744,8 +732,8 @@ final class TreeEditorTest extends EscalationTestCase
         $evil = $this->createGroups([$name], $this->getEntity($group))[$name];
 
         // In the graph, then in the panel of the group
-        $editor = $this->handle($group, TreeEditor::fromDatabase($group), new AddNodeAction(), ['group' => $evil]);
-        foreach ([$editor, $this->handle($group, $editor, new SelectNodeAction(), ['group' => $evil])] as $shown) {
+        $editor = $this->handle($this->getEntity($group), TreeEditor::fromDatabase($this->getEntity($group)), new AddNodeAction(), ['group' => $evil]);
+        foreach ([$editor, $this->handle($this->getEntity($group), $editor, new SelectNodeAction(), ['group' => $evil])] as $shown) {
             $html = $this->render($shown);
             $this->assertStringNotContainsString('<img src=x', $html);
             $this->assertStringNotContainsString('</script><img', $html);
@@ -756,18 +744,18 @@ final class TreeEditorTest extends EscalationTestCase
     {
         $this->login();
         [$group, $ids] = $this->createGraphData();
-        $editor = $this->handle($group, TreeEditor::fromDatabase($group), new AddNodeAction(), ['group' => $ids['Current']]);
+        $editor = $this->handle($this->getEntity($group), TreeEditor::fromDatabase($this->getEntity($group)), new AddNodeAction(), ['group' => $ids['Current']]);
 
         // By level, then by name, with the search applied
         $placed = $editor->getTemplateVariables()['placed'];
         $this->assertSame([$ids['A'], $ids['Current'], $ids['B']], array_column($placed, 'id'));
         $this->assertSame([1, 1, 2], array_column($placed, 'level'));
-        $editor = $this->handle($group, $editor, new RenderAction(), ['query' => 'cur']);
+        $editor = $this->handle($this->getEntity($group), $editor, new RenderAction(), ['query' => 'cur']);
         $this->assertSame([false, true, false], array_column($editor->getTemplateVariables()['placed'], 'matches'));
 
         // Each one selects its group, without the right to edit too.
         $_SESSION['glpiactiveprofile']['config'] = READ;
-        $html = $this->render(TreeEditor::fromDatabase($group));
+        $html = $this->render(TreeEditor::fromDatabase($this->getEntity($group)));
         $this->assertStringContainsString('data-mo-action="select_node" data-mo-group="' . $ids['A'] . '"', $html);
         $this->assertStringNotContainsString('data-mo-action="add_node"', $html);
     }
@@ -798,7 +786,7 @@ final class TreeEditorTest extends EscalationTestCase
                 }
             }
         });
-        $editor = TreeEditor::respond($this->request($group, TreeEditor::fromDatabase($group), ['action' => 'test_place_all']));
+        $editor = TreeEditor::respond($this->request($this->getEntity($group), TreeEditor::fromDatabase($this->getEntity($group)), ['action' => 'test_place_all']));
         $this->assertContains($ids['Current'], $editor->getState()['nodes']);
         $this->assertContains($ids['D'], $editor->getState()['nodes']);
     }

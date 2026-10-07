@@ -31,8 +31,8 @@
  #}
 
 {#
- # "Escalation" tab of a group (see Group_Link::showForGroup()): the editor of the escalation tree
- # of the active entity (see EscalationTree\TreeEditor), driven by public/js/escalation_graph.js.
+ # Editor of the escalation tree of an entity (see Group_Link::getEditorVariables() and
+ # EscalationTree\TreeEditor), driven by public/js/escalation_graph.js.
  # The graph is drawn with Cytoscape.js, the library of the impact analysis of GLPI.
  #}
 <link rel="stylesheet" href="{{ css_path('lib/cytoscape.css') }}" />
@@ -64,13 +64,29 @@
     // The library of the impact analysis (see Impact::loadLibs()), loaded once in the page: loaded
     // again when the tab is reloaded, it would fail to register its elements again.
     (() => {
-        const start = () => new GlpiPluginMoreoptionsEscalationGraph(document.getElementById('{{ container_id|e('js') }}'));
-        if (window.cytoscape !== undefined) {
-            start();
+        const container = document.getElementById('{{ container_id|e('js') }}');
+        const start = () => new GlpiPluginMoreoptionsEscalationGraph(container);
+        const load = () => {
+            if (window.cytoscape !== undefined) {
+                start();
+            } else {
+                $.ajax({ url: '{{ js_path('lib/cytoscape.js')|e('js') }}', dataType: 'script', cache: true })
+                    .done(start)
+                    .fail(() => glpi_toast_error('{{ config.strings.load_error|e('js') }}'));
+            }
+        };
+        // Cytoscape.js measures its container: the graph is only started once shown (the editor
+        // being hidden until the "Escalate" tab of the configuration is opened).
+        if (container.offsetWidth > 0) {
+            load();
         } else {
-            $.ajax({ url: '{{ js_path('lib/cytoscape.js')|e('js') }}', dataType: 'script', cache: true })
-                .done(start)
-                .fail(() => glpi_toast_error('{{ config.strings.load_error|e('js') }}'));
+            const observer = new ResizeObserver(() => {
+                if (container.offsetWidth > 0) {
+                    observer.disconnect();
+                    load();
+                }
+            });
+            observer.observe(container);
         }
     })();
 </script>

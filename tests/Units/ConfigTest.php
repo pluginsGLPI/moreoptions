@@ -66,6 +66,7 @@ use ProblemTask;
 use GlpiPlugin\Moreoptions\Config;
 use GlpiPlugin\Moreoptions\Tests\MoreOptionsTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Profile;
 
 class ConfigTest extends MoreOptionsTestCase
 {
@@ -2862,5 +2863,33 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertTrue($this->updateTestConfig($conf, [
             'assign_technical_group_when_changing_category_ticket' => 0,
         ]));
+    }
+
+    public function testGroupFilterBypassProfiles(): void
+    {
+        $this->login();
+        $field      = 'escalate_group_filter_bypass_profiles';
+        $admin      = getItemByTypeName(Profile::class, 'Super-Admin', true);
+        $technician = getItemByTypeName(Profile::class, 'Technician', true);
+
+        // Saved as sent by the form: the profiles selected, after the empty value of the select.
+        $root = Config::getConfig(0, false);
+        $this->assertTrue($root->update(['id' => $root->getID(), $field => ['', (string) $admin, (string) $technician]]));
+        $this->assertSame([$admin, $technician], Config::decodeProfiles(Config::getConfig(0, false)->fields[$field]));
+
+        // A new child entity inherits them.
+        $child = $this->createItem(Entity::class, ['name' => 'Group filter child', 'entities_id' => 0]);
+        $child_config = Config::getConfig($child->getID(), false);
+        $this->assertSame((string) Config::CONFIG_PARENT, (string) $child_config->fields[$field]);
+        $this->assertSame([$admin, $technician], Config::decodeProfiles(Config::getConfig($child->getID())->fields[$field]));
+
+        // "Inherit" wins over the profiles selected with it.
+        $this->assertTrue($child_config->update(['id' => $child_config->getID(), $field => [(string) Config::CONFIG_PARENT, (string) $admin]]));
+        $this->assertSame((string) Config::CONFIG_PARENT, (string) Config::getConfig($child->getID(), false)->fields[$field]);
+
+        // Nothing selected: no profile, without inheriting.
+        $this->assertTrue($child_config->update(['id' => $child_config->getID(), $field => ['']]));
+        $this->assertSame('[]', Config::getConfig($child->getID(), false)->fields[$field]);
+        $this->assertSame([], Config::decodeProfiles(Config::getConfig($child->getID())->fields[$field]));
     }
 }

@@ -35,7 +35,7 @@
 use GlpiPlugin\Moreoptions\EscalationTree\TreeEditor;
 
 /**
- * Applies a change made in the escalation graph of a group, or saves it, then renders the editor
+ * Applies a change made in the escalation graph of an entity, or saves it, then renders the editor
  * again (see TreeEditor::respond()).
  */
 
