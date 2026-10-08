@@ -600,6 +600,7 @@ class EscalationTest extends MoreOptionsTestCase
     {
         $this->login();
         $entities_id = $this->getTestRootEntity(true);
+        $this->assertIsInt($entities_id);
         $this->enableEscalation($entities_id, ['escalate_group_filter_is_active' => 1]);
 
         // A -> B, A -> C, B -> D
@@ -683,6 +684,7 @@ class EscalationTest extends MoreOptionsTestCase
     {
         $this->login();
         $entities_id = $this->getTestRootEntity(true);
+        $this->assertIsInt($entities_id);
         $this->enableEscalation($entities_id, ['escalate_group_filter_is_active' => 1]);
 
         // A -> C, A -> D, B -> D, B -> E
