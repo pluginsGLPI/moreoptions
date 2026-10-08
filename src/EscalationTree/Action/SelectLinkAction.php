@@ -32,30 +32,26 @@
  * -------------------------------------------------------------------------
  */
 
-namespace GlpiPlugin\Moreoptions\LinkStrategy;
+namespace GlpiPlugin\Moreoptions\EscalationTree\Action;
+
+use GlpiPlugin\Moreoptions\EscalationTree\EscalationLink;
+use GlpiPlugin\Moreoptions\EscalationTree\TreeEditor;
 
 /**
- * Link replicated in the sub-entities of its entity
+ * Selects a link (`link`), to show its panel.
  */
-final class InheritedLink extends AbstractLinkStrategy
+final class SelectLinkAction extends AbstractViewAction
 {
-    public function appliesToSubEntities(): bool
+    public static function getName(): string
     {
-        return true;
+        return 'select_link';
     }
 
-    public function getLabel(): string
+    public function apply(TreeEditor $editor, array $params): void
     {
-        return __('Inherited', 'moreoptions');
-    }
-
-    public function getDescription(): string
-    {
-        return __('Also replicated in the child entities', 'moreoptions');
-    }
-
-    public function getColor(): string
-    {
-        return 'var(--mo-gl-inherited)';
+        $link = (string) ($params['link'] ?? '');
+        if ($editor->getTree()->getLink($link) instanceof EscalationLink) {
+            $editor->select(link: $link);
+        }
     }
 }

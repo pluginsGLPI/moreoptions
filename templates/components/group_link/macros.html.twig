@@ -1,0 +1,107 @@
+{#
+ # -------------------------------------------------------------------------
+ # MoreOptions plugin for GLPI
+ # -------------------------------------------------------------------------
+ #
+ # MIT License
+ #
+ # Permission is hereby granted, free of charge, to any person obtaining a copy
+ # of this software and associated documentation files (the "Software"), to deal
+ # in the Software without restriction, including without limitation the rights
+ # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ # copies of the Software, and to permit persons to whom the Software is
+ # furnished to do so, subject to the following conditions:
+ #
+ # The above copyright notice and this permission notice shall be included in all
+ # copies or substantial portions of the Software.
+ #
+ # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ # SOFTWARE.
+ # -------------------------------------------------------------------------
+ # @copyright Copyright (C) 2025 by the MoreOptions plugin team.
+ # @license   MIT https://opensource.org/licenses/mit-license.php
+ # @link      https://github.com/pluginsGLPI/moreoptions
+ # @link      https://gitlab.teclib.com/glpi-network/moreoptions/
+ # -------------------------------------------------------------------------
+ #}
+
+{#
+ # Pieces of the escalation graph shared by its templates.
+ #}
+
+{#
+ # Arrow of a link strategy, as drawn in the graph (see AbstractLinkStrategy::getColor()): dashed
+ # for a link replicated from a parent entity. Used by the legend and the panels.
+ #
+ # @param color      CSS color of the arrow
+ # @param replicated Whether the link is replicated from a parent entity
+ #}
+{% macro arrow(color, replicated = false) %}
+    {% set width = 26 %}
+    <svg width="{{ width }}" height="8" aria-hidden="true" class="flex-shrink-0">
+        <line x1="0" y1="4" x2="{{ width - 8 }}" y2="4" stroke-width="2"
+              class="{{ replicated ? 'mo-gl-edge-replicated' }}" style="stroke: {{ color }};"></line>
+        <path d="M{{ width - 8 }} 0 L{{ width }} 4 L{{ width - 8 }} 8 Z" style="fill: {{ color }};"></path>
+    </svg>
+{% endmacro %}
+
+{# Level of a group in the tree (see EscalationTree::getLevels()) #}
+{% macro level_badge(level) %}
+    <span class="badge bg-blue-lt" title="{{ __('Level', 'moreoptions') }}">{{ __('L%d', 'moreoptions')|format(level) }}</span>
+{% endmacro %}
+
+{#
+ # Choice among a few values, as toggle buttons: choosing one sends `action` with its value (see
+ # public/js/escalation_graph.js).
+ #
+ # @param name       Name of the field
+ # @param action     Action sent, see Action\TreeActionRegistry
+ # @param options    List of `value`, `label`, `title` (tooltip), and either `icon` (shown alone) or `color` (of its arrow)
+ # @param checked    Value chosen
+ # @param uid        Unique part of the ids of the fields
+ # @param aria_label
+ # @param disabled
+ # @param classes    Classes of the group of buttons
+ #}
+{% macro choices(name, action, options, checked, uid, aria_label, disabled = false, classes = '') %}
+    <div class="btn-group {{ classes }}" role="group" aria-label="{{ aria_label }}">
+        {% for option in options %}
+            {% set id = 'mo-gl-' ~ name ~ '-' ~ option.value ~ '-' ~ uid %}
+            <input type="radio" class="btn-check" name="_{{ name }}" id="{{ id }}" value="{{ option.value }}"
+                   data-mo-action="{{ action }}" {{ option.value == checked ? 'checked' }} {{ disabled ? 'disabled' }} />
+            <label class="btn btn-sm btn-outline-secondary {{ option.icon is defined ? 'btn-icon' : 'gap-2' }}" for="{{ id }}"
+                   data-bs-toggle="tooltip" title="{{ option.title }}">
+                {% if option.icon is defined %}
+                    <i class="ti {{ option.icon }}"></i>
+                    <span class="visually-hidden">{{ option.label }}</span>
+                {% else %}
+                    {{ _self.arrow(option.color) }}
+                    <span>{{ option.label }}</span>
+                {% endif %}
+            </label>
+        {% endfor %}
+    </div>
+{% endmacro %}
+
+{#
+ # The delete button of GLPI, at the bottom of a side panel.
+ #
+ # @param action Action sent, see Action\TreeActionRegistry
+ # @param title  What it deletes
+ # @param group  Group it applies to, if any
+ #}
+{% macro delete_button(action, title, group = null) %}
+    <div class="card-footer">
+        <button type="button" class="btn btn-outline-danger w-100" data-mo-action="{{ action }}"
+                {% if group is not null %}data-mo-group="{{ group }}"{% endif %}
+                data-bs-toggle="tooltip" title="{{ title }} ({{ __('Delete key', 'moreoptions') }})">
+            <i class="ti ti-trash"></i>
+            <span>{{ __('Delete') }}</span>
+        </button>
+    </div>
+{% endmacro %}

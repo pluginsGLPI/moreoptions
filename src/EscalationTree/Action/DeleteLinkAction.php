@@ -32,30 +32,32 @@
  * -------------------------------------------------------------------------
  */
 
-namespace GlpiPlugin\Moreoptions\LinkStrategy;
+namespace GlpiPlugin\Moreoptions\EscalationTree\Action;
+
+use GlpiPlugin\Moreoptions\EscalationTree\TreeEditor;
 
 /**
- * Link replicated in the sub-entities of its entity
+ * Deletes a link: the one given (`link`, from the context menu or the panel of a group), or the
+ * selected one. From the panel of the selected group, it stays selected.
  */
-final class InheritedLink extends AbstractLinkStrategy
+final class DeleteLinkAction extends AbstractTreeAction
 {
-    public function appliesToSubEntities(): bool
+    public static function getName(): string
     {
-        return true;
+        return 'delete_link';
     }
 
-    public function getLabel(): string
+    public function apply(TreeEditor $editor, array $params): void
     {
-        return __('Inherited', 'moreoptions');
-    }
+        $given = (string) ($params['link'] ?? '');
+        $link  = $given !== '' ? $given : $editor->getSelectedLink();
+        if ($link === null) {
+            return;
+        }
 
-    public function getDescription(): string
-    {
-        return __('Also replicated in the child entities', 'moreoptions');
-    }
-
-    public function getColor(): string
-    {
-        return 'var(--mo-gl-inherited)';
+        $editor->getTree()->unlink($link);
+        if ($editor->getSelectedNode() === null || $given === '') {
+            $editor->select();
+        }
     }
 }

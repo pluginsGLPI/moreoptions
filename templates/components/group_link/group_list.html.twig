@@ -1,0 +1,124 @@
+{#
+ # -------------------------------------------------------------------------
+ # MoreOptions plugin for GLPI
+ # -------------------------------------------------------------------------
+ #
+ # MIT License
+ #
+ # Permission is hereby granted, free of charge, to any person obtaining a copy
+ # of this software and associated documentation files (the "Software"), to deal
+ # in the Software without restriction, including without limitation the rights
+ # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ # copies of the Software, and to permit persons to whom the Software is
+ # furnished to do so, subject to the following conditions:
+ #
+ # The above copyright notice and this permission notice shall be included in all
+ # copies or substantial portions of the Software.
+ #
+ # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ # SOFTWARE.
+ # -------------------------------------------------------------------------
+ # @copyright Copyright (C) 2025 by the MoreOptions plugin team.
+ # @license   MIT https://opensource.org/licenses/mit-license.php
+ # @link      https://github.com/pluginsGLPI/moreoptions
+ # @link      https://gitlab.teclib.com/glpi-network/moreoptions/
+ # -------------------------------------------------------------------------
+ #}
+
+{#
+ # Groups of the side panel, with their search field: the groups of the graph, which can be
+ # selected from here with the keyboard, then the groups that can still be placed. The search is
+ # applied server side on each render, and in the page while typing (see public/js/escalation_graph.js).
+ # A group is placed by clicking it, or by dragging it onto the graph: each one is shown as a small
+ # card, as the groups of the graph, with a grip.
+ #
+ # @param placed  See TreeView::getTemplateVariables()
+ # @param pool    See TreeView::getTemplateVariables()
+ # @param query   Current search
+ # @param canedit Whether groups can be placed
+ #}
+{% import '@moreoptions/components/group_link/macros.html.twig' as macros %}
+
+{#
+ # Title of a section of the list, with its number of groups: folds and unfolds the section. The
+ # folded sections stay folded when the editor is rendered again (see public/js/escalation_graph.js).
+ #}
+{% macro section(key, title, groups) %}
+    <button type="button" class="btn btn-ghost-secondary subheader justify-content-between w-100 px-1 mt-1"
+            data-bs-toggle="collapse" data-bs-target="#mo-gl-section-{{ key }}" aria-expanded="true" aria-controls="mo-gl-section-{{ key }}">
+        <span class="d-flex align-items-center gap-1">
+            <i class="ti ti-chevron-down mo-gl-section-chevron"></i>
+            {{ title }}
+        </span>
+        <span class="badge bg-secondary-lt">{{ groups|length }}</span>
+    </button>
+{% endmacro %}
+
+{# What a section of the list says when none of its groups is shown (see the search in public/js/escalation_graph.js) #}
+{% macro empty_hint(groups, empty) %}
+    <div class="text-secondary small text-center py-2" data-mo-list-empty {{ groups|filter(group => group.matches) is not empty ? 'hidden' }}>
+        {{ groups is not empty ? __('No group matches the search.', 'moreoptions') : empty }}
+    </div>
+{% endmacro %}
+
+<div class="card-header">
+    <h3 class="card-title">
+        <i class="{{ 'Group'|itemtype_icon }} me-2"></i>
+        {{ 'Group'|itemtype_name(get_plural_number()) }}
+    </h3>
+</div>
+<div class="card-body flex-grow-0 py-2">
+    <div class="input-icon">
+        <span class="input-icon-addon"><i class="ti ti-search"></i></span>
+        <input type="search" class="form-control form-control-sm" name="query" value="{{ query }}"
+               placeholder="{{ __('Search a group', 'moreoptions') }}" aria-label="{{ __('Search a group', 'moreoptions') }}"
+               autocomplete="off" data-mo-search />
+    </div>
+</div>
+
+<div class="mo-gl-pool">
+    <div data-mo-list>
+        {{ _self.section('placed', __('In the graph', 'moreoptions'), placed) }}
+        <div class="collapse show" id="mo-gl-section-placed" data-mo-section="placed">
+            <div class="d-flex flex-column gap-1">
+                {% for group in placed %}
+                    <button type="button" class="btn btn-ghost-secondary text-body fw-normal justify-content-start gap-2 px-2 text-start"
+                            data-mo-action="select_node" data-mo-group="{{ group.id }}" data-mo-name="{{ group.name|lower }}"
+                            {{ not group.matches ? 'hidden' }}>
+                        {{ macros.level_badge(group.level) }}
+                        <span class="flex-grow-1 text-break">{{ group.name }}</span>
+                    </button>
+                {% endfor %}
+                {{ _self.empty_hint(placed, __('No group in the graph yet.', 'moreoptions')) }}
+            </div>
+        </div>
+    </div>
+
+    {% if canedit %}
+        <div data-mo-list>
+            {{ _self.section('pool', __('To place', 'moreoptions'), pool) }}
+            <div class="collapse show" id="mo-gl-section-pool" data-mo-section="pool">
+                <div class="d-flex flex-column gap-2">
+                    {% for group in pool %}
+                        <button type="button" class="card card-sm mo-gl-pool-item"
+                                data-mo-action="add_node" data-mo-group="{{ group.id }}"
+                                data-mo-name="{{ group.name|lower }}" draggable="true"
+                                title="{{ __('Drag onto the graph, or click, to place this group', 'moreoptions') }}"
+                                {{ not group.matches ? 'hidden' }}>
+                            <i class="ti ti-grip-vertical mo-gl-pool-item-grip"></i>
+                            <span class="avatar avatar-sm bg-blue-lt"><i class="{{ 'Group'|itemtype_icon }}"></i></span>
+                            <span class="flex-grow-1 text-break fw-medium">{{ group.name }}</span>
+                            <i class="ti ti-plus text-secondary"></i>
+                        </button>
+                    {% endfor %}
+                    {{ _self.empty_hint(pool, __('All the groups are placed.', 'moreoptions')) }}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>

@@ -32,30 +32,46 @@
  * -------------------------------------------------------------------------
  */
 
-namespace GlpiPlugin\Moreoptions\LinkStrategy;
+namespace GlpiPlugin\Moreoptions\Tests\Units;
 
-/**
- * Link replicated in the sub-entities of its entity
- */
-final class InheritedLink extends AbstractLinkStrategy
+use GlpiPlugin\Moreoptions\EscalationTree\EscalationGraph;
+use PHPUnit\Framework\TestCase;
+
+final class EscalationGraphTest extends TestCase
 {
-    public function appliesToSubEntities(): bool
+    public function testLevelsFollowTheLongestPath(): void
     {
-        return true;
+        // 1 -> 2 -> 3, and 1 -> 3 skipping a level; 4 alone
+        $graph = new EscalationGraph([4, 3, 2, 1], [[1, 2], [2, 3], [1, 3]]);
+
+        $this->assertSame([4 => 1, 3 => 3, 2 => 2, 1 => 1], $graph->getLevels());
+        $this->assertSame([2, 3], $graph->getChildren(1));
+        $this->assertSame([2, 1], $graph->getParents(3));
+        $this->assertEqualsCanonicalizing([1, 2], array_keys($graph->getAncestors(3)));
+        $this->assertEqualsCanonicalizing([2, 3], array_keys($graph->getDescendants(1)));
+        $this->assertNull($graph->findCycle());
     }
 
-    public function getLabel(): string
+    public function testCycle(): void
     {
-        return __('Inherited', 'moreoptions');
+        // 1 -> 2 -> 3 -> 2, then 3 -> 4 after the loop
+        $graph = new EscalationGraph([], [[1, 2], [2, 3], [3, 2], [3, 4]]);
+
+        $this->assertSame([1 => 1, 2 => 1, 3 => 1, 4 => 1], $graph->getLevels());
+        // In the order of the escalation, from any group of the loop
+        $cycle = $graph->findCycle();
+        $this->assertContains($cycle, [[2, 3], [3, 2]]);
+        $this->assertArrayHasKey(2, $graph->getAncestors(2));
     }
 
-    public function getDescription(): string
+    public function testAnEdgeIsAddedOnce(): void
     {
-        return __('Also replicated in the child entities', 'moreoptions');
-    }
+        $graph = new EscalationGraph();
+        $graph->addEdge(1, 2);
+        $graph->addEdge(1, 2);
 
-    public function getColor(): string
-    {
-        return 'var(--mo-gl-inherited)';
+        $this->assertSame([2], $graph->getChildren(1));
+        $this->assertSame([1], $graph->getParents(2));
+        $this->assertSame([], $graph->getChildren(3));
     }
 }

@@ -32,30 +32,29 @@
  * -------------------------------------------------------------------------
  */
 
-namespace GlpiPlugin\Moreoptions\LinkStrategy;
+namespace GlpiPlugin\Moreoptions\EscalationTree\Action;
+
+use GlpiPlugin\Moreoptions\EscalationTree\TreeEditor;
+use GlpiPlugin\Moreoptions\LinkStrategy\LinkStrategyEnum;
 
 /**
- * Link replicated in the sub-entities of its entity
+ * Changes the strategy (`value`) of a link: the one given (`link`, from the context menu of the
+ * graph), or the selected one.
  */
-final class InheritedLink extends AbstractLinkStrategy
+final class SetLinkTypeAction extends AbstractTreeAction
 {
-    public function appliesToSubEntities(): bool
+    public static function getName(): string
     {
-        return true;
+        return 'set_link_type';
     }
 
-    public function getLabel(): string
+    public function apply(TreeEditor $editor, array $params): void
     {
-        return __('Inherited', 'moreoptions');
-    }
-
-    public function getDescription(): string
-    {
-        return __('Also replicated in the child entities', 'moreoptions');
-    }
-
-    public function getColor(): string
-    {
-        return 'var(--mo-gl-inherited)';
+        $given    = (string) ($params['link'] ?? '');
+        $link     = $given !== '' ? $given : $editor->getSelectedLink();
+        $strategy = LinkStrategyEnum::tryFromDrawn((string) ($params['value'] ?? ''));
+        if ($link !== null && $strategy instanceof LinkStrategyEnum) {
+            $editor->getTree()->setStrategy($link, $strategy);
+        }
     }
 }

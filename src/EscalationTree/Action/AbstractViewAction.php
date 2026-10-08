@@ -32,30 +32,16 @@
  * -------------------------------------------------------------------------
  */
 
-namespace GlpiPlugin\Moreoptions\LinkStrategy;
+namespace GlpiPlugin\Moreoptions\EscalationTree\Action;
 
 /**
- * Link replicated in the sub-entities of its entity
+ * An action only changing the view of the graph (the selection, the orientation...), allowed
+ * without the right to edit the links.
  */
-final class InheritedLink extends AbstractLinkStrategy
+abstract class AbstractViewAction extends AbstractTreeAction
 {
-    public function appliesToSubEntities(): bool
+    public function requiresEdit(): bool
     {
-        return true;
-    }
-
-    public function getLabel(): string
-    {
-        return __('Inherited', 'moreoptions');
-    }
-
-    public function getDescription(): string
-    {
-        return __('Also replicated in the child entities', 'moreoptions');
-    }
-
-    public function getColor(): string
-    {
-        return 'var(--mo-gl-inherited)';
+        return false;
     }
 }

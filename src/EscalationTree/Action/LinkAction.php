@@ -32,30 +32,44 @@
  * -------------------------------------------------------------------------
  */
 
-namespace GlpiPlugin\Moreoptions\LinkStrategy;
+namespace GlpiPlugin\Moreoptions\EscalationTree\Action;
+
+use GlpiPlugin\Moreoptions\EscalationTree\EscalationLink;
+use GlpiPlugin\Moreoptions\EscalationTree\TreeEditor;
 
 /**
- * Link replicated in the sub-entities of its entity
+ * Links two groups (`from` and `to`), dragged one onto the other, with the strategy chosen above
+ * the graph, and selects their link. Groups already linked keep their link, and a replicated link
+ * restored stays as it is. A group dropped on itself only clears the selection.
  */
-final class InheritedLink extends AbstractLinkStrategy
+final class LinkAction extends AbstractTreeAction
 {
-    public function appliesToSubEntities(): bool
+    public static function getName(): string
     {
-        return true;
+        return 'link';
     }
 
-    public function getLabel(): string
+    public function apply(TreeEditor $editor, array $params): void
     {
-        return __('Inherited', 'moreoptions');
-    }
+        $from = (int) ($params['from'] ?? 0);
+        $to   = (int) ($params['to'] ?? 0);
+        if ($from === $to) {
+            $editor->select();
+            return;
+        }
 
-    public function getDescription(): string
-    {
-        return __('Also replicated in the child entities', 'moreoptions');
-    }
+        $tree    = $editor->getTree();
+        $existed = $tree->getLink(EscalationLink::key($from, $to)) instanceof EscalationLink;
+        $link    = $tree->link($from, $to);
+        if (!$link instanceof EscalationLink) {
+            $editor->refuseLink($from, $to);
+            return;
+        }
 
-    public function getColor(): string
-    {
-        return 'var(--mo-gl-inherited)';
+        if (!$existed && !$link->isReplicated()) {
+            $tree->setStrategy($link->getKey(), $editor->getDrawingStrategy());
+        }
+
+        $editor->select(link: $link->getKey());
     }
 }

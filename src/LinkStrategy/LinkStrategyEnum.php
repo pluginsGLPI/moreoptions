@@ -53,6 +53,24 @@ enum LinkStrategyEnum: string
     }
 
     /**
+     * Get the strategy of a stored value, the default one for an unknown value
+     */
+    public static function fromValue(mixed $value): self
+    {
+        return (is_string($value) ? self::tryFrom($value) : null) ?? self::getDefault();
+    }
+
+    /**
+     * Get the strategy of a value sent by the escalation graph: null unless a drawn one
+     */
+    public static function tryFromDrawn(string $value): ?self
+    {
+        $strategy = self::tryFrom($value);
+
+        return $strategy?->getStrategy()->isDrawn() ? $strategy : null;
+    }
+
+    /**
      * Get the default strategy
      */
     public static function getDefault(): self
@@ -61,18 +79,19 @@ enum LinkStrategyEnum: string
     }
 
     /**
-     * Get all available link strategies
+     * Get the strategies of the links drawn in the escalation graph
      *
-     * @return array<string, AbstractLinkStrategy>
+     * @return list<self>
      */
-    public static function getAvailableStrategies(): array
+    public static function getDrawnCases(): array
     {
-        $strategies = [];
-
-        foreach (LinkStrategyEnum::cases() as $case) {
-            $strategies[$case->value] = $case->getStrategy();
+        $cases = [];
+        foreach (self::cases() as $case) {
+            if ($case->getStrategy()->isDrawn()) {
+                $cases[] = $case;
+            }
         }
 
-        return $strategies;
+        return $cases;
     }
 }

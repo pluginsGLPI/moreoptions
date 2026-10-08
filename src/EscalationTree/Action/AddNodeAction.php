@@ -32,30 +32,28 @@
  * -------------------------------------------------------------------------
  */
 
-namespace GlpiPlugin\Moreoptions\LinkStrategy;
+namespace GlpiPlugin\Moreoptions\EscalationTree\Action;
+
+use GlpiPlugin\Moreoptions\EscalationTree\TreeEditor;
 
 /**
- * Link replicated in the sub-entities of its entity
+ * Places a group (`group`) in the graph. It is not selected: the list of the groups to place
+ * stays shown, for other groups to be placed. The graph is centered on it if out of view.
  */
-final class InheritedLink extends AbstractLinkStrategy
+final class AddNodeAction extends AbstractTreeAction
 {
-    public function appliesToSubEntities(): bool
+    public static function getName(): string
     {
-        return true;
+        return 'add_node';
     }
 
-    public function getLabel(): string
+    public function apply(TreeEditor $editor, array $params): void
     {
-        return __('Inherited', 'moreoptions');
-    }
-
-    public function getDescription(): string
-    {
-        return __('Also replicated in the child entities', 'moreoptions');
-    }
-
-    public function getColor(): string
-    {
-        return 'var(--mo-gl-inherited)';
+        $group = (int) ($params['group'] ?? 0);
+        if (isset($editor->getTree()->getUnplacedGroups()[$group])) {
+            $editor->getTree()->addNode($group);
+            $editor->select();
+            $editor->scrollTo($group);
+        }
     }
 }
