@@ -223,7 +223,26 @@ class Group_Link extends CommonDBRelation
      */
     public static function getNextLevelGroups(int $groups_id, int $entities_id): array
     {
-        $destinations = EscalationGraph::fromLinks([], self::getLinksForEntity($entities_id))->getChildren($groups_id);
+        return self::getNextLevelGroupsOf([$groups_id], $entities_id);
+    }
+
+    /**
+     * Groups of the next level of the escalation, from any of the given groups in the given entity
+     * (see getNextLevelGroups()).
+     *
+     * @param list<int> $groups_ids
+     * @return list<int> Ids of the groups, in ascending order
+     */
+    public static function getNextLevelGroupsOf(array $groups_ids, int $entities_id): array
+    {
+        $graph = EscalationGraph::fromLinks([], self::getLinksForEntity($entities_id));
+
+        $destinations = [];
+        foreach ($groups_ids as $groups_id) {
+            array_push($destinations, ...$graph->getChildren($groups_id));
+        }
+
+        $destinations = array_values(array_unique($destinations));
         sort($destinations);
 
         return $destinations;

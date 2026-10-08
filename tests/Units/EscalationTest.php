@@ -42,9 +42,13 @@ use ITILFollowup;
 use Log;
 use GlpiPlugin\Moreoptions\Config;
 use GlpiPlugin\Moreoptions\Escalation;
+use GlpiPlugin\Moreoptions\EscalationTree\EscalationLink;
+use GlpiPlugin\Moreoptions\Group_Link;
+use GlpiPlugin\Moreoptions\LinkStrategy\LinkStrategyEnum;
 use GlpiPlugin\Moreoptions\Tests\MoreOptionsTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Problem;
+use Profile;
 use Session;
 use Symfony\Component\DomCrawler\Crawler;
 use Ticket;
@@ -583,6 +587,167 @@ class EscalationTest extends MoreOptionsTestCase
             'groups_id' => $child_group->getID(),
         ]));
         $this->hasSessionMessages(ERROR, ['This group is not visible from the entity of the item.']);
+    }
+
+    /**
+     * With the group filter active, the item can only be escalated to the groups of the next level
+     * of the escalation tree, from the groups assigned to it.
+     *
+     * @param class-string<CommonITILObject> $itemtype
+     */
+    #[DataProvider('itemtypeProvider')]
+    public function testGroupFilter(string $itemtype): void
+    {
+        $this->login();
+        $entities_id = $this->getTestRootEntity(true);
+        $this->assertIsInt($entities_id);
+        $this->enableEscalation($entities_id, ['escalate_group_filter_is_active' => 1]);
+
+        // A -> B, A -> C, B -> D
+        $a = $this->createGroup($entities_id, 'Level 1');
+        $b = $this->createGroup($entities_id, 'Level 2 - B');
+        $c = $this->createGroup($entities_id, 'Level 2 - C');
+        $d = $this->createGroup($entities_id, 'Level 3');
+        $this->createItems(Group_Link::class, [
+            ['entities_id' => $entities_id] + (new EscalationLink($a->getID(), $b->getID(), LinkStrategyEnum::BASIC))->toRow(),
+            ['entities_id' => $entities_id] + (new EscalationLink($a->getID(), $c->getID(), LinkStrategyEnum::BASIC))->toRow(),
+            ['entities_id' => $entities_id] + (new EscalationLink($b->getID(), $d->getID(), LinkStrategyEnum::BASIC))->toRow(),
+        ]);
+
+        $item = $this->createItem($itemtype, [
+            'name'        => 'Test escalation',
+            'content'     => 'Test content',
+            'entities_id' => $entities_id,
+        ]);
+        $this->assertInstanceOf(CommonITILObject::class, $item);
+
+        // No group assigned: no level to start from, any group is allowed
+        $this->assertNull(Escalation::getGroupFilter($item));
+
+        $this->createItem($item->grouplinkclass, [
+            $item->getForeignKeyField() => $item->getID(),
+            'groups_id'                 => $a->getID(),
+            'type'                      => CommonITILActor::ASSIGN,
+        ]);
+
+        $this->assertSame([$b->getID(), $c->getID()], Escalation::getGroupFilter($item));
+        $this->assertNull(Escalation::getEscalationBlocker($item, $b->getID()));
+        $this->assertSame(
+            'This group is not in the next level of the escalation tree.',
+            Escalation::getEscalationBlocker($item, $d->getID()),
+        );
+
+        // The escalation to a group out of the next level is refused
+        $this->assertFalse((new Escalation())->add([
+            'itemtype'  => $item::class,
+            'items_id'  => $item->getID(),
+            'groups_id' => $d->getID(),
+        ]));
+        $this->hasSessionMessages(ERROR, ['This group is not in the next level of the escalation tree.']);
+        $this->assertSame([$a->getID()], $this->getAssignedGroupIds($item));
+
+        // Escalate to B: the next level is now D
+        $this->createItem(Escalation::class, [
+            'itemtype'  => $item::class,
+            'items_id'  => $item->getID(),
+            'groups_id' => $b->getID(),
+        ]);
+        $this->assertSame([$d->getID()], Escalation::getGroupFilter($item));
+
+        $this->assertTrue(Escalation::isGroupFilterApplied($item));
+
+        // A profile allowed to bypass the filter can escalate to any group
+        $config = Config::getConfig($entities_id, false);
+        $this->updateItem(Config::class, $config->getID(), [
+            'escalate_group_filter_bypass_profiles' => [(string) $_SESSION['glpiactiveprofile']['id']],
+        ], ['escalate_group_filter_bypass_profiles']);
+        $this->assertFalse(Escalation::isGroupFilterApplied($item));
+        $this->assertNull(Escalation::getGroupFilter($item));
+        $this->assertNull(Escalation::getEscalationBlocker($item, $c->getID()));
+
+        // Another profile does not bypass it
+        $this->updateItem(Config::class, $config->getID(), [
+            'escalate_group_filter_bypass_profiles' => [(string) getItemByTypeName(Profile::class, 'Technician', true)],
+        ], ['escalate_group_filter_bypass_profiles']);
+        $this->assertSame([$d->getID()], Escalation::getGroupFilter($item));
+
+        // The filter not active: any group is allowed
+        $this->updateItem(Config::class, $config->getID(), ['escalate_group_filter_is_active' => 0]);
+        $this->assertFalse(Escalation::isGroupFilterApplied($item));
+        $this->assertNull(Escalation::getGroupFilter($item));
+    }
+
+    /**
+     * With several groups assigned, the groups allowed by the filter are the union of their next
+     * levels, without duplicates.
+     */
+    public function testGroupFilterWithSeveralAssignedGroups(): void
+    {
+        $this->login();
+        $entities_id = $this->getTestRootEntity(true);
+        $this->assertIsInt($entities_id);
+        $this->enableEscalation($entities_id, ['escalate_group_filter_is_active' => 1]);
+
+        // A -> C, A -> D, B -> D, B -> E
+        $a = $this->createGroup($entities_id, 'Source A');
+        $b = $this->createGroup($entities_id, 'Source B');
+        $c = $this->createGroup($entities_id, 'Target C');
+        $d = $this->createGroup($entities_id, 'Target D');
+        $e = $this->createGroup($entities_id, 'Target E');
+        $this->createItems(Group_Link::class, [
+            ['entities_id' => $entities_id] + (new EscalationLink($a->getID(), $c->getID(), LinkStrategyEnum::BASIC))->toRow(),
+            ['entities_id' => $entities_id] + (new EscalationLink($a->getID(), $d->getID(), LinkStrategyEnum::BASIC))->toRow(),
+            ['entities_id' => $entities_id] + (new EscalationLink($b->getID(), $d->getID(), LinkStrategyEnum::BASIC))->toRow(),
+            ['entities_id' => $entities_id] + (new EscalationLink($b->getID(), $e->getID(), LinkStrategyEnum::BASIC))->toRow(),
+        ]);
+
+        $item = $this->createItem(Ticket::class, [
+            'name'              => 'Test escalation',
+            'content'           => 'Test content',
+            'entities_id'       => $entities_id,
+            '_groups_id_assign' => [$a->getID(), $b->getID()],
+        ]);
+
+        $this->assertSame([$c->getID(), $d->getID(), $e->getID()], Escalation::getGroupFilter($item));
+    }
+
+    /**
+     * With the group filter active, the escalation form only offers the groups of the next level,
+     * and cannot be submitted when there is none.
+     */
+    public function testEscalationFormWithoutNextLevel(): void
+    {
+        $this->login();
+        $entities_id = $this->getTestRootEntity(true);
+        $this->assertIsInt($entities_id);
+        $this->enableEscalation($entities_id, ['escalate_group_filter_is_active' => 1]);
+
+        $item = $this->createItem(Ticket::class, [
+            'name'              => 'Test escalation',
+            'content'           => 'Test content',
+            'entities_id'       => $entities_id,
+            '_groups_id_assign' => [$this->createGroup($entities_id, 'Last level')->getID()],
+        ]);
+        $this->assertInstanceOf(Ticket::class, $item);
+
+        ob_start();
+        Escalation::showEscalationForm($item);
+        $crawler = new Crawler(ob_get_clean());
+
+        $this->assertStringContainsString(
+            'No group in the next level of the escalation tree.',
+            $crawler->filter('.alert-warning')->text(),
+        );
+        $this->assertNotNull($crawler->filter('button[type="submit"][name="add"]')->attr('disabled'));
+
+        // Without the filter, the form can be submitted
+        $this->enableEscalation($entities_id, ['escalate_group_filter_is_active' => 0]);
+        ob_start();
+        Escalation::showEscalationForm($item);
+        $crawler = new Crawler(ob_get_clean());
+
+        $this->assertCount(0, $crawler->filter('.alert-warning'));
+        $this->assertNull($crawler->filter('button[type="submit"][name="add"]')->attr('disabled'));
     }
 
     /**
