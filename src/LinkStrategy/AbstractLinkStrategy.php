@@ -37,13 +37,20 @@ namespace GlpiPlugin\Moreoptions\LinkStrategy;
 abstract class AbstractLinkStrategy
 {
     /**
-     * Get the display options of the arrow representing the link between the two groups
-     *
-     * @return array<string, mixed>
+     * Get the CSS color of the arrow representing the link in the escalation graph, null for a
+     * link that is not drawn. A link replicated from a parent entity is drawn dashed.
      */
-    public function getArrowOptions(): array
+    public function getColor(): ?string
     {
-        return [];
+        return null;
+    }
+
+    /**
+     * Whether the link is drawn in the escalation graph, and can be chosen for a link there
+     */
+    public function isDrawn(): bool
+    {
+        return $this->getColor() !== null;
     }
 
     /**
@@ -68,7 +75,11 @@ abstract class AbstractLinkStrategy
     abstract public function getLabel(): string;
 
     /**
-     * Get the icon of the link strategy
+     * Get the description of the link strategy, shown in the escalation graph: where the link
+     * applies. Empty for a link that is not drawn.
      */
-    abstract public function getIcon(): string;
+    public function getDescription(): string
+    {
+        return '';
+    }
 }

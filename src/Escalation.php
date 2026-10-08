@@ -154,8 +154,50 @@ class Escalation extends CommonDBTM
     }
 
     /**
+     * Whether the group filter of the entity of the item applies to the current user: the option is
+     * active, and the active profile of the user is not allowed to bypass it.
+     */
+    public static function isGroupFilterApplied(CommonITILObject $item): bool
+    {
+        $config = Config::getConfig((int) $item->fields['entities_id']);
+        if ((int) ($config->fields['escalate_group_filter_is_active'] ?? 0) !== 1) {
+            return false;
+        }
+
+        $bypass_profiles = Config::decodeProfiles($config->fields['escalate_group_filter_bypass_profiles'] ?? null);
+
+        return !in_array((int) ($_SESSION['glpiactiveprofile']['id'] ?? 0), $bypass_profiles, true);
+    }
+
+    /**
+     * Groups the item can be escalated to when the group filter applies (see
+     * self::isGroupFilterApplied()): the groups of the next level of the escalation tree (see
+     * Group_Link::getNextLevelGroupsOf()) from the groups assigned to the item.
+     *
+     * Null, any group being allowed, when the filter does not apply, or when no group is assigned
+     * to the item: there is no level to start from.
+     *
+     * @return list<int>|null Ids of the groups
+     */
+    public static function getGroupFilter(CommonITILObject $item): ?array
+    {
+        if (!self::isGroupFilterApplied($item)) {
+            return null;
+
+        }
+
+        $assigned_groups = self::getAssignedGroupIds($item);
+        if ($assigned_groups === []) {
+            return null;
+        }
+
+        return Group_Link::getNextLevelGroupsOf($assigned_groups, (int) $item->fields['entities_id']);
+    }
+
+    /**
      * Why the item cannot be escalated to the given group, or null when it can: the group must
-     * exist, be assignable, be visible from the item entity and not be already assigned to the item.
+     * exist, be assignable, be visible from the item entity, not be already assigned to the item
+     * and be allowed by the group filter (see self::getGroupFilter()).
      */
     public static function getEscalationBlocker(CommonITILObject $item, int $groups_id): ?string
     {
@@ -184,11 +226,16 @@ class Escalation extends CommonDBTM
             return __('This group is already assigned.', 'moreoptions');
         }
 
+        $allowed_groups = self::getGroupFilter($item);
+        if ($allowed_groups !== null && !in_array($groups_id, $allowed_groups, true)) {
+            return __('This group is not in the next level of the escalation tree.', 'moreoptions');
+        }
+
         return null;
     }
 
     /**
-     * @return array<int>
+     * @return list<int>
      */
     private static function getAssignedGroupIds(CommonITILObject $item): array
     {
@@ -456,9 +503,18 @@ class Escalation extends CommonDBTM
 
         $config = Config::getConfig((int) $item->fields['entities_id']);
 
+        $group_condition = ['is_assign' => 1];
+        $allowed_groups  = self::getGroupFilter($item);
+        if ($allowed_groups !== null) {
+            // No group in the next level: the "0" id matches none
+            $group_condition['id'] = $allowed_groups !== [] ? $allowed_groups : [0];
+        }
+
         TemplateRenderer::getInstance()->display('@moreoptions/escalation_form.html.twig', [
             'item' => $item,
             'groups_used' => $groups_used ?? [],
+            'group_condition' => $group_condition,
+            'no_allowed_group' => $allowed_groups === [],
             // Default values of the form options
             'config' => [
                 'assign_to_observer' => (int) ($config->fields['escalade_assign_me_as_obsever_by_default'] ?? 0) === 1,

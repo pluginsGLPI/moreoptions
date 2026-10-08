@@ -49,8 +49,13 @@ final class InheritedLink extends AbstractLinkStrategy
         return __('Inherited', 'moreoptions');
     }
 
-    public function getIcon(): string
+    public function getDescription(): string
     {
-        return 'ti ti-sitemap';
+        return __('Also replicated in the child entities', 'moreoptions');
+    }
+
+    public function getColor(): string
+    {
+        return 'var(--mo-gl-inherited)';
     }
 }
