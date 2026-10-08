@@ -28,47 +28,58 @@
  * @copyright Copyright (C) 2025 by the MoreOptions plugin team.
  * @license   MIT https://opensource.org/licenses/mit-license.php
  * @link      https://github.com/pluginsGLPI/moreoptions
+ * @link      https://gitlab.teclib.com/glpi-network/moreoptions/
  * -------------------------------------------------------------------------
  */
 
-declare(strict_types=1);
+namespace GlpiPlugin\Moreoptions\LinkStrategy;
 
-use GlpiPlugin\Moreoptions\Config;
-use GlpiPlugin\Moreoptions\Escalation;
-use GlpiPlugin\Moreoptions\EscalationRule;
-use GlpiPlugin\Moreoptions\Group_Link;
-
-function plugin_moreoptions_install(): bool
+abstract class AbstractLinkStrategy
 {
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
+    /**
+     * Get the CSS color of the arrow representing the link in the escalation graph, null for a
+     * link that is not drawn. A link replicated from a parent entity is drawn dashed.
+     */
+    public function getColor(): ?string
+    {
+        return null;
+    }
 
-    Config::install($migration);
-    Escalation::install($migration);
-    Group_Link::install($migration);
-    $migration->executeMigration();
-    return true;
-}
+    /**
+     * Whether the link is drawn in the escalation graph, and can be chosen for a link there
+     */
+    public function isDrawn(): bool
+    {
+        return $this->getColor() !== null;
+    }
 
-function plugin_moreoptions_uninstall(): bool
-{
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
+    /**
+     * Whether the link is replicated in the sub-entities of its entity
+     */
+    public function appliesToSubEntities(): bool
+    {
+        return false;
+    }
 
-    Config::uninstall($migration);
-    Escalation::uninstall($migration);
-    EscalationRule::uninstall($migration);
-    Group_Link::uninstall($migration);
+    /**
+     * Whether the link stops, from its entity, the replication of an inherited link
+     */
+    public function blocksInheritance(): bool
+    {
+        return false;
+    }
 
-    return true;
-}
+    /**
+     * Get the label of the link strategy
+     */
+    abstract public function getLabel(): string;
 
-/**
- * Adds the "Escalate to group" action to the ticket / change / problem rules (see the `use_rules`
- * hook in setup.php).
- *
- * @param array<string, mixed> $params
- * @return array<string, array<string, mixed>>
- */
-function plugin_moreoptions_getRuleActions(array $params = []): array
-{
-    return EscalationRule::getRuleActions($params);
+    /**
+     * Get the description of the link strategy, shown in the escalation graph: where the link
+     * applies. Empty for a link that is not drawn.
+     */
+    public function getDescription(): string
+    {
+        return '';
+    }
 }

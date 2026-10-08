@@ -28,47 +28,48 @@
  * @copyright Copyright (C) 2025 by the MoreOptions plugin team.
  * @license   MIT https://opensource.org/licenses/mit-license.php
  * @link      https://github.com/pluginsGLPI/moreoptions
+ * @link      https://gitlab.teclib.com/glpi-network/moreoptions/
  * -------------------------------------------------------------------------
  */
 
-declare(strict_types=1);
+namespace GlpiPlugin\Moreoptions\EscalationTree\Action;
 
-use GlpiPlugin\Moreoptions\Config;
-use GlpiPlugin\Moreoptions\Escalation;
-use GlpiPlugin\Moreoptions\EscalationRule;
-use GlpiPlugin\Moreoptions\Group_Link;
-
-function plugin_moreoptions_install(): bool
-{
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
-
-    Config::install($migration);
-    Escalation::install($migration);
-    Group_Link::install($migration);
-    $migration->executeMigration();
-    return true;
-}
-
-function plugin_moreoptions_uninstall(): bool
-{
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
-
-    Config::uninstall($migration);
-    Escalation::uninstall($migration);
-    EscalationRule::uninstall($migration);
-    Group_Link::uninstall($migration);
-
-    return true;
-}
+use GlpiPlugin\Moreoptions\EscalationTree\EscalationLink;
+use GlpiPlugin\Moreoptions\EscalationTree\TreeEditor;
 
 /**
- * Adds the "Escalate to group" action to the ticket / change / problem rules (see the `use_rules`
- * hook in setup.php).
- *
- * @param array<string, mixed> $params
- * @return array<string, array<string, mixed>>
+ * Links two groups (`from` and `to`), dragged one onto the other, with the strategy chosen above
+ * the graph, and selects their link. Groups already linked keep their link, and a replicated link
+ * restored stays as it is. A group dropped on itself only clears the selection.
  */
-function plugin_moreoptions_getRuleActions(array $params = []): array
+final class LinkAction extends AbstractTreeAction
 {
-    return EscalationRule::getRuleActions($params);
+    public static function getName(): string
+    {
+        return 'link';
+    }
+
+    public function apply(TreeEditor $editor, array $params): void
+    {
+        $from = (int) ($params['from'] ?? 0);
+        $to   = (int) ($params['to'] ?? 0);
+        if ($from === $to) {
+            $editor->select();
+            return;
+        }
+
+        $tree    = $editor->getTree();
+        $existed = $tree->getLink(EscalationLink::key($from, $to)) instanceof EscalationLink;
+        $link    = $tree->link($from, $to);
+        if (!$link instanceof EscalationLink) {
+            $editor->refuseLink($from, $to);
+            return;
+        }
+
+        if (!$existed && !$link->isReplicated()) {
+            $tree->setStrategy($link->getKey(), $editor->getDrawingStrategy());
+        }
+
+        $editor->select(link: $link->getKey());
+    }
 }

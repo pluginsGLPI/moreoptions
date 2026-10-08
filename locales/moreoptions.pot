@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-14 09:44+0000\n"
+"POT-Creation-Date: 2026-10-02 10:20+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,6 +16,207 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: templates/escalation_button.html.twig templates/escalation_form.html.twig
+#: src/Config.php:334 src/Config.php:403
+msgid "Escalate"
+msgstr ""
+
+#: templates/components/segmented_control.html.twig
+msgid "Follow the parent entity"
+msgstr ""
+
+#: templates/components/group_link/legend.html.twig
+msgid "Link to draw"
+msgstr ""
+
+#: templates/components/group_link/legend.html.twig
+#, php-format
+msgid "%s, replicated from a parent entity"
+msgstr ""
+
+#: templates/components/group_link/group_list.html.twig
+msgid "Search a group"
+msgstr ""
+
+#: templates/components/group_link/group_list.html.twig
+msgid "Drag onto the graph, or click, to place this group"
+msgstr ""
+
+#: templates/components/group_link/group_list.html.twig
+msgid "No group matches the search."
+msgstr ""
+
+#: templates/components/group_link/group_list.html.twig
+msgid "All the groups are placed."
+msgstr ""
+
+#: templates/components/group_link/editor.html.twig
+msgid "History"
+msgstr ""
+
+#: templates/components/group_link/editor.html.twig
+msgid "Orientation"
+msgstr ""
+
+#: templates/components/group_link/editor.html.twig
+msgid "Horizontal"
+msgstr ""
+
+#: templates/components/group_link/editor.html.twig
+msgid "Vertical"
+msgstr ""
+
+#: templates/components/group_link/editor.html.twig
+msgid "Fit the graph to the view"
+msgstr ""
+
+#: templates/components/group_link/editor.html.twig
+msgid "Remove all the links"
+msgstr ""
+
+#: templates/components/group_link/editor.html.twig
+msgid ""
+"Remove the links of this entity, and restore the ones inherited from the "
+"parent entities"
+msgstr ""
+
+#: templates/components/group_link/editor.html.twig
+msgid "Remove all the links of the graph?"
+msgstr ""
+
+#: templates/components/group_link/editor.html.twig
+msgid ""
+"Remove all the links of this entity? The links inherited from the parent "
+"entities are restored."
+msgstr ""
+
+#: templates/components/group_link/editor.html.twig
+msgid "Drag from the circle of a group onto another group to link them."
+msgstr ""
+
+#: templates/components/group_link/editor.html.twig
+msgid "Drag a group of the list onto the graph to place it."
+msgstr ""
+
+#: templates/components/group_link/editor.html.twig
+msgid "Right-click a group or a link for more actions."
+msgstr ""
+
+#: templates/components/group_link/editor.html.twig
+msgid "Delete: removes the selection. Ctrl+Z / Ctrl+Y: undo / redo."
+msgstr ""
+
+#: templates/components/group_link/editor.html.twig
+msgid "Drag the background to move around, scroll to zoom."
+msgstr ""
+
+#: templates/components/group_link/editor.html.twig
+msgid "Dashed links are inherited from a parent entity."
+msgstr ""
+
+#: templates/components/group_link/editor.html.twig
+msgid "The links shown and saved are the ones of the active entity"
+msgstr ""
+
+#: templates/components/group_link/editor.html.twig
+#, php-format
+msgid "%d group"
+msgid_plural "%d groups"
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/components/group_link/editor.html.twig
+#, php-format
+msgid "%d link"
+msgid_plural "%d links"
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/components/group_link/group_panel.html.twig
+msgid "Level"
+msgstr ""
+
+#: templates/components/group_link/group_panel.html.twig
+#: templates/group_link.html.twig
+#, php-format
+msgid "L%d"
+msgstr ""
+
+#: templates/components/group_link/group_panel.html.twig
+msgid "Escalates to"
+msgstr ""
+
+#: templates/components/group_link/group_panel.html.twig
+msgid "This group does not escalate to any group."
+msgstr ""
+
+#: templates/components/group_link/group_panel.html.twig
+msgid "Add a group to escalate to"
+msgstr ""
+
+#: templates/components/group_link/group_panel.html.twig
+msgid "Receives escalations from"
+msgstr ""
+
+#: templates/components/group_link/group_panel.html.twig
+msgid "No group escalates to it: it is a first level."
+msgstr ""
+
+#: templates/components/group_link/group_panel.html.twig
+msgid "Add a group escalating to it"
+msgstr ""
+
+#: templates/components/group_link/group_panel.html.twig
+msgid "Remove the group from the graph, with its links"
+msgstr ""
+
+#: templates/components/group_link/group_panel.html.twig
+#: templates/components/group_link/link_panel.html.twig
+msgid "Delete key"
+msgstr ""
+
+#: templates/components/group_link/group_panel.html.twig
+#, php-format
+msgid "%1$s link replicated from the entity %2$s"
+msgstr ""
+
+#: templates/components/group_link/group_panel.html.twig
+#: templates/components/group_link/link_panel.html.twig
+#: templates/group_link.html.twig
+msgid "Delete the link"
+msgstr ""
+
+#: templates/components/group_link/group_panel.html.twig
+#: templates/components/group_link/link_panel.html.twig
+msgid "Link type"
+msgstr ""
+
+#: templates/components/group_link/link_panel.html.twig
+msgid "Link"
+msgstr ""
+
+#: templates/components/group_link/link_panel.html.twig
+msgid "Escalates to the child group"
+msgstr ""
+
+#: templates/components/group_link/link_panel.html.twig
+msgid "Receives the escalations of the parent group"
+msgstr ""
+
+#: templates/components/group_link/link_panel.html.twig
+msgid "Deleting it here removes it from this entity and its child entities."
+msgstr ""
+
+#: templates/components/group_link/link_panel.html.twig
+#, php-format
+msgid "Inherited from %s"
+msgstr ""
+
+#: templates/config.html.twig
+msgid "Inherit"
+msgstr ""
 
 #: templates/config.html.twig
 msgid ""
@@ -23,63 +224,190 @@ msgid ""
 "precedence over this one."
 msgstr ""
 
-#: templates/config.html.twig
-msgid "Take the group of associated item"
+#: templates/escalation_form.html.twig
+msgid "Comment"
 msgstr ""
 
-#: templates/config.html.twig
-msgid "Take the requester group"
+#: templates/escalation_form.html.twig
+msgid "Assign me as an observer"
 msgstr ""
 
-#: templates/config.html.twig
-msgid "Take the technician group"
+#: templates/group_link.html.twig
+msgid "Remove from the graph"
 msgstr ""
 
-#: templates/config.html.twig
-msgid "Prevent closure with tasks in To Do status"
+#: templates/group_link.html.twig
+#, php-format
+msgid "Link type: %s"
 msgstr ""
 
-#: templates/config.html.twig
-msgid "Assign technical manager when changing category"
+#: templates/group_link.html.twig
+msgid "The change could not be applied. Reload the page and try again."
 msgstr ""
 
-#: templates/config.html.twig
-msgid "Assign technical group when changing category"
+#: src/Group_Link.php:69 src/Escalation.php:70
+msgid "Escalation"
+msgid_plural "Escalations"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/LinkStrategy/NoneLink.php:49
+msgid "None"
 msgstr ""
 
-#: templates/config.html.twig
-msgid "Assign technician from task to parent item"
+#: src/LinkStrategy/NoneLink.php:54
+msgid "Removes, from its entity, a link replicated from a parent entity"
 msgstr ""
 
-#: templates/config.html.twig
-msgid "Mandatory fields to Solve and Close ITILs"
+#: src/LinkStrategy/BasicLink.php:44
+msgid "Basic"
 msgstr ""
 
-#: templates/config.html.twig
-msgid "Mandatory fields for Tasks creation"
+#: src/LinkStrategy/BasicLink.php:49
+msgid "Limited to the entity where it was created"
 msgstr ""
 
-#: src/Config.php:54 src/Config.php:59 src/Config.php:86
-msgid "More options"
+#: src/LinkStrategy/InheritedLink.php:49
+msgid "Inherited"
 msgstr ""
 
-#: src/Config.php:191
-msgid "Default"
+#: src/LinkStrategy/InheritedLink.php:54
+msgid "Also replicated in the child entities"
 msgstr ""
 
-#: src/Controller.php:75
+#: src/Escalation.php:172
+#, php-format
+msgid "Escalate from %1$s to %2$s"
+msgstr ""
+
+#: src/Escalation.php:173
+#, php-format
+msgid "Escalate to %s"
+msgstr ""
+
+#: src/Escalation.php:193
+msgid "Show / hide the comment"
+msgstr ""
+
+#: src/Escalation.php:243
+msgid "This group is already assigned."
+msgstr ""
+
+#: src/Controller.php:83
 msgid "Controller"
 msgstr ""
 
-#: src/Controller.php:340
+#: src/Controller.php:401
 msgid "The ticket you wish to close has tasks that need to be completed."
 msgstr ""
 
-#: src/Controller.php:436
+#: src/Controller.php:516
 #, php-format
 msgid "To close this %s, you must fill in the following fields:"
 msgstr ""
 
-#: src/Controller.php:473
+#: src/Controller.php:616 src/Controller.php:674
 msgid "To create this task, you must fill in the following fields:"
+msgstr ""
+
+#: src/EscalationTree/EscalationTree.php:231
+#, php-format
+msgid "Hidden group #%d"
+msgstr ""
+
+#: src/EscalationTree/TreeEditor.php:164
+msgid ""
+"The active entity changed: the graph was reloaded, the unsaved changes were "
+"discarded."
+msgstr ""
+
+#: src/EscalationTree/TreeEditor.php:180
+msgid ""
+"The links were saved by someone else meanwhile: the graph was reloaded, the "
+"unsaved changes were discarded."
+msgstr ""
+
+#: src/EscalationTree/TreeEditor.php:186
+msgid "Escalation links saved."
+msgstr ""
+
+#: src/EscalationTree/TreeEditor.php:233
+#, php-format
+msgid ""
+"The links were not saved: in the entity %1$s, they would make a loop between "
+"the groups %2$s."
+msgstr ""
+
+#: src/EscalationTree/TreeEditor.php:472
+#, php-format
+msgid ""
+"%1$s already escalates to %2$s, directly or not: linking them the other way "
+"would create a loop."
+msgstr ""
+
+#: src/EscalationTree/TreeEditor.php:478
+#, php-format
+msgid ""
+"%s cannot be linked in this entity: it is only shown for a link inherited "
+"from a parent entity."
+msgstr ""
+
+#: src/Config.php:58 src/Config.php:63 src/Config.php:89
+msgid "More options"
+msgstr ""
+
+#: src/Config.php:178
+msgid "Default"
+msgstr ""
+
+#: src/Config.php:358
+msgid "Actors and groups"
+msgstr ""
+
+#: src/Config.php:361
+msgid "Take the group of associated item"
+msgstr ""
+
+#: src/Config.php:362
+msgid "Take the requester group"
+msgstr ""
+
+#: src/Config.php:363
+msgid "Take the technician group"
+msgstr ""
+
+#: src/Config.php:364
+msgid "Assign technical manager when changing category"
+msgstr ""
+
+#: src/Config.php:365
+msgid "Assign technical group when changing category"
+msgstr ""
+
+#: src/Config.php:366
+msgid "Assign technician from task to parent item"
+msgstr ""
+
+#: src/Config.php:370
+msgid "Closure"
+msgstr ""
+
+#: src/Config.php:373
+msgid "Prevent closure with tasks in To Do status"
+msgstr ""
+
+#: src/Config.php:377
+msgid "Mandatory fields to Solve and Close ITILs"
+msgstr ""
+
+#: src/Config.php:390
+msgid "Mandatory fields for Tasks creation"
+msgstr ""
+
+#: src/Config.php:392
+msgid "These settings are shared by tickets, changes and problems."
+msgstr ""
+
+#: src/Config.php:406
+msgid "Activate escalation"
 msgstr ""

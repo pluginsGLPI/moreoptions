@@ -37,13 +37,22 @@
 namespace GlpiPlugin\Moreoptions;
 
 use DBmysql;
+use Change;
 use CommonDBTM;
 use CommonGLPI;
+use CommonITILObject;
 use Entity;
 use Glpi\Application\View\TemplateRenderer;
+use JsonException;
 use Migration;
 use Plugin;
+use Problem;
+use Profile;
 use Session;
+use Ticket;
+
+use function Safe\json_decode;
+use function Safe\json_encode;
 
 class Config extends CommonDBTM
 {
@@ -117,7 +126,48 @@ class Config extends CommonDBTM
             }
         }
 
+        foreach (self::getProfilesConfigFields() as $field) {
+            if (isset($item->input[$field])) {
+                $item->input[$field] = self::encodeProfiles($item->input[$field]);
+            }
+        }
+
         return $item;
+    }
+
+    /**
+     * Value stored for a `profiles` field, from the multiple select of the form: the ids of the
+     * profiles as a JSON list, or Config::CONFIG_PARENT when "Inherit" is among them.
+     */
+    private static function encodeProfiles(mixed $value): string
+    {
+        $ids = array_map(intval(...), array_filter((array) $value, is_numeric(...)));
+        if (in_array(self::CONFIG_PARENT, $ids, true)) {
+            return (string) self::CONFIG_PARENT;
+        }
+
+        return json_encode(array_values(array_unique(array_filter($ids, static fn(int $id): bool => $id > 0))));
+    }
+
+    /**
+     * Ids of the profiles of a `profiles` field, as stored by encodeProfiles(): none for an
+     * inherited value not resolved (see getConfig()) or an invalid one.
+     *
+     * @return list<int>
+     */
+    public static function decodeProfiles(mixed $value): array
+    {
+        if (!is_string($value) || $value === '' || (int) $value === self::CONFIG_PARENT) {
+            return [];
+        }
+
+        try {
+            $ids = json_decode($value, true);
+        } catch (JsonException) {
+            return [];
+        }
+
+        return is_array($ids) ? array_values(array_map(intval(...), array_filter($ids, is_numeric(...)))) : [];
     }
 
     /**
@@ -137,11 +187,63 @@ class Config extends CommonDBTM
     }
 
     /**
+     * Fields of kind `profiles`: lists of profiles, stored as JSON (see encodeProfiles()).
+     *
+     * @return array<string>
+     */
+    private static function getProfilesConfigFields(): array
+    {
+        return self::getConfigFieldsByKind('profiles');
+    }
+
+    /**
+     * Every field a child entity can inherit from its parent entity: the integer ones (see
+     * getAllConfigFields()) and the `profiles` ones.
+     *
+     * @return array<string>
+     */
+    private static function getInheritableConfigFields(): array
+    {
+        return array_merge(self::getAllConfigFields(), self::getProfilesConfigFields());
+    }
+
+    /**
+     * Integer fields: the `yes_no`, `actor` and `status` ones.
+     *
      * @return array<string>
      */
     private static function getAllConfigFields(): array
     {
-        return array_merge(self::getItilConfigFields(), self::getActorGroupConfigFields());
+        return array_merge(
+            self::getItilConfigFields(),
+            self::getActorGroupConfigFields(),
+            array_keys(self::getStatusConfigFields()),
+        );
+    }
+
+    /**
+     * Fields of kind `status`, with the ITIL itemtype whose statuses they hold.
+     *
+     * @return array<string, class-string<CommonITILObject>>
+     */
+    private static function getStatusConfigFields(): array
+    {
+        return [
+            'escalade_status_after_escalation_ticket'  => Ticket::class,
+            'escalade_status_after_escalation_change'  => Change::class,
+            'escalade_status_after_escalation_problem' => Problem::class,
+        ];
+    }
+
+    /**
+     * Choices of a `status` field: "No change" (0), then every status of the itemtype.
+     *
+     * @param class-string<CommonITILObject> $itemtype
+     * @return array<int, string>
+     */
+    public static function getSelectableStatus(string $itemtype): array
+    {
+        return [0 => __('No change', 'moreoptions')] + $itemtype::getAllStatusArray();
     }
 
     /**
@@ -290,6 +392,14 @@ class Config extends CommonDBTM
             'entities_id' => $item->getID(),
         ]);
 
+        $status_options = [];
+        foreach (self::getStatusConfigFields() as $field => $itemtype) {
+            $status_options[$field] = self::getSelectableStatus($itemtype);
+            if ($item->getID() > 0) {
+                $status_options[$field] = [self::CONFIG_PARENT => __('Inherit', 'moreoptions')] + $status_options[$field];
+            }
+        }
+
         $tabs = self::getScreenTabs();
         $sections_by_tab = [];
         foreach ($tabs as $tab) {
@@ -305,8 +415,12 @@ class Config extends CommonDBTM
                 'parent_entity_id'   => $item->getID() > 0 ? (int) $item->fields['entities_id'] : null,
                 'parent_badges'      => self::getParentValueBadges($item),
                 'dropdown_options'   => self::getSelectableActorGroup(),
+                'status_options'     => $status_options,
                 'config_parent'      => self::CONFIG_PARENT,
                 'escalade_takes_technician_group' => self::isTechnicianGroupHandledByEscalade(),
+                'profile_options'    => ($item->getID() > 0 ? [self::CONFIG_PARENT => __('Inherit', 'moreoptions')] : []) + self::getSelectableProfiles(),
+                'profiles_values'    => self::getProfilesValues($moconfig),
+                'escalation_tree'    => Group_Link::getEditorVariables($item),
                 'params'             => [
                     'canedit' => self::canUpdate(),
                 ],
@@ -320,6 +434,38 @@ class Config extends CommonDBTM
     }
 
     /**
+     * Choices of a `profiles` field: every profile, by name.
+     *
+     * @return array<int, string>
+     */
+    private static function getSelectableProfiles(): array
+    {
+        return array_map(
+            static fn(array $profile): string => (string) $profile['name'],
+            (new Profile())->find([], 'name'),
+        );
+    }
+
+    /**
+     * Values selected in the `profiles` fields of the given configuration: Config::CONFIG_PARENT
+     * alone when inherited.
+     *
+     * @return array<string, list<int>>
+     */
+    private static function getProfilesValues(self $moconfig): array
+    {
+        $values = [];
+        foreach (self::getProfilesConfigFields() as $field) {
+            $value = $moconfig->fields[$field] ?? null;
+            $values[$field] = $value !== null && (int) $value === self::CONFIG_PARENT
+                ? [self::CONFIG_PARENT]
+                : self::decodeProfiles($value);
+        }
+
+        return $values;
+    }
+
+    /**
      * The four tabs the config screen is split into.
      *
      * @return array<int, array{id: string, label: string, icon: string}>
@@ -327,10 +473,12 @@ class Config extends CommonDBTM
     public static function getScreenTabs(): array
     {
         return [
-            ['id' => 'ticket', 'label' => __('Ticket'), 'icon' => 'ti-ticket'],
-            ['id' => 'change', 'label' => __('Change'), 'icon' => 'ti-git-branch'],
-            ['id' => 'problem', 'label' => __('Problem'), 'icon' => 'ti-alert-circle'],
+            ['id' => 'ticket', 'label' => __('Ticket'), 'icon' => Ticket::getIcon()],
+            ['id' => 'change', 'label' => __('Change'), 'icon' => Change::getIcon()],
+            ['id' => 'problem', 'label' => __('Problem'), 'icon' => Problem::getIcon()],
             ['id' => 'task', 'label' => _n('Task', 'Tasks', 2), 'icon' => 'ti-checklist'],
+            ['id' => 'escalate', 'label' => __('Escalate', 'moreoptions'), 'icon' => Escalation::getIcon(),],
+            ['id' => 'escalate_filter', 'label' => __('Escalate filter', 'moreoptions'), 'icon' => 'ti-filter'],
         ];
     }
 
@@ -397,6 +545,37 @@ class Config extends CommonDBTM
                     ],
                 ],
             ],
+            'escalate' => [
+                [
+                    'title' => __('Escalate', 'moreoptions'),
+                    'icon'  => Escalation::getIcon(),
+                    'rows'  => [
+                        ['key' => 'escalate_is_active', 'kind' => 'yes_no', 'label' => __('Activate escalation', 'moreoptions')],
+                        ['key' => 'escalate_remove_technician', 'kind' => 'yes_no', 'label' => __('Remove technician after escalation', 'moreoptions')],
+                        ['key' => 'escalade_status_after_escalation_ticket', 'kind' => 'status', 'label' => __('Ticket status after escalation', 'moreoptions')],
+                        ['key' => 'escalade_status_after_escalation_change', 'kind' => 'status', 'label' => __('Change status after escalation', 'moreoptions')],
+                        ['key' => 'escalade_status_after_escalation_problem', 'kind' => 'status', 'label' => __('Problem status after escalation', 'moreoptions')],
+                    ],
+                ],
+                [
+                    'title' => __('Default options values', 'moreoptions'),
+                    'icon'  => 'ti-settings',
+                    'rows'  => [
+                        ['key' => 'escalade_assign_me_as_obsever_by_default', 'kind' => 'yes_no', 'label' => __('Assign me as observer after escalation', 'moreoptions')],
+                        ['key' => 'escalade_is_private_by_default', 'kind' => 'yes_no', 'label' => __('Escalate event is private', 'moreoptions')],
+                    ],
+                ],
+            ],
+            'escalate_filter' => [
+                [
+                    'title' => __('Group filter', 'moreoptions'),
+                    'icon'  => 'ti-filter',
+                    'rows'  => [
+                        ['key' => 'escalate_group_filter_is_active', 'kind' => 'yes_no', 'label' => __('Activate group filter', 'moreoptions')],
+                        ['key' => 'escalate_group_filter_bypass_profiles', 'kind' => 'profiles', 'label' => __('Profiles allowed to bypass the filter', 'moreoptions')],
+                    ],
+                ],
+            ],
         ];
     }
 
@@ -409,8 +588,13 @@ class Config extends CommonDBTM
      */
     private static function getSectionsForTab(string $tab_id): array
     {
-        $group  = $tab_id === 'task' ? 'task' : 'itil';
-        $suffix = $tab_id === 'task' ? '' : ('_' . $tab_id);
+        if (in_array($tab_id, ['task', 'escalate', 'escalate_filter'], true)) {
+            $group = $tab_id;
+            $suffix = '';
+        } else {
+            $group = 'itil';
+            $suffix = '_' . $tab_id;
+        }
 
         $sections = [];
         foreach (self::getScreenSections()[$group] as $section) {
@@ -462,6 +646,18 @@ class Config extends CommonDBTM
             $badges[$field] = Entity::inheritedValue(htmlescape($text), false, false);
         }
 
+        foreach (self::getStatusConfigFields() as $field => $itemtype) {
+            $text = self::getSelectableStatus($itemtype)[(int) ($parent_config->fields[$field] ?? 0)] ?? __('No change', 'moreoptions');
+            $badges[$field] = Entity::inheritedValue(htmlescape($text), false, false);
+        }
+
+        $profile_names = self::getSelectableProfiles();
+        foreach (self::getProfilesConfigFields() as $field) {
+            $names = array_intersect_key($profile_names, array_flip(self::decodeProfiles($parent_config->fields[$field] ?? null)));
+            $text  = $names !== [] ? implode(', ', $names) : __('None');
+            $badges[$field] = Entity::inheritedValue(htmlescape($text), false, false);
+        }
+
         return $badges;
     }
 
@@ -471,7 +667,7 @@ class Config extends CommonDBTM
         $entity_id = $item->getID();
         $data = ['entities_id' => $entity_id];
         if ($entity_id > 0) {
-            foreach (self::getAllConfigFields() as $field) {
+            foreach (self::getInheritableConfigFields() as $field) {
                 $data[$field] = self::CONFIG_PARENT;
             }
         }
@@ -500,7 +696,7 @@ class Config extends CommonDBTM
             $entity = new Entity();
             if ($entity->getFromDB($entityId)) {
                 $parentConfig = self::getConfig((int) $entity->fields['entities_id'], true);
-                foreach (self::getAllConfigFields() as $field) {
+                foreach (self::getInheritableConfigFields() as $field) {
                     if (($moconfig->fields[$field] ?? 0) == self::CONFIG_PARENT) {
                         $moconfig->fields[$field] = $parentConfig->fields[$field] ?? 0;
                     }
@@ -561,6 +757,15 @@ class Config extends CommonDBTM
                 `assign_technician_from_task_ticket` tinyint NOT NULL DEFAULT '0',
                 `assign_technician_from_task_change` tinyint NOT NULL DEFAULT '0',
                 `assign_technician_from_task_problem` tinyint NOT NULL DEFAULT '0',
+                `escalate_is_active` tinyint NOT NULL DEFAULT '0',
+                `escalate_remove_technician` tinyint NOT NULL DEFAULT '0',
+                `escalade_status_after_escalation_ticket` tinyint NOT NULL DEFAULT '0',
+                `escalade_status_after_escalation_change` tinyint NOT NULL DEFAULT '0',
+                `escalade_status_after_escalation_problem` tinyint NOT NULL DEFAULT '0',
+                `escalade_assign_me_as_obsever_by_default` tinyint NOT NULL DEFAULT '0',
+                `escalade_is_private_by_default` tinyint NOT NULL DEFAULT '0',
+                `escalate_group_filter_is_active` tinyint NOT NULL DEFAULT '0',
+                `escalate_group_filter_bypass_profiles` text,
                 PRIMARY KEY (`id`),
                 KEY `entities_id` (`entities_id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
@@ -579,6 +784,13 @@ class Config extends CommonDBTM
                 'assign_technician_from_task_ticket',
                 'assign_technician_from_task_change',
                 'assign_technician_from_task_problem',
+                'escalate_is_active',
+                'escalate_remove_technician',
+                'escalade_status_after_escalation_ticket',
+                'escalade_status_after_escalation_change',
+                'escalade_status_after_escalation_problem',
+                'escalade_assign_me_as_obsever_by_default',
+                'escalade_is_private_by_default',
             ] as $field
         ) {
             if (!$DB->fieldExists($table, $field)) {
@@ -586,7 +798,35 @@ class Config extends CommonDBTM
             }
         }
 
+        // Status fields added to an existing table: child entities inherit by default.
+        $new_inherited_fields = [];
+        foreach (array_keys(self::getStatusConfigFields()) as $field) {
+            if (!$DB->fieldExists($table, $field)) {
+                $migration->addField($table, $field, 'bool', ['value' => '0']);
+                $new_inherited_fields[] = $field;
+            }
+        }
+
+        // Same for the group filter fields.
+        if (!$DB->fieldExists($table, 'escalate_group_filter_is_active')) {
+            $migration->addField($table, 'escalate_group_filter_is_active', 'bool', ['value' => '0']);
+            $new_inherited_fields[] = 'escalate_group_filter_is_active';
+        }
+
+        if (!$DB->fieldExists($table, 'escalate_group_filter_bypass_profiles')) {
+            $migration->addField($table, 'escalate_group_filter_bypass_profiles', 'text');
+            $new_inherited_fields[] = 'escalate_group_filter_bypass_profiles';
+        }
+
         $migration->executeMigration();
+
+        if ($new_inherited_fields !== []) {
+            $DB->update(
+                $table,
+                array_fill_keys($new_inherited_fields, self::CONFIG_PARENT),
+                ['entities_id' => ['>', 0]],
+            );
+        }
 
         $entities = new Entity();
         foreach ($entities->find() as $entity) {
@@ -598,7 +838,7 @@ class Config extends CommonDBTM
 
                 $data = ['entities_id' => $entity_id];
                 if ($entity_id > 0) {
-                    foreach (self::getAllConfigFields() as $field) {
+                    foreach (self::getInheritableConfigFields() as $field) {
                         $data[$field] = self::CONFIG_PARENT;
                     }
                 }

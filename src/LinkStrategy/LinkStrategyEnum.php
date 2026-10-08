@@ -28,47 +28,70 @@
  * @copyright Copyright (C) 2025 by the MoreOptions plugin team.
  * @license   MIT https://opensource.org/licenses/mit-license.php
  * @link      https://github.com/pluginsGLPI/moreoptions
+ * @link      https://gitlab.teclib.com/glpi-network/moreoptions/
  * -------------------------------------------------------------------------
  */
 
-declare(strict_types=1);
+namespace GlpiPlugin\Moreoptions\LinkStrategy;
 
-use GlpiPlugin\Moreoptions\Config;
-use GlpiPlugin\Moreoptions\Escalation;
-use GlpiPlugin\Moreoptions\EscalationRule;
-use GlpiPlugin\Moreoptions\Group_Link;
-
-function plugin_moreoptions_install(): bool
+enum LinkStrategyEnum: string
 {
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
+    case NONE      = 'none';
+    case BASIC     = 'basic';
+    case INHERITED = 'inherited';
 
-    Config::install($migration);
-    Escalation::install($migration);
-    Group_Link::install($migration);
-    $migration->executeMigration();
-    return true;
-}
+    /**
+     * Create a new instance of the strategy
+     */
+    public function getStrategy(): AbstractLinkStrategy
+    {
+        return match ($this) {
+            self::NONE      => new NoneLink(),
+            self::BASIC     => new BasicLink(),
+            self::INHERITED => new InheritedLink(),
+        };
+    }
 
-function plugin_moreoptions_uninstall(): bool
-{
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
+    /**
+     * Get the strategy of a stored value, the default one for an unknown value
+     */
+    public static function fromValue(mixed $value): self
+    {
+        return (is_string($value) ? self::tryFrom($value) : null) ?? self::getDefault();
+    }
 
-    Config::uninstall($migration);
-    Escalation::uninstall($migration);
-    EscalationRule::uninstall($migration);
-    Group_Link::uninstall($migration);
+    /**
+     * Get the strategy of a value sent by the escalation graph: null unless a drawn one
+     */
+    public static function tryFromDrawn(string $value): ?self
+    {
+        $strategy = self::tryFrom($value);
 
-    return true;
-}
+        return $strategy?->getStrategy()->isDrawn() ? $strategy : null;
+    }
 
-/**
- * Adds the "Escalate to group" action to the ticket / change / problem rules (see the `use_rules`
- * hook in setup.php).
- *
- * @param array<string, mixed> $params
- * @return array<string, array<string, mixed>>
- */
-function plugin_moreoptions_getRuleActions(array $params = []): array
-{
-    return EscalationRule::getRuleActions($params);
+    /**
+     * Get the default strategy
+     */
+    public static function getDefault(): self
+    {
+        return self::NONE;
+    }
+
+    /**
+     * Get the strategies of the links drawn in the escalation graph
+     *
+     * @return list<self>
+     */
+    public static function getDrawnCases(): array
+    {
+        $cases = [];
+        foreach (self::cases() as $case) {
+            if ($case->getStrategy()->isDrawn()) {
+                $cases[] = $case;
+            }
+        }
+
+        return $cases;
+    }
 }

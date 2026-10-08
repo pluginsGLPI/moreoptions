@@ -1,0 +1,183 @@
+{#
+ # -------------------------------------------------------------------------
+ # MoreOptions plugin for GLPI
+ # -------------------------------------------------------------------------
+ #
+ # MIT License
+ #
+ # Permission is hereby granted, free of charge, to any person obtaining a copy
+ # of this software and associated documentation files (the "Software"), to deal
+ # in the Software without restriction, including without limitation the rights
+ # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ # copies of the Software, and to permit persons to whom the Software is
+ # furnished to do so, subject to the following conditions:
+ #
+ # The above copyright notice and this permission notice shall be included in all
+ # copies or substantial portions of the Software.
+ #
+ # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ # SOFTWARE.
+ # -------------------------------------------------------------------------
+ # @copyright Copyright (C) 2025 by the MoreOptions plugin team.
+ # @license   MIT https://opensource.org/licenses/mit-license.php
+ # @link      https://github.com/pluginsGLPI/moreoptions
+ # -------------------------------------------------------------------------
+ #}
+
+{#
+ # Rendered through the core `Hooks::TIMELINE_ACTIONS` hook (see Escalation::showEscalateButton()).
+ # The "Assigned to" field is rendered by GLPI core, so this only drops an invisible anchor +
+ # script that adds, next to its label:
+ #  - a small "Escalate" button, opening the escalation form in a modal (see ajax/escalation_form.php),
+ #  - a small "Escalation history" button, opening a popover listing the escalations of the item.
+ #    Each one has a button escalating again to its target group, through the same modal with the
+ #    group preselected once it is shown, disabled when it is not possible (see
+ #    Escalation::getEscalationBlocker(), also checked when the escalation is added).
+ #}
+<span id="{{ marker_id }}" style="display: none;" aria-hidden="true"></span>
+{% if history is not empty %}
+<template id="{{ marker_id }}-history">
+    <ul class="list-unstyled mb-0 moreoptions-escalation-history">
+        {% for entry in history %}
+            <li class="d-flex align-items-center gap-2 py-1{{ not loop.last ? ' border-bottom' }}">
+                <div class="flex-grow-1">
+                    <div class="text-secondary small">
+                        {{ entry.date|formatted_datetime }}
+                        {% if entry.author is not empty %}
+                            &middot; {{ entry.author }}
+                        {% endif %}
+                    </div>
+                    <div class="moreoptions-escalation-groups">
+                        {% for source in entry.sources %}
+                            <span class="moreoptions-escalation-group"><i class="ti ti-users"></i>{{ source }}</span>
+                        {% endfor %}
+                        <i class="ti ti-arrow-right" aria-hidden="true"></i>
+                        <span class="moreoptions-escalation-group"><i class="ti ti-users"></i>{{ entry.target }}</span>
+                    </div>
+                </div>
+                {% set reescalate_title = entry.blocker ?? __('Escalate again to this group', 'moreoptions') %}
+                {# A disabled button gets no mouse events: its wrapper carries the tooltip #}
+                <span title="{{ reescalate_title }}" data-bs-toggle="tooltip">
+                    <button type="button" class="btn btn-sm btn-ghost-secondary moreoptions-escalate-btn py-0 px-1 moreoptions-reescalate-btn"
+                            data-groups-id="{{ entry.groups_id }}" data-groups-name="{{ entry.target }}" aria-label="{{ reescalate_title }}"
+                            {{ entry.blocker is not null ? 'disabled' }}>
+                        <i class="ti ti-escalator-up"></i>
+                    </button>
+                </span>
+            </li>
+        {% endfor %}
+    </ul>
+</template>
+{% endif %}
+<script>
+(function() {
+    var marker = document.getElementById({{ marker_id|json_encode|raw }});
+    var container = marker ? marker.closest('#itil-object-container') : null;
+    if (!container) {
+        return;
+    }
+
+    var label_row = container.querySelector('[data-testid="form-field-assign"] > .d-flex');
+    if (!label_row || label_row.querySelector('.moreoptions-escalate-btn')) {
+        return;
+    }
+
+    // The target group is preselected on the client side, once the form is shown
+    var openEscalationForm = function(group) {
+        glpi_ajax_dialog({
+            url: {{ path('/plugins/moreoptions/ajax/escalation_form.php')|json_encode|raw }},
+            method: 'get',
+            params: {
+                itemtype: {{ itemtype|json_encode|raw }},
+                items_id: {{ items_id|json_encode|raw }},
+            },
+            title: {{ __('Escalate', 'moreoptions')|json_encode|raw }},
+            dialogclass: 'modal-lg',
+            show: function(event) {
+                if (!group) {
+                    return;
+                }
+                var select = event.target.querySelector('select[name="groups_id"]');
+                if (select) {
+                    $(select).append(new Option(group.name, group.id, true, true)).trigger('change');
+                }
+            },
+        });
+    };
+
+{% if can_escalate %}
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn btn-sm btn-ghost-secondary moreoptions-escalate-btn ms-2 py-0 px-1';
+    button.title = {{ __('Escalate', 'moreoptions')|json_encode|raw }};
+    button.innerHTML = '<i class="ti ti-escalator-up me-1"></i>'
+        + '<span>' + _.escape({{ __('Escalate', 'moreoptions')|json_encode|raw }}) + '</span>';
+    button.addEventListener('click', function() {
+        openEscalationForm(null);
+    });
+
+    label_row.appendChild(button);
+{% endif %}
+
+    var history_template = document.getElementById({{ (marker_id ~ '-history')|json_encode|raw }});
+    if (!history_template) {
+        return;
+    }
+
+    var history_label = {{ __('Escalation history', 'moreoptions')|json_encode|raw }};
+    var history_button = document.createElement('button');
+    history_button.type = 'button';
+    history_button.className = 'btn btn-sm btn-ghost-secondary moreoptions-escalate-btn moreoptions-escalation-history-btn ms-1 py-0 px-1';
+    history_button.title = history_label;
+    history_button.setAttribute('aria-label', history_label);
+    history_button.innerHTML = '<i class="ti ti-history"></i>';
+    label_row.appendChild(history_button);
+
+    // The content is a DOM element, not a string: it is not sanitized, so its buttons are kept
+    var history_content = history_template.content.firstElementChild.cloneNode(true);
+    var popover = new bootstrap.Popover(history_button, {
+        title: history_label,
+        content: history_content,
+        html: true,
+        placement: 'bottom',
+        trigger: 'manual',
+        customClass: 'moreoptions-escalation-history-popover',
+    });
+
+    history_button.addEventListener('click', function() {
+        popover.toggle();
+    });
+
+    history_button.addEventListener('shown.bs.popover', function() {
+        history_content.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(node) {
+            bootstrap.Tooltip.getOrCreateInstance(node);
+        });
+    });
+
+    // Close the popover when clicking outside of it
+    document.addEventListener('click', function(event) {
+        if (!history_button.contains(event.target) && !history_content.contains(event.target)) {
+            popover.hide();
+        }
+    });
+
+    history_content.querySelectorAll('.moreoptions-reescalate-btn:not([disabled])').forEach(function(reescalate_button) {
+        reescalate_button.addEventListener('click', function() {
+            var tooltip = bootstrap.Tooltip.getInstance(reescalate_button.parentElement);
+            if (tooltip) {
+                tooltip.hide();
+            }
+            popover.hide();
+            openEscalationForm({
+                id: reescalate_button.dataset.groupsId,
+                name: reescalate_button.dataset.groupsName,
+            });
+        });
+    });
+})();
+</script>

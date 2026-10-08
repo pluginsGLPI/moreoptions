@@ -28,47 +28,27 @@
  * @copyright Copyright (C) 2025 by the MoreOptions plugin team.
  * @license   MIT https://opensource.org/licenses/mit-license.php
  * @link      https://github.com/pluginsGLPI/moreoptions
+ * @link      https://gitlab.teclib.com/glpi-network/moreoptions/
  * -------------------------------------------------------------------------
  */
 
-declare(strict_types=1);
-
-use GlpiPlugin\Moreoptions\Config;
+use Glpi\Exception\Http\AccessDeniedHttpException;
 use GlpiPlugin\Moreoptions\Escalation;
-use GlpiPlugin\Moreoptions\EscalationRule;
-use GlpiPlugin\Moreoptions\Group_Link;
 
-function plugin_moreoptions_install(): bool
-{
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
+Session::checkLoginUser();
 
-    Config::install($migration);
-    Escalation::install($migration);
-    Group_Link::install($migration);
-    $migration->executeMigration();
-    return true;
+if (isset($_POST['add'])) {
+    $item = getItemForItemtype($_POST['itemtype'] ?? '');
+    if (
+        !$item instanceof CommonITILObject
+        || !$item->getFromDB((int) ($_POST['items_id'] ?? 0))
+        || !$item->canAssign()
+        || !Escalation::isEnabledFor($item)
+    ) {
+        throw new AccessDeniedHttpException();
+    }
+
+    (new Escalation())->add($_POST);
 }
 
-function plugin_moreoptions_uninstall(): bool
-{
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
-
-    Config::uninstall($migration);
-    Escalation::uninstall($migration);
-    EscalationRule::uninstall($migration);
-    Group_Link::uninstall($migration);
-
-    return true;
-}
-
-/**
- * Adds the "Escalate to group" action to the ticket / change / problem rules (see the `use_rules`
- * hook in setup.php).
- *
- * @param array<string, mixed> $params
- * @return array<string, array<string, mixed>>
- */
-function plugin_moreoptions_getRuleActions(array $params = []): array
-{
-    return EscalationRule::getRuleActions($params);
-}
+Html::back();

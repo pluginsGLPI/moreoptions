@@ -28,47 +28,33 @@
  * @copyright Copyright (C) 2025 by the MoreOptions plugin team.
  * @license   MIT https://opensource.org/licenses/mit-license.php
  * @link      https://github.com/pluginsGLPI/moreoptions
+ * @link      https://gitlab.teclib.com/glpi-network/moreoptions/
  * -------------------------------------------------------------------------
  */
 
-declare(strict_types=1);
+namespace GlpiPlugin\Moreoptions\EscalationTree\Action;
 
-use GlpiPlugin\Moreoptions\Config;
-use GlpiPlugin\Moreoptions\Escalation;
-use GlpiPlugin\Moreoptions\EscalationRule;
-use GlpiPlugin\Moreoptions\Group_Link;
-
-function plugin_moreoptions_install(): bool
-{
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
-
-    Config::install($migration);
-    Escalation::install($migration);
-    Group_Link::install($migration);
-    $migration->executeMigration();
-    return true;
-}
-
-function plugin_moreoptions_uninstall(): bool
-{
-    $migration = new Migration(PLUGIN_MOREOPTIONS_VERSION);
-
-    Config::uninstall($migration);
-    Escalation::uninstall($migration);
-    EscalationRule::uninstall($migration);
-    Group_Link::uninstall($migration);
-
-    return true;
-}
+use GlpiPlugin\Moreoptions\EscalationTree\TreeEditor;
+use GlpiPlugin\Moreoptions\LinkStrategy\LinkStrategyEnum;
 
 /**
- * Adds the "Escalate to group" action to the ticket / change / problem rules (see the `use_rules`
- * hook in setup.php).
- *
- * @param array<string, mixed> $params
- * @return array<string, array<string, mixed>>
+ * Changes the strategy (`value`) of a link: the one given (`link`, from the context menu of the
+ * graph), or the selected one.
  */
-function plugin_moreoptions_getRuleActions(array $params = []): array
+final class SetLinkTypeAction extends AbstractTreeAction
 {
-    return EscalationRule::getRuleActions($params);
+    public static function getName(): string
+    {
+        return 'set_link_type';
+    }
+
+    public function apply(TreeEditor $editor, array $params): void
+    {
+        $given    = (string) ($params['link'] ?? '');
+        $link     = $given !== '' ? $given : $editor->getSelectedLink();
+        $strategy = LinkStrategyEnum::tryFromDrawn((string) ($params['value'] ?? ''));
+        if ($link !== null && $strategy instanceof LinkStrategyEnum) {
+            $editor->getTree()->setStrategy($link, $strategy);
+        }
+    }
 }
