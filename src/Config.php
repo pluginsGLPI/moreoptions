@@ -85,6 +85,10 @@ class Config extends CommonDBTM
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0): string
     {
+        if (!self::canView()) {
+            return '';
+        }
+
         if ($item->getType() === Entity::class) {
             return self::createTabEntry(__('More options', 'moreoptions'), 0);
         }
@@ -94,6 +98,11 @@ class Config extends CommonDBTM
 
     public static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
     {
+        // The tab dispatcher only checks rights on the Entity, not on this config
+        if (!self::canView()) {
+            return false;
+        }
+
         if ($item->getType() === Entity::class) {
             if ($item instanceof Entity) {
                 self::showForEntity($item);
@@ -103,6 +112,25 @@ class Config extends CommonDBTM
         }
 
         return true;
+    }
+
+    /**
+     * Only the configuration fields can be updated: a config row must never be
+     * moved to another entity. Control keys (prefixed with `_`) are kept.
+     *
+     * @param array<string, mixed> $input
+     *
+     * @return array<string, mixed>
+     */
+    public function prepareInputForUpdate($input): array
+    {
+        $allowed = array_merge(['id'], self::getAllConfigFields());
+
+        return array_filter(
+            $input,
+            static fn($key): bool => in_array($key, $allowed, true) || str_starts_with((string) $key, '_'),
+            ARRAY_FILTER_USE_KEY,
+        );
     }
 
     public static function preItemUpdate(CommonDBTM $item): CommonDBTM
@@ -614,11 +642,6 @@ class Config extends CommonDBTM
 
     public static function uninstall(Migration $migration): void
     {
-        /** @var DBmysql $DB */
-        global $DB;
-        $table = self::getTable();
-        if ($DB->tableExists($table)) {
-            $DB->doQuery("DROP TABLE IF EXISTS `" . self::getTable() . "`");
-        }
+        $migration->dropTable(self::getTable());
     }
 }
