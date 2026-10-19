@@ -41,4 +41,5 @@ if (isset($_POST["update"])) {
     $config->check($_POST['id'], UPDATE);
     $config->update($_POST);
 }
+
 Html::back();

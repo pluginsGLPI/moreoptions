@@ -37,6 +37,16 @@ require_once __DIR__ . '/../../src/Plugin.php';
 
 use Rector\Config\RectorConfig;
 
+$baseline_file = __DIR__ . '/../../PluginsRector.php';
+if (!file_exists($baseline_file)) {
+    throw new RuntimeException(
+        sprintf(
+            'Unable to find "%s". Running rector on a plugin requires a GLPI development checkout that ships PluginsRector.php.',
+            $baseline_file,
+        ),
+    );
+}
+
 return RectorConfig::configure()
     ->withPaths([
         __DIR__ . '/front',

@@ -36,6 +36,7 @@
 
 namespace GlpiPlugin\Moreoptions;
 
+use DBmysql;
 use CommonDBTM;
 use CommonGLPI;
 use Entity;
@@ -46,9 +47,12 @@ use Session;
 
 class Config extends CommonDBTM
 {
-    public bool $dohistory = true;
-    public static string $rightname = 'config';
-    public const CONFIG_PARENT = \Entity::CONFIG_PARENT;
+    public $dohistory = true;
+
+    public static $rightname = 'config';
+
+    public const CONFIG_PARENT = Entity::CONFIG_PARENT;
+
     public static function getMenuName(): string
     {
         return __('More options', 'moreoptions');
@@ -81,23 +85,52 @@ class Config extends CommonDBTM
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0): string
     {
-        switch ($item->getType()) {
-            case Entity::class:
-                return self::createTabEntry(__('More options', 'moreoptions'), 0);
+        if (!self::canView()) {
+            return '';
         }
+
+        if ($item->getType() === Entity::class) {
+            return self::createTabEntry(__('More options', 'moreoptions'), 0);
+        }
+
         return '';
     }
 
     public static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
     {
-        switch ($item->getType()) {
-            case Entity::class:
-                if ($item instanceof Entity) {
-                    self::showForEntity($item);
-                }
-                return true;
+        // The tab dispatcher only checks rights on the Entity, not on this config
+        if (!self::canView()) {
+            return false;
         }
+
+        if ($item->getType() === Entity::class) {
+            if ($item instanceof Entity) {
+                self::showForEntity($item);
+            }
+
+            return true;
+        }
+
         return true;
+    }
+
+    /**
+     * Only the configuration fields can be updated: a config row must never be
+     * moved to another entity. Control keys (prefixed with `_`) are kept.
+     *
+     * @param array<string, mixed> $input
+     *
+     * @return array<string, mixed>
+     */
+    public function prepareInputForUpdate($input): array
+    {
+        $allowed = array_merge(['id'], self::getAllConfigFields());
+
+        return array_filter(
+            $input,
+            static fn($key): bool => in_array($key, $allowed, true) || str_starts_with((string) $key, '_'),
+            ARRAY_FILTER_USE_KEY,
+        );
     }
 
     public static function preItemUpdate(CommonDBTM $item): CommonDBTM
@@ -120,42 +153,7 @@ class Config extends CommonDBTM
      */
     public static function getItilConfigFields(): array
     {
-        return [
-            'take_item_group_ticket',
-            'take_item_group_change',
-            'take_item_group_problem',
-            'prevent_closure_ticket',
-            'prevent_closure_change',
-            'prevent_closure_problem',
-            'require_technician_to_close_ticket',
-            'require_technicians_group_to_close_ticket',
-            'require_category_to_close_ticket',
-            'require_location_to_close_ticket',
-            'require_solution_to_close_ticket',
-            'require_technician_to_close_change',
-            'require_technicians_group_to_close_change',
-            'require_category_to_close_change',
-            'require_location_to_close_change',
-            'require_solution_to_close_change',
-            'require_technician_to_close_problem',
-            'require_technicians_group_to_close_problem',
-            'require_category_to_close_problem',
-            'require_location_to_close_problem',
-            'require_solution_to_close_problem',
-            'assign_technical_manager_when_changing_category_ticket',
-            'assign_technical_group_when_changing_category_ticket',
-            'assign_technical_manager_when_changing_category_change',
-            'assign_technical_group_when_changing_category_change',
-            'assign_technical_manager_when_changing_category_problem',
-            'assign_technical_group_when_changing_category_problem',
-            'mandatory_task_category',
-            'mandatory_task_duration',
-            'mandatory_task_user',
-            'mandatory_task_group',
-            'assign_technician_from_task_ticket',
-            'assign_technician_from_task_change',
-            'assign_technician_from_task_problem',
-        ];
+        return self::getConfigFieldsByKind('yes_no');
     }
 
     /**
@@ -163,14 +161,7 @@ class Config extends CommonDBTM
      */
     private static function getActorGroupConfigFields(): array
     {
-        return [
-            'take_requester_group_ticket',
-            'take_requester_group_change',
-            'take_requester_group_problem',
-            'take_technician_group_ticket',
-            'take_technician_group_change',
-            'take_technician_group_problem',
-        ];
+        return self::getConfigFieldsByKind('actor');
     }
 
     /**
@@ -179,6 +170,30 @@ class Config extends CommonDBTM
     private static function getAllConfigFields(): array
     {
         return array_merge(self::getItilConfigFields(), self::getActorGroupConfigFields());
+    }
+
+    /**
+     * Every field name of the given kind, resolved across all four tabs --
+     * i.e. the same list `getItilConfigFields()`/`getActorGroupConfigFields()`
+     * used to hardcode, but read off `getScreenSections()` so a new setting
+     * only needs to be added there.
+     *
+     * @return array<string>
+     */
+    private static function getConfigFieldsByKind(string $kind): array
+    {
+        $fields = [];
+        foreach (self::getScreenTabs() as $tab) {
+            foreach (self::getSectionsForTab($tab['id']) as $section) {
+                foreach ($section['rows'] as $row) {
+                    if ($row['kind'] === $kind) {
+                        $fields[] = $row['field'];
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($fields));
     }
 
     /**
@@ -255,7 +270,7 @@ class Config extends CommonDBTM
      */
     private static function getEscaladeConfig(): ?array
     {
-        /** @var \DBmysql $DB */
+        /** @var DBmysql $DB */
         global $DB;
 
         if (isset($_SESSION['glpi_plugins']['escalade']['config']) && is_array($_SESSION['glpi_plugins']['escalade']['config'])) {
@@ -303,23 +318,21 @@ class Config extends CommonDBTM
             'entities_id' => $item->getID(),
         ]);
 
-        $inheritance_labels = [];
-        if ($item->getID() > 0) {
-            $parentConfig = self::getConfig($item->fields['entities_id'], true);
-            foreach (self::getItilConfigFields() as $field) {
-                $inheritance_labels[$field] = self::getInheritedValueBadge($parentConfig->fields[$field] ?? 0);
-            }
-            foreach (self::getActorGroupConfigFields() as $field) {
-                $inheritance_labels[$field] = self::getInheritedValueBadgeForActorGroup($parentConfig->fields[$field] ?? 0);
-            }
+        $tabs = self::getScreenTabs();
+        $sections_by_tab = [];
+        foreach ($tabs as $tab) {
+            $sections_by_tab[$tab['id']] = self::getSectionsForTab($tab['id']);
         }
 
         TemplateRenderer::getInstance()->display(
             '@moreoptions/config.html.twig',
             [
                 'item'               => $moconfig,
+                'tabs'               => $tabs,
+                'sections_by_tab'    => $sections_by_tab,
+                'parent_entity_id'   => $item->getID() > 0 ? (int) $item->fields['entities_id'] : null,
+                'parent_badges'      => self::getParentValueBadges($item),
                 'dropdown_options'   => self::getSelectableActorGroup(),
-                'inheritance_labels' => $inheritance_labels,
                 'config_parent'      => self::CONFIG_PARENT,
                 'escalade_takes_technician_group' => self::isTechnicianGroupHandledByEscalade(),
                 'params'             => [
@@ -334,20 +347,150 @@ class Config extends CommonDBTM
         return "ti ti-send";
     }
 
-    private static function getInheritedValueBadge(mixed $value): string
+    /**
+     * The four tabs the config screen is split into.
+     *
+     * @return array<int, array{id: string, label: string, icon: string}>
+     */
+    public static function getScreenTabs(): array
     {
-        $text = match ((int) $value) {
-            1       => __('Yes'),
-            default => __('No'),
-        };
-        return Entity::inheritedValue(htmlescape($text), false, false);
+        return [
+            ['id' => 'ticket', 'label' => __('Ticket'), 'icon' => 'ti-ticket'],
+            ['id' => 'change', 'label' => __('Change'), 'icon' => 'ti-git-branch'],
+            ['id' => 'problem', 'label' => __('Problem'), 'icon' => 'ti-alert-circle'],
+            ['id' => 'task', 'label' => _n('Task', 'Tasks', 2), 'icon' => 'ti-checklist'],
+        ];
     }
 
-    private static function getInheritedValueBadgeForActorGroup(mixed $value): string
+    /**
+     * Settings shared by the Ticket / Change / Problem tabs ('itil'), plus the
+     * task-only ones ('task'), which have no per-type variant: their field
+     * name carries no suffix.
+     *
+     * This is the single place to add a new setting or section. A row
+     * applies to all three ITIL types unless it lists the ones it is
+     * restricted to in `only` (e.g. `['ticket']`, for a ticket-specific
+     * setting), and warns instead of being hidden on a single type with
+     * `warn_on`. Adding a field here is not enough on its own: it also needs
+     * a column (see install()) and, for a brand new one, a default value
+     * wired into addConfig().
+     *
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    private static function getScreenSections(): array
     {
-        $options = self::getSelectableActorGroup();
-        $text = $options[(int) $value] ?? __('No');
-        return Entity::inheritedValue(htmlescape($text), false, false);
+        return [
+            'itil' => [
+                [
+                    'title' => __('Actors and groups', 'moreoptions'),
+                    'icon'  => 'ti-users-group',
+                    'rows'  => [
+                        ['key' => 'take_item_group', 'kind' => 'yes_no', 'label' => __('Take the group of associated item', 'moreoptions')],
+                        ['key' => 'take_requester_group', 'kind' => 'actor', 'label' => __('Take the requester group', 'moreoptions')],
+                        ['key' => 'take_technician_group', 'kind' => 'actor', 'label' => __('Take the technician group', 'moreoptions'), 'warn_on' => 'ticket'],
+                        ['key' => 'assign_technical_manager_when_changing_category', 'kind' => 'yes_no', 'label' => __('Assign technical manager when changing category', 'moreoptions')],
+                        ['key' => 'assign_technical_group_when_changing_category', 'kind' => 'yes_no', 'label' => __('Assign technical group when changing category', 'moreoptions')],
+                        ['key' => 'assign_technician_from_task', 'kind' => 'yes_no', 'label' => __('Assign technician from task to parent item', 'moreoptions')],
+                    ],
+                ],
+                [
+                    'title' => __('Closure', 'moreoptions'),
+                    'icon'  => 'ti-lock',
+                    'rows'  => [
+                        ['key' => 'prevent_closure', 'kind' => 'yes_no', 'label' => __('Prevent closure with tasks in To Do status', 'moreoptions')],
+                    ],
+                ],
+                [
+                    'title' => __('Mandatory fields to Solve and Close ITILs', 'moreoptions'),
+                    'icon'  => 'ti-help-circle',
+                    'rows'  => [
+                        ['key' => 'require_technician_to_close', 'kind' => 'yes_no', 'label' => __('Technician')],
+                        ['key' => 'require_technicians_group_to_close', 'kind' => 'yes_no', 'label' => __('Technicians group')],
+                        ['key' => 'require_category_to_close', 'kind' => 'yes_no', 'label' => __('Category')],
+                        ['key' => 'require_location_to_close', 'kind' => 'yes_no', 'label' => __('Location')],
+                        ['key' => 'require_solution_to_close', 'kind' => 'yes_no', 'label' => __('Solution')],
+                    ],
+                ],
+            ],
+            'task' => [
+                [
+                    'title' => __('Mandatory fields for Tasks creation', 'moreoptions'),
+                    'icon'  => 'ti-checklist',
+                    'note'  => __('These settings are shared by tickets, changes and problems.', 'moreoptions'),
+                    'rows'  => [
+                        ['key' => 'mandatory_task_category', 'kind' => 'yes_no', 'label' => __('Category')],
+                        ['key' => 'mandatory_task_duration', 'kind' => 'yes_no', 'label' => __('Duration')],
+                        ['key' => 'mandatory_task_user', 'kind' => 'yes_no', 'label' => __('User')],
+                        ['key' => 'mandatory_task_group', 'kind' => 'yes_no', 'label' => __('Group')],
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Sections to render for one tab: each row's field name resolved (`key`
+     * plus the tab's suffix, task settings getting none), and rows
+     * restricted with `only` dropped where they do not apply.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private static function getSectionsForTab(string $tab_id): array
+    {
+        $group  = $tab_id === 'task' ? 'task' : 'itil';
+        $suffix = $tab_id === 'task' ? '' : ('_' . $tab_id);
+
+        $sections = [];
+        foreach (self::getScreenSections()[$group] as $section) {
+            $rows = array_values(array_filter(
+                $section['rows'],
+                static fn(array $row): bool => empty($row['only']) || in_array($tab_id, $row['only'], true),
+            ));
+
+            if ($rows === []) {
+                continue;
+            }
+
+            $section['rows'] = array_map(
+                static fn(array $row): array => $row + ['field' => $row['key'] . $suffix],
+                $rows,
+            );
+            $sections[] = $section;
+        }
+
+        return $sections;
+    }
+
+    /**
+     * GLPI's own "inherited value" badges, one per field, shown right on the
+     * "Inherit" option so it doubles as what that option currently resolves
+     * to.
+     *
+     * Returns an empty array for the root entity, which inherits from nothing.
+     *
+     * @return array<string, string>
+     */
+    private static function getParentValueBadges(Entity $item): array
+    {
+        if ($item->getID() <= 0) {
+            return [];
+        }
+
+        $parent_config = self::getConfig((int) $item->fields['entities_id'], true);
+        $actor_options = self::getSelectableActorGroup();
+
+        $badges = [];
+        foreach (self::getItilConfigFields() as $field) {
+            $text = ((int) ($parent_config->fields[$field] ?? 0)) === 1 ? __('Yes') : __('No');
+            $badges[$field] = Entity::inheritedValue(htmlescape($text), false, false);
+        }
+
+        foreach (self::getActorGroupConfigFields() as $field) {
+            $text = $actor_options[(int) ($parent_config->fields[$field] ?? 0)] ?? __('No');
+            $badges[$field] = Entity::inheritedValue(htmlescape($text), false, false);
+        }
+
+        return $badges;
     }
 
     public static function addConfig(CommonDBTM $item): void
@@ -360,6 +503,7 @@ class Config extends CommonDBTM
                 $data[$field] = self::CONFIG_PARENT;
             }
         }
+
         $moconfig->add($data);
     }
 
@@ -368,7 +512,6 @@ class Config extends CommonDBTM
      *
      * @param int|null $entityId Entity ID (null = current active entity)
      * @param bool $useInheritance Whether to follow parent entity inheritance (default: true)
-     * @return self
      */
     public static function getConfig(?int $entityId = null, bool $useInheritance = true): self
     {
@@ -398,12 +541,12 @@ class Config extends CommonDBTM
 
     public static function install(Migration $migration): void
     {
-        /** @var \DBmysql $DB */
+        /** @var DBmysql $DB */
         global $DB;
         $table = self::getTable();
         if (!$DB->tableExists($table)) {
-            $migration->displayMessage("Installing $table");
-            $query = "CREATE TABLE IF NOT EXISTS `$table` (
+            $migration->displayMessage('Installing ' . $table);
+            $query = "CREATE TABLE IF NOT EXISTS `{$table}` (
                 `id` int unsigned NOT NULL AUTO_INCREMENT,
                 `entities_id` int unsigned NOT NULL DEFAULT '0',
                 `take_item_group_ticket` tinyint NOT NULL DEFAULT '0',
@@ -480,12 +623,14 @@ class Config extends CommonDBTM
                 if (countElementsInTable(self::getTable(), ['entities_id' => $entity_id]) > 0) {
                     continue;
                 }
+
                 $data = ['entities_id' => $entity_id];
                 if ($entity_id > 0) {
                     foreach (self::getAllConfigFields() as $field) {
                         $data[$field] = self::CONFIG_PARENT;
                     }
                 }
+
                 $DB->insert(
                     self::getTable(),
                     $data,
@@ -497,11 +642,6 @@ class Config extends CommonDBTM
 
     public static function uninstall(Migration $migration): void
     {
-        /** @var \DBmysql $DB */
-        global $DB;
-        $table = self::getTable();
-        if ($DB->tableExists($table)) {
-            $DB->doQuery("DROP TABLE IF EXISTS `" . self::getTable() . "`");
-        }
+        $migration->dropTable(self::getTable());
     }
 }

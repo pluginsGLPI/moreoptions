@@ -36,9 +36,39 @@
 
 namespace GlpiPlugin\Moreoptions\Tests\Units;
 
+use Ticket;
+use TicketTask;
+use Planning;
+use TaskCategory;
+use Group;
+use ITILCategory;
+use Location;
+use Group_Ticket;
+use User;
+use Ticket_User;
+use ITILSolution;
+use CommonITILObject;
+use Change;
+use Change_Group;
+use Change_User;
+use Problem;
+use Group_Problem;
+use Problem_User;
+use Group_User;
+use Computer;
+use Group_Item;
+use Item_Ticket;
+use CommonITILActor;
+use Entity;
+use GlpiPlugin\Moreoptions\Controller;
+use ChangeTask;
+use ProblemTask;
 use GlpiPlugin\Moreoptions\Config;
 use GlpiPlugin\Moreoptions\Tests\MoreOptionsTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
+
+use function Safe\ob_get_clean;
+use function Safe\ob_start;
 
 class ConfigTest extends MoreOptionsTestCase
 {
@@ -62,7 +92,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         //Create a ticket
         $ticket = $this->createItem(
-            \Ticket::class,
+            Ticket::class,
             [
                 'name'          => 'Test ticket task mandatory fields',
                 'content'       => 'Test content',
@@ -70,20 +100,20 @@ class ConfigTest extends MoreOptionsTestCase
         );
 
         //Create a task without mandatory fields (Expected to fail)
-        $task = new \TicketTask();
+        $task = new TicketTask();
         $result = $task->add(
             [
                 'tickets_id'    => $ticket->getID(),
                 'content'          => 'Test task',
-                'state'             => \Planning::TODO,
+                'state'             => Planning::TODO,
             ],
         );
         $this->assertFalse($result);
         $this->clearSessionMessages();
 
         // Create category
-        $category = $this->createItem(
-            \TaskCategory::class,
+        $this->createItem(
+            TaskCategory::class,
             [
                 'name' => 'Test category',
             ],
@@ -91,7 +121,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         //Create a task with mandatory fields (Expected to succeed)
         $task = $this->createItem(
-            \TicketTask::class,
+            TicketTask::class,
             [
                 'tickets_id'    => $ticket->getID(),
                 'content'          => 'Test task',
@@ -99,12 +129,13 @@ class ConfigTest extends MoreOptionsTestCase
                 'users_id_tech'      => 1,
                 'groups_id_tech'     => 1,
                 'actiontime'         => 300,
-                'state'             => \Planning::TODO,
+                'state'             => Planning::TODO,
             ],
         );
 
         // Create task without user (Expected to fail)
-        $task = new \TicketTask();
+        $task = new TicketTask();
+
         $result = $task->add(
             [
                 'tickets_id'    => $ticket->getID(),
@@ -112,14 +143,14 @@ class ConfigTest extends MoreOptionsTestCase
                 'taskcategories_id' => 1,
                 'groups_id_tech'     => 1,
                 'actiontime'         => 300,
-                'state'             => \Planning::TODO,
+                'state'             => Planning::TODO,
             ],
         );
         $this->assertFalse($result);
         $this->clearSessionMessages();
 
         // Create task without group (Expected to fail)
-        $task = new \TicketTask();
+        $task = new TicketTask();
         $result = $task->add(
             [
                 'tickets_id'    => $ticket->getID(),
@@ -127,14 +158,14 @@ class ConfigTest extends MoreOptionsTestCase
                 'taskcategories_id' => 1,
                 'users_id_tech'      => 1,
                 'actiontime'         => 300,
-                'state'             => \Planning::TODO,
+                'state'             => Planning::TODO,
             ],
         );
         $this->assertFalse($result);
         $this->clearSessionMessages();
 
         // Create task without duration (Expected to fail)
-        $task = new \TicketTask();
+        $task = new TicketTask();
         $result = $task->add(
             [
                 'tickets_id'    => $ticket->getID(),
@@ -142,14 +173,14 @@ class ConfigTest extends MoreOptionsTestCase
                 'taskcategories_id' => 1,
                 'users_id_tech'      => 1,
                 'groups_id_tech'     => 1,
-                'state'             => \Planning::TODO,
+                'state'             => Planning::TODO,
             ],
         );
         $this->assertFalse($result);
         $this->clearSessionMessages();
 
         // Create task without category (Expected to fail)
-        $task = new \TicketTask();
+        $task = new TicketTask();
         $result = $task->add(
             [
                 'tickets_id'    => $ticket->getID(),
@@ -157,14 +188,14 @@ class ConfigTest extends MoreOptionsTestCase
                 'users_id_tech'      => 1,
                 'groups_id_tech'     => 1,
                 'actiontime'         => 300,
-                'state'             => \Planning::TODO,
+                'state'             => Planning::TODO,
             ],
         );
         $this->assertFalse($result);
         $this->clearSessionMessages();
 
         //Check if we have only 1 task
-        $tasks = new \TicketTask();
+        $tasks = new TicketTask();
         $tasks = count($tasks->find(['tickets_id' => $ticket->getID()]));
         $this->assertEquals(1, $tasks);
 
@@ -201,7 +232,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         //Create a ticket without mandatory fields (Expected to succeed)
         $ticket = $this->createItem(
-            \Ticket::class,
+            Ticket::class,
             [
                 'name'          => 'Test ticket close',
                 'content'       => 'Test content',
@@ -211,7 +242,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create group
         $group = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name' => 'Test group close ticket',
             ],
@@ -219,11 +250,11 @@ class ConfigTest extends MoreOptionsTestCase
         $gid = $group->getID();
 
         // Close the ticket without mandatory fields (Expected to fail)
-        $ticket = new \Ticket();
+        $ticket = new Ticket();
         $result = $ticket->update(
             [
                 'id'          => $tid,
-                'status'      => \Ticket::CLOSED,
+                'status'      => Ticket::CLOSED,
             ],
         );
         $this->assertFalse($result);
@@ -231,7 +262,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create category
         $category = $this->createItem(
-            \ITILCategory::class,
+            ITILCategory::class,
             [
                 'name' => 'Test category close ticket',
             ],
@@ -240,7 +271,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create location
         $location = $this->createItem(
-            \Location::class,
+            Location::class,
             [
                 'name' => 'Test location close ticket',
             ],
@@ -249,16 +280,16 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Add technician group to the ticket
         $this->createItem(
-            \Group_Ticket::class,
+            Group_Ticket::class,
             [
                 'tickets_id' => $tid,
                 'groups_id'  => $gid,
-                'type'       => \Group_Ticket::ASSIGN,
+                'type'       => Group_Ticket::ASSIGN,
             ],
         );
 
         // Add technician to the ticket
-        $user = new \User();
+        $user = new User();
         $this->assertTrue($user->getFromDBByCrit(
             [
                 'name' => 'glpi',
@@ -266,32 +297,32 @@ class ConfigTest extends MoreOptionsTestCase
         ));
 
         $this->createItem(
-            \Ticket_User::class,
+            Ticket_User::class,
             [
                 'tickets_id' => $tid,
                 'users_id'   => $user->getID(),
-                'type'       => \Ticket_User::ASSIGN,
+                'type'       => Ticket_User::ASSIGN,
             ],
         );
 
         // Close the ticket without location and category (Expected to fail)
-        $ticket = new \Ticket();
+        $ticket = new Ticket();
         $this->assertFalse($ticket->update(
             [
                 'id'                => $tid,
-                'status'            => \Ticket::CLOSED,
+                'status'            => Ticket::CLOSED,
             ],
         ));
         $this->clearSessionMessages();
 
         // Close the ticket with location and category (Expected to succeed)
         $this->updateItem(
-            \Ticket::class,
+            Ticket::class,
             $tid,
             [
                 'locations_id'     => $lid,
                 'itilcategories_id' => $cid,
-                'status'            => \Ticket::CLOSED,
+                'status'            => Ticket::CLOSED,
             ],
         );
 
@@ -324,7 +355,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create a ticket without mandatory fields
         $ticket = $this->createItem(
-            \Ticket::class,
+            Ticket::class,
             [
                 'name'    => 'Test ticket solution',
                 'content' => 'Test content',
@@ -333,39 +364,39 @@ class ConfigTest extends MoreOptionsTestCase
         $tid = $ticket->getID();
 
         // Attempt to add a solution (Expected to fail because missing tech and category)
-        $solution = new \ITILSolution();
+        $solution = new ITILSolution();
         $resultFields = $solution->add([
-            'itemtype' => \Ticket::class,
+            'itemtype' => Ticket::class,
             'items_id' => $tid,
             'content'  => 'My test solution',
-            'status'   => \CommonITILObject::SOLVED,
+            'status'   => CommonITILObject::SOLVED,
         ]);
 
         $this->clearSessionMessages();
         $this->assertFalse($resultFields);
 
         // Add technician to the ticket
-        $user = new \User();
+        $user = new User();
         $this->assertTrue($user->getFromDBByCrit(['name' => 'glpi']));
 
         $this->createItem(
-            \Ticket_User::class,
+            Ticket_User::class,
             [
                 'tickets_id' => $tid,
                 'users_id'   => $user->getID(),
-                'type'       => \Ticket_User::ASSIGN,
+                'type'       => Ticket_User::ASSIGN,
             ],
         );
 
         // Create category and update ticket
         $category = $this->createItem(
-            \ITILCategory::class,
+            ITILCategory::class,
             [
                 'name' => 'Test category for solution test',
             ],
         );
         $this->updateItem(
-            \Ticket::class,
+            Ticket::class,
             $tid,
             [
                 'itilcategories_id' => $category->getID(),
@@ -373,13 +404,13 @@ class ConfigTest extends MoreOptionsTestCase
         );
 
         // Attempt to add solution with all mandatory fields present (Expected to succeed)
-        $solution2 = new \ITILSolution();
+        $solution2 = new ITILSolution();
         $resultOk = $solution2->add([
-            'itemtype'   => \Ticket::class,
+            'itemtype'   => Ticket::class,
             'items_id'   => $tid,
             'solutiontypes_id' => 0,
             'content'    => 'My test solution with fields ok',
-            'status'     => \CommonITILObject::SOLVED,
+            'status'     => CommonITILObject::SOLVED,
         ]);
         $this->assertIsInt($resultOk);
         $this->clearSessionMessages();
@@ -412,7 +443,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create a ticket
         $ticket = $this->createItem(
-            \Ticket::class,
+            Ticket::class,
             [
                 'name'    => 'Test ticket resolve without solution',
                 'content' => 'Test content',
@@ -423,39 +454,39 @@ class ConfigTest extends MoreOptionsTestCase
         // Directly set the status to Solved, without any solution (Expected to fail).
         // `updateItem()` cannot be used here: it asserts the update succeeds, which is
         // exactly what this step must NOT do.
-        $ticket = new \Ticket();
+        $ticket = new Ticket();
         $result = $ticket->update([
             'id'     => $tid,
-            'status' => \Ticket::SOLVED,
+            'status' => Ticket::SOLVED,
         ]);
         $this->assertFalse($result);
         $this->clearSessionMessages();
 
         // The status must not actually have changed in DB
-        $ticket = new \Ticket();
+        $ticket = new Ticket();
         $this->assertTrue($ticket->getFromDB($tid));
-        $this->assertNotEquals(\Ticket::SOLVED, $ticket->fields['status']);
+        $this->assertNotEquals(Ticket::SOLVED, $ticket->fields['status']);
 
         // Add a solution (Expected to succeed): the parent ticket is resolved as a side
         // effect of this, and that resulting status change must not be blocked.
         // 'content' and 'status' are skipped from createItem()'s post-add field check,
         // as ITILSolution may transform/recompute them (rich text, auto-acceptance...).
         $this->createItem(
-            \ITILSolution::class,
+            ITILSolution::class,
             [
-                'itemtype' => \Ticket::class,
+                'itemtype' => Ticket::class,
                 'items_id' => $tid,
                 'content'  => 'My test solution',
-                'status'   => \CommonITILObject::SOLVED,
+                'status'   => CommonITILObject::SOLVED,
             ],
             ['content', 'status'],
         );
         $this->clearSessionMessages();
 
         // The ticket must now actually be Solved
-        $ticket = new \Ticket();
+        $ticket = new Ticket();
         $this->assertTrue($ticket->getFromDB($tid));
-        $this->assertEquals(\Ticket::SOLVED, $ticket->fields['status']);
+        $this->assertEquals(Ticket::SOLVED, $ticket->fields['status']);
 
         // Reset config
         $resetResult = $this->updateTestConfig($conf, [
@@ -487,7 +518,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         //Create a change without mandatory fields (Expected to succeed)
         $change = $this->createItem(
-            \Change::class,
+            Change::class,
             [
                 'name'          => 'Test change close',
                 'content'       => 'Test content',
@@ -497,7 +528,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create group
         $group = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name' => 'Test group close change',
             ],
@@ -505,11 +536,11 @@ class ConfigTest extends MoreOptionsTestCase
         $gid = $group->getID();
 
         // Close the change without mandatory fields (Expected to fail)
-        $change = new \Change();
+        $change = new Change();
         $result = $change->update(
             [
                 'id'          => $cid,
-                'status'      => \Change::CLOSED,
+                'status'      => Change::CLOSED,
             ],
         );
         $this->assertFalse($result);
@@ -517,7 +548,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create category
         $category = $this->createItem(
-            \ITILCategory::class,
+            ITILCategory::class,
             [
                 'name' => 'Test category close change',
             ],
@@ -526,7 +557,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create location
         $location = $this->createItem(
-            \Location::class,
+            Location::class,
             [
                 'name' => 'Test location close change',
             ],
@@ -535,16 +566,16 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Add technician group to the change
         $this->createItem(
-            \Change_Group::class,
+            Change_Group::class,
             [
                 'changes_id' => $cid,
                 'groups_id'  => $gid,
-                'type'       => \Change_Group::ASSIGN,
+                'type'       => Change_Group::ASSIGN,
             ],
         );
 
         // Add technician to the change
-        $user = new \User();
+        $user = new User();
         $this->assertTrue($user->getFromDBByCrit(
             [
                 'name' => 'glpi',
@@ -552,20 +583,20 @@ class ConfigTest extends MoreOptionsTestCase
         ));
 
         $this->createItem(
-            \Change_User::class,
+            Change_User::class,
             [
                 'changes_id' => $cid,
                 'users_id'   => $user->getID(),
-                'type'       => \Change_User::ASSIGN,
+                'type'       => Change_User::ASSIGN,
             ],
         );
 
         // Close the change without location and category (Expected to fail)
-        $change = new \Change();
+        $change = new Change();
         $result = $change->update(
             [
                 'id'                => $cid,
-                'status'            => \Change::CLOSED,
+                'status'            => Change::CLOSED,
             ],
         );
         $this->assertFalse($result);
@@ -573,12 +604,12 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Close the change with location and category (Expected to succeed)
         $this->updateItem(
-            \Change::class,
+            Change::class,
             $cid,
             [
                 'locations_id'     => $lid,
                 'itilcategories_id' => $catid,
-                'status'            => \Change::CLOSED,
+                'status'            => Change::CLOSED,
             ],
         );
 
@@ -615,7 +646,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         //Create a problem without mandatory fields (Expected to succeed)
         $problem = $this->createItem(
-            \Problem::class,
+            Problem::class,
             [
                 'name'          => 'Test problem close',
                 'content'       => 'Test content',
@@ -625,7 +656,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create group
         $group = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name' => 'Test group close problem',
             ],
@@ -633,11 +664,11 @@ class ConfigTest extends MoreOptionsTestCase
         $gid = $group->getID();
 
         // Close the problem without mandatory fields (Expected to fail)
-        $problem = new \Problem();
+        $problem = new Problem();
         $result = $problem->update(
             [
                 'id'          => $pid,
-                'status'      => \Problem::CLOSED,
+                'status'      => Problem::CLOSED,
             ],
         );
         $this->assertFalse($result);
@@ -645,7 +676,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create category
         $category = $this->createItem(
-            \ITILCategory::class,
+            ITILCategory::class,
             [
                 'name' => 'Test category close problem',
             ],
@@ -654,7 +685,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create location
         $location = $this->createItem(
-            \Location::class,
+            Location::class,
             [
                 'name' => 'Test location close problem',
             ],
@@ -663,16 +694,16 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Add technician group to the problem
         $this->createItem(
-            \Group_Problem::class,
+            Group_Problem::class,
             [
                 'problems_id' => $pid,
                 'groups_id'  => $gid,
-                'type'       => \Group_Problem::ASSIGN,
+                'type'       => Group_Problem::ASSIGN,
             ],
         );
 
         // Add technician to the problem
-        $user = new \User();
+        $user = new User();
         $this->assertTrue($user->getFromDBByCrit(
             [
                 'name' => 'glpi',
@@ -680,20 +711,20 @@ class ConfigTest extends MoreOptionsTestCase
         ));
 
         $this->createItem(
-            \Problem_User::class,
+            Problem_User::class,
             [
                 'problems_id' => $pid,
                 'users_id'   => $user->getID(),
-                'type'       => \Problem_User::ASSIGN,
+                'type'       => Problem_User::ASSIGN,
             ],
         );
 
         // Close the problem without location and category (Expected to fail)
-        $problem = new \Problem();
+        $problem = new Problem();
         $result = $problem->update(
             [
                 'id'                => $pid,
-                'status'            => \Problem::CLOSED,
+                'status'            => Problem::CLOSED,
             ],
         );
         $this->assertFalse($result);
@@ -701,12 +732,12 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Close the problem with location and category (Expected to succeed)
         $this->updateItem(
-            \Problem::class,
+            Problem::class,
             $pid,
             [
                 'locations_id'     => $lid,
                 'itilcategories_id' => $catid,
-                'status'            => \Problem::CLOSED,
+                'status'            => Problem::CLOSED,
             ],
         );
 
@@ -738,21 +769,21 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create two groups
         $group1 = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name' => 'Test group 1',
             ],
         );
 
         $group2 = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name' => 'Test group 2',
             ],
         );
 
         // Get the user glpi
-        $user = new \User();
+        $user = new User();
         $this->assertTrue($user->getFromDBByCrit(
             [
                 'name' => 'glpi',
@@ -761,7 +792,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Assign the user to the group
         $this->createItem(
-            \Group_User::class,
+            Group_User::class,
             [
                 'groups_id' => $group1->getID(),
                 'users_id'  => $user->getID(),
@@ -769,7 +800,7 @@ class ConfigTest extends MoreOptionsTestCase
         );
 
         $this->createItem(
-            \Group_User::class,
+            Group_User::class,
             [
                 'groups_id' => $group2->getID(),
                 'users_id'  => $user->getID(),
@@ -778,7 +809,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         //Create a ticket
         $ticket = $this->createItem(
-            \Ticket::class,
+            Ticket::class,
             [
                 'name'          => 'Test ticket requester group',
                 'content'       => 'Test content',
@@ -787,20 +818,20 @@ class ConfigTest extends MoreOptionsTestCase
         $tid = $ticket->getID();
 
         $this->createItem(
-            \Ticket_User::class,
+            Ticket_User::class,
             [
                 'tickets_id' => $tid,
                 'users_id'   => $user->getID(),
-                'type'       => \Ticket_User::REQUESTER,
+                'type'       => Ticket_User::REQUESTER,
             ],
         );
 
         // Check if the group of the requester is in the actors
-        $ticket_group = new \Group_Ticket();
+        $ticket_group = new Group_Ticket();
         $groups = $ticket_group->find(['tickets_id' => $ticket->getID()]);
         $this->assertCount(2, $groups);
 
-        $config = new Config();
+        new Config();
         // Configurer pour ne prendre que le groupe principal du demandeur
         $result = $this->updateTestConfig($conf, [
             'entities_id'                 => 0,
@@ -812,7 +843,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         //Create a ticket
         $ticket = $this->createItem(
-            \Ticket::class,
+            Ticket::class,
             [
                 'name'          => 'Test ticket requester group - 2',
                 'content'       => 'Test content',
@@ -822,27 +853,27 @@ class ConfigTest extends MoreOptionsTestCase
 
         //Add default group to the user
         $this->updateItem(
-            \User::class,
+            User::class,
             $user->getID(),
             [
                 'groups_id' => $group1->getID(),
             ],
         );
 
-        $user2 = new \User();
+        $user2 = new User();
         $this->assertTrue($user2->getFromDB($user->getID()));
 
         $this->createItem(
-            \Ticket_User::class,
+            Ticket_User::class,
             [
                 'tickets_id' => $tid,
                 'users_id'   => $user2->getID(),
-                'type'       => \Ticket_User::REQUESTER,
+                'type'       => Ticket_User::REQUESTER,
             ],
         );
 
         // Check if the group of the requester is in the actors
-        $ticket_group = new \Group_Ticket();
+        $ticket_group = new Group_Ticket();
         $groups = $ticket_group->find(['tickets_id' => $tid]);
         $this->assertCount(1, $groups);
 
@@ -873,21 +904,21 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create two groups
         $group1 = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name' => 'Test group 1',
             ],
         );
 
         $group2 = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name' => 'Test group 2',
             ],
         );
 
         // Get the user tech
-        $user = new \User();
+        $user = new User();
         $this->assertTrue($user->getFromDBByCrit(
             [
                 'name' => 'tech',
@@ -896,7 +927,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Assign the user to the group
         $this->createItem(
-            \Group_User::class,
+            Group_User::class,
             [
                 'groups_id' => $group1->getID(),
                 'users_id'  => $user->getID(),
@@ -904,7 +935,7 @@ class ConfigTest extends MoreOptionsTestCase
         );
 
         $this->createItem(
-            \Group_User::class,
+            Group_User::class,
             [
                 'groups_id' => $group2->getID(),
                 'users_id'  => $user->getID(),
@@ -913,7 +944,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         //Create a ticket
         $ticket = $this->createItem(
-            \Ticket::class,
+            Ticket::class,
             [
                 'name'          => 'Test ticket',
                 'content'       => 'Test content',
@@ -922,16 +953,16 @@ class ConfigTest extends MoreOptionsTestCase
         $tid = $ticket->getID();
 
         $this->createItem(
-            \Ticket_User::class,
+            Ticket_User::class,
             [
                 'tickets_id' => $tid,
                 'users_id'   => $user->getID(),
-                'type'       => \Ticket_User::ASSIGN,
+                'type'       => Ticket_User::ASSIGN,
             ],
         );
 
         // Check if the group of the requester is in the actors
-        $ticket_group = new \Group_Ticket();
+        $ticket_group = new Group_Ticket();
         $groups = $ticket_group->find(['tickets_id' => $ticket->getID()]);
         $this->assertCount(2, $groups);
 
@@ -942,11 +973,11 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertTrue($result);
 
-        $conf = Config::getConfig();
+        Config::getConfig();
 
         //Create a ticket
         $ticket = $this->createItem(
-            \Ticket::class,
+            Ticket::class,
             [
                 'name'          => 'Test ticket tech group - 2',
                 'content'       => 'Test content',
@@ -956,27 +987,27 @@ class ConfigTest extends MoreOptionsTestCase
 
         //Add default group to the user
         $this->updateItem(
-            \User::class,
+            User::class,
             $user->getID(),
             [
                 'groups_id' => $group1->getID(),
             ],
         );
 
-        $user2 = new \User();
+        $user2 = new User();
         $this->assertTrue($user2->getFromDB($user->getID()));
 
         $this->createItem(
-            \Ticket_User::class,
+            Ticket_User::class,
             [
                 'tickets_id' => $tid,
                 'users_id'   => $user2->getID(),
-                'type'       => \Ticket_User::ASSIGN,
+                'type'       => Ticket_User::ASSIGN,
             ],
         );
 
         // Check if the group of the requester is in the actors
-        $ticket_group = new \Group_Ticket();
+        $ticket_group = new Group_Ticket();
         $groups = $ticket_group->find(['tickets_id' => $ticket->getID()]);
         $this->assertCount(1, $groups);
     }
@@ -995,11 +1026,11 @@ class ConfigTest extends MoreOptionsTestCase
         ]);
         $this->assertTrue($result);
 
-        $conf = Config::getConfig();
+        Config::getConfig();
 
         // Create two groups
         $group1 = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name' => 'Test group 1',
             ],
@@ -1007,20 +1038,20 @@ class ConfigTest extends MoreOptionsTestCase
 
         //Create item computer
         $computer = $this->createItem(
-            \Computer::class,
+            Computer::class,
             [
                 'name' => 'Test computer',
                 'entities_id' => 0,
             ],
         );
-        $cid = $computer->getID();
+        $computer->getID();
 
         //Create item ticket
         $this->createItem(
-            \Group_Item::class,
+            Group_Item::class,
             [
                 'items_id'   => $computer->getID(),
-                'itemtype'   => \Computer::class,
+                'itemtype'   => Computer::class,
                 'groups_id'  => $group1->getID(),
                 'type'       => 1,
             ],
@@ -1028,7 +1059,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         //Create a ticket
         $ticket = $this->createItem(
-            \Ticket::class,
+            Ticket::class,
             [
                 'name'          => 'Test ticket item groups',
                 'content'       => 'Test content',
@@ -1038,20 +1069,20 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Assign the computer to the ticket
         $this->createItem(
-            \Item_Ticket::class,
+            Item_Ticket::class,
             [
                 'tickets_id' => $tid,
                 'items_id'   => $computer->getID(),
-                'itemtype'   => \Computer::class,
+                'itemtype'   => Computer::class,
             ],
         );
 
         // Check if the groups are in the actors
-        $ticket_group = new \Group_Ticket();
+        $ticket_group = new Group_Ticket();
         $groups = $ticket_group->find(
             [
                 'tickets_id' => $ticket->getID(),
-                'type' => \CommonITILActor::ASSIGN,
+                'type' => CommonITILActor::ASSIGN,
             ],
         );
         $this->assertCount(1, $groups);
@@ -1076,7 +1107,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create a group for the category
         $group = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name' => 'Test Technical Group',
             ],
@@ -1085,7 +1116,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create a user for technical manager
         $user = $this->createItem(
-            \User::class,
+            User::class,
             [
                 'name' => 'test_tech_manager',
                 'login' => 'test_tech_manager',
@@ -1096,7 +1127,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create a category with technical manager and group
         $category = $this->createItem(
-            \ITILCategory::class,
+            ITILCategory::class,
             [
                 'name' => 'Test Category with Tech',
                 'users_id' => $uid,
@@ -1107,7 +1138,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create a ticket
         $ticket = $this->createItem(
-            \Ticket::class,
+            Ticket::class,
             [
                 'name' => 'Test ticket category update',
                 'content' => 'Test content',
@@ -1117,7 +1148,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Update ticket with the category
         $this->updateItem(
-            \Ticket::class,
+            Ticket::class,
             $tid,
             [
                 'itilcategories_id' => $cid,
@@ -1125,20 +1156,20 @@ class ConfigTest extends MoreOptionsTestCase
         );
 
         // Check if technical manager was assigned
-        $ticket_user = new \Ticket_User();
+        $ticket_user = new Ticket_User();
         $assigned_users = $ticket_user->find([
             'tickets_id' => $tid,
             'users_id' => $uid,
-            'type' => \CommonITILActor::ASSIGN,
+            'type' => CommonITILActor::ASSIGN,
         ]);
         $this->assertCount(1, $assigned_users);
 
         // Check if technical group was assigned
-        $ticket_group = new \Group_Ticket();
+        $ticket_group = new Group_Ticket();
         $assigned_groups = $ticket_group->find([
             'tickets_id' => $tid,
             'groups_id' => $gid,
-            'type' => \CommonITILActor::ASSIGN,
+            'type' => CommonITILActor::ASSIGN,
         ]);
         $this->assertCount(1, $assigned_groups);
 
@@ -1169,7 +1200,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create a group for the category
         $group = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name' => 'Test Technical Group Change',
             ],
@@ -1178,7 +1209,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create a user for technical manager
         $user = $this->createItem(
-            \User::class,
+            User::class,
             [
                 'name' => 'test_tech_manager_change',
                 'login' => 'test_tech_manager_change',
@@ -1189,7 +1220,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create a category with technical manager and group
         $category = $this->createItem(
-            \ITILCategory::class,
+            ITILCategory::class,
             [
                 'name' => 'Test Category with Tech Change',
                 'users_id' => $uid,
@@ -1200,7 +1231,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create a change
         $change = $this->createItem(
-            \Change::class,
+            Change::class,
             [
                 'name' => 'Test change category update',
                 'content' => 'Test content',
@@ -1210,7 +1241,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Update change with the category
         $this->updateItem(
-            \Change::class,
+            Change::class,
             $chid,
             [
                 'itilcategories_id' => $cid,
@@ -1218,20 +1249,20 @@ class ConfigTest extends MoreOptionsTestCase
         );
 
         // Check if technical manager was assigned
-        $change_user = new \Change_User();
+        $change_user = new Change_User();
         $assigned_users = $change_user->find([
             'changes_id' => $chid,
             'users_id' => $uid,
-            'type' => \CommonITILActor::ASSIGN,
+            'type' => CommonITILActor::ASSIGN,
         ]);
         $this->assertCount(1, $assigned_users);
 
         // Check if technical group was assigned
-        $change_group = new \Change_Group();
+        $change_group = new Change_Group();
         $assigned_groups = $change_group->find([
             'changes_id' => $chid,
             'groups_id' => $gid,
-            'type' => \CommonITILActor::ASSIGN,
+            'type' => CommonITILActor::ASSIGN,
         ]);
         $this->assertCount(1, $assigned_groups);
 
@@ -1262,7 +1293,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create a group for the category
         $group = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name' => 'Test Technical Group Problem',
             ],
@@ -1271,7 +1302,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create a user for technical manager
         $user = $this->createItem(
-            \User::class,
+            User::class,
             [
                 'name' => 'test_tech_manager_problem',
                 'login' => 'test_tech_manager_problem',
@@ -1282,7 +1313,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create a category with technical manager and group
         $category = $this->createItem(
-            \ITILCategory::class,
+            ITILCategory::class,
             [
                 'name' => 'Test Category with Tech Problem',
                 'users_id' => $uid,
@@ -1293,7 +1324,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create a problem
         $problem = $this->createItem(
-            \Problem::class,
+            Problem::class,
             [
                 'name' => 'Test problem category update',
                 'content' => 'Test content',
@@ -1303,7 +1334,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Update problem with the category
         $this->updateItem(
-            \Problem::class,
+            Problem::class,
             $pid,
             [
                 'itilcategories_id' => $cid,
@@ -1311,20 +1342,20 @@ class ConfigTest extends MoreOptionsTestCase
         );
 
         // Check if technical manager was assigned
-        $problem_user = new \Problem_User();
+        $problem_user = new Problem_User();
         $assigned_users = $problem_user->find([
             'problems_id' => $pid,
             'users_id' => $uid,
-            'type' => \CommonITILActor::ASSIGN,
+            'type' => CommonITILActor::ASSIGN,
         ]);
         $this->assertCount(1, $assigned_users);
 
         // Check if technical group was assigned
-        $problem_group = new \Group_Problem();
+        $problem_group = new Group_Problem();
         $assigned_groups = $problem_group->find([
             'problems_id' => $pid,
             'groups_id' => $gid,
-            'type' => \CommonITILActor::ASSIGN,
+            'type' => CommonITILActor::ASSIGN,
         ]);
         $this->assertCount(1, $assigned_groups);
 
@@ -1355,7 +1386,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create a category with technical manager and group
         $group = $this->createItem(
-            \Group::class,
+            Group::class,
             [
                 'name' => 'Test Group Disabled',
             ],
@@ -1363,7 +1394,7 @@ class ConfigTest extends MoreOptionsTestCase
         $gid = $group->getID();
 
         $user = $this->createItem(
-            \User::class,
+            User::class,
             [
                 'name' => 'test_user_disabled',
                 'login' => 'test_user_disabled',
@@ -1373,7 +1404,7 @@ class ConfigTest extends MoreOptionsTestCase
         $uid = $user->getID();
 
         $category = $this->createItem(
-            \ITILCategory::class,
+            ITILCategory::class,
             [
                 'name' => 'Test Category Disabled',
                 'users_id' => $uid,
@@ -1384,7 +1415,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create and update a ticket
         $ticket = $this->createItem(
-            \Ticket::class,
+            Ticket::class,
             [
                 'name' => 'Test disabled config',
                 'content' => 'Test content',
@@ -1393,7 +1424,7 @@ class ConfigTest extends MoreOptionsTestCase
         $tid = $ticket->getID();
 
         $this->updateItem(
-            \Ticket::class,
+            Ticket::class,
             $tid,
             [
                 'itilcategories_id' => $cid,
@@ -1401,19 +1432,19 @@ class ConfigTest extends MoreOptionsTestCase
         );
 
         // Verify no technical actors were assigned
-        $ticket_user = new \Ticket_User();
+        $ticket_user = new Ticket_User();
         $assigned_users = $ticket_user->find([
             'tickets_id' => $tid,
             'users_id' => $uid,
-            'type' => \CommonITILActor::ASSIGN,
+            'type' => CommonITILActor::ASSIGN,
         ]);
         $this->assertCount(0, $assigned_users);
 
-        $ticket_group = new \Group_Ticket();
+        $ticket_group = new Group_Ticket();
         $assigned_groups = $ticket_group->find([
             'tickets_id' => $tid,
             'groups_id' => $gid,
-            'type' => \CommonITILActor::ASSIGN,
+            'type' => CommonITILActor::ASSIGN,
         ]);
         $this->assertCount(0, $assigned_groups);
     }
@@ -1427,7 +1458,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create child entity under root (entities_id=0)
         $child_entity = $this->createItem(
-            \Entity::class,
+            Entity::class,
             [
                 'name' => 'Child Entity Test',
                 'entities_id' => 0,
@@ -1481,7 +1512,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->login();
         // Create grandparent entity (level 1)
         $grandparent_entity = $this->createItem(
-            \Entity::class,
+            Entity::class,
             [
                 'name' => 'Grandparent Entity Test',
                 'entities_id' => 0, // Root entity as parent
@@ -1494,7 +1525,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create parent entity (level 2)
         $parent_entity = $this->createItem(
-            \Entity::class,
+            Entity::class,
             [
                 'name' => 'Parent Entity Test Level 2',
                 'entities_id' => $grandparent_entity_id,
@@ -1506,7 +1537,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create child entity (level 3)
         $child_entity = $this->createItem(
-            \Entity::class,
+            Entity::class,
             [
                 'name' => 'Child Entity Test Level 3',
                 'entities_id' => $parent_entity_id,
@@ -1573,7 +1604,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->initEntitySession();
         // Create parent entity
         $parent_entity = $this->createItem(
-            \Entity::class,
+            Entity::class,
             [
                 'name' => 'Parent Entity No Inherit Test',
                 'entities_id' => 0,
@@ -1585,7 +1616,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create child entity
         $child_entity = $this->createItem(
-            \Entity::class,
+            Entity::class,
             [
                 'name' => 'Child Entity No Inherit Test',
                 'entities_id' => $parent_entity_id,
@@ -1638,7 +1669,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->initEntitySession();
         // Create test entity
         $test_entity = $this->createItem(
-            \Entity::class,
+            Entity::class,
             [
                 'name' => 'Session Test Entity',
                 'entities_id' => 0,
@@ -1728,7 +1759,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->initEntitySession();
         // Create parent entity
         $parent_entity = $this->createItem(
-            \Entity::class,
+            Entity::class,
             [
                 'name' => 'Controller Parent Entity Test',
                 'entities_id' => 0,
@@ -1740,7 +1771,7 @@ class ConfigTest extends MoreOptionsTestCase
 
         // Create child entity
         $child_entity = $this->createItem(
-            \Entity::class,
+            Entity::class,
             [
                 'name' => 'Controller Child Entity Test',
                 'entities_id' => $parent_entity_id,
@@ -1781,7 +1812,7 @@ class ConfigTest extends MoreOptionsTestCase
         $_SESSION['glpiactive_entity'] = $child_entity_id;
 
         // Create a task item to test
-        $task = new \TicketTask();
+        $task = new TicketTask();
         $task->input = [
             'content' => 'Test task content',
             'taskcategories_id' => '', // Empty category - should trigger error due to inheritance
@@ -1798,12 +1829,12 @@ class ConfigTest extends MoreOptionsTestCase
                 'mandatory_task_duration' => Config::CONFIG_PARENT,
             ],
         );
-        $result_task = \GlpiPlugin\Moreoptions\Controller::checkTaskRequirements($task);
+        $result_task = Controller::checkTaskRequirements($task);
         $this->assertFalse($result_task->input, 'Child entity should block task via inherited mandatory config');
         $this->clearSessionMessages();
 
         // Now test with filled mandatory fields
-        $task2 = new \TicketTask();
+        $task2 = new TicketTask();
         $task2->input = [
             'content' => 'Test task content',
             'taskcategories_id' => 1, // Valid category
@@ -1812,7 +1843,7 @@ class ConfigTest extends MoreOptionsTestCase
             'groups_id_tech' => 1,
         ];
 
-        $result_task2 = \GlpiPlugin\Moreoptions\Controller::checkTaskRequirements($task2);
+        $result_task2 = Controller::checkTaskRequirements($task2);
         // Should not be false since mandatory fields are filled
         $this->assertNotFalse($result_task2->input);
 
@@ -1833,7 +1864,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertTrue($result);
 
         $tech = $this->createItem(
-            \User::class,
+            User::class,
             [
                 'name'         => 'tech_from_task',
                 'password'     => 'tech_from_task',
@@ -1845,7 +1876,7 @@ class ConfigTest extends MoreOptionsTestCase
         $tech_id = $tech->getID();
 
         $ticket = $this->createItem(
-            \Ticket::class,
+            Ticket::class,
             [
                 'name'    => 'Test ticket for task assignment',
                 'content' => 'Test content',
@@ -1853,36 +1884,36 @@ class ConfigTest extends MoreOptionsTestCase
         );
         $ticket_id = $ticket->getID();
 
-        $ticket_user = new \Ticket_User();
+        $ticket_user = new Ticket_User();
         $assigned_users_before = $ticket_user->find([
             'tickets_id' => $ticket_id,
             'users_id'   => $tech_id,
-            'type'       => \CommonITILActor::ASSIGN,
+            'type'       => CommonITILActor::ASSIGN,
         ]);
         $this->assertCount(0, $assigned_users_before);
 
         $task = $this->createItem(
-            \TicketTask::class,
+            TicketTask::class,
             [
                 'tickets_id'    => $ticket_id,
                 'content'       => 'Test task',
                 'users_id_tech' => $tech_id,
                 'actiontime'    => 3600,
-                'state'         => \Planning::TODO,
+                'state'         => Planning::TODO,
             ],
         );
-        $task_id = $task->getID();
+        $task->getID();
 
         $assigned_users_after = $ticket_user->find([
             'tickets_id' => $ticket_id,
             'users_id'   => $tech_id,
-            'type'       => \CommonITILActor::ASSIGN,
+            'type'       => CommonITILActor::ASSIGN,
         ]);
 
         $this->assertCount(1, $assigned_users_after);
         $assignedUser = reset($assigned_users_after);
         $this->assertEquals($tech_id, $assignedUser['users_id']);
-        $this->assertEquals(\CommonITILActor::ASSIGN, $assignedUser['type']);
+        $this->assertEquals(CommonITILActor::ASSIGN, $assignedUser['type']);
     }
 
     public function testAssignTechnicianFromChangeTask(): void
@@ -1898,7 +1929,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertTrue($result);
 
         $tech = $this->createItem(
-            \User::class,
+            User::class,
             [
                 'name'         => 'tech_from_change_task',
                 'password'     => 'tech_from_change_task',
@@ -1910,7 +1941,7 @@ class ConfigTest extends MoreOptionsTestCase
         $tech_id = $tech->getID();
 
         $change = $this->createItem(
-            \Change::class,
+            Change::class,
             [
                 'name'    => 'Test change for task assignment',
                 'content' => 'Test content',
@@ -1918,36 +1949,36 @@ class ConfigTest extends MoreOptionsTestCase
         );
         $change_id = $change->getID();
 
-        $change_user = new \Change_User();
+        $change_user = new Change_User();
         $assigned_users_before = $change_user->find([
             'changes_id' => $change_id,
             'users_id'   => $tech_id,
-            'type'       => \CommonITILActor::ASSIGN,
+            'type'       => CommonITILActor::ASSIGN,
         ]);
         $this->assertCount(0, $assigned_users_before);
 
         $task = $this->createItem(
-            \ChangeTask::class,
+            ChangeTask::class,
             [
                 'changes_id'    => $change_id,
                 'content'       => 'Test change task',
                 'users_id_tech' => $tech_id,
                 'actiontime'    => 3600,
-                'state'         => \Planning::TODO,
+                'state'         => Planning::TODO,
             ],
         );
-        $task_id = $task->getID();
+        $task->getID();
 
         $assigned_users_after = $change_user->find([
             'changes_id' => $change_id,
             'users_id'   => $tech_id,
-            'type'       => \CommonITILActor::ASSIGN,
+            'type'       => CommonITILActor::ASSIGN,
         ]);
 
         $this->assertCount(1, $assigned_users_after);
         $assignedUser = reset($assigned_users_after);
         $this->assertEquals($tech_id, $assignedUser['users_id']);
-        $this->assertEquals(\CommonITILActor::ASSIGN, $assignedUser['type']);
+        $this->assertEquals(CommonITILActor::ASSIGN, $assignedUser['type']);
     }
 
     public function testAssignTechnicianFromProblemTask(): void
@@ -1963,7 +1994,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertTrue($result);
 
         $tech = $this->createItem(
-            \User::class,
+            User::class,
             [
                 'name'         => 'tech_from_problem_task',
                 'password'     => 'tech_from_problem_task',
@@ -1975,7 +2006,7 @@ class ConfigTest extends MoreOptionsTestCase
         $tech_id = $tech->getID();
 
         $problem = $this->createItem(
-            \Problem::class,
+            Problem::class,
             [
                 'name'    => 'Test problem for task assignment',
                 'content' => 'Test content',
@@ -1983,36 +2014,36 @@ class ConfigTest extends MoreOptionsTestCase
         );
         $problem_id = $problem->getID();
 
-        $problem_user = new \Problem_User();
+        $problem_user = new Problem_User();
         $assigned_users_before = $problem_user->find([
             'problems_id' => $problem_id,
             'users_id'    => $tech_id,
-            'type'        => \CommonITILActor::ASSIGN,
+            'type'        => CommonITILActor::ASSIGN,
         ]);
         $this->assertCount(0, $assigned_users_before);
 
         $task = $this->createItem(
-            \ProblemTask::class,
+            ProblemTask::class,
             [
                 'problems_id'   => $problem_id,
                 'content'       => 'Test problem task',
                 'users_id_tech' => $tech_id,
                 'actiontime'    => 3600,
-                'state'         => \Planning::TODO,
+                'state'         => Planning::TODO,
             ],
         );
-        $task_id = $task->getID();
+        $task->getID();
 
         $assigned_users_after = $problem_user->find([
             'problems_id' => $problem_id,
             'users_id'    => $tech_id,
-            'type'        => \CommonITILActor::ASSIGN,
+            'type'        => CommonITILActor::ASSIGN,
         ]);
 
         $this->assertCount(1, $assigned_users_after);
         $assignedUser = reset($assigned_users_after);
         $this->assertEquals($tech_id, $assignedUser['users_id']);
-        $this->assertEquals(\CommonITILActor::ASSIGN, $assignedUser['type']);
+        $this->assertEquals(CommonITILActor::ASSIGN, $assignedUser['type']);
     }
 
     public function testAssignTechnicianFromTaskDisabledByConfig(): void
@@ -2028,7 +2059,7 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertTrue($result);
 
         $tech = $this->createItem(
-            \User::class,
+            User::class,
             [
                 'name'         => 'tech_from_task_disabled',
                 'password'     => 'tech_from_task_disabled',
@@ -2040,7 +2071,7 @@ class ConfigTest extends MoreOptionsTestCase
         $tech_id = $tech->getID();
 
         $ticket = $this->createItem(
-            \Ticket::class,
+            Ticket::class,
             [
                 'name'    => 'Test ticket for disabled task assignment',
                 'content' => 'Test content',
@@ -2049,21 +2080,21 @@ class ConfigTest extends MoreOptionsTestCase
         $ticket_id = $ticket->getID();
 
         $this->createItem(
-            \TicketTask::class,
+            TicketTask::class,
             [
                 'tickets_id'    => $ticket_id,
                 'content'       => 'Test task',
                 'users_id_tech' => $tech_id,
                 'actiontime'    => 3600,
-                'state'         => \Planning::TODO,
+                'state'         => Planning::TODO,
             ],
         );
 
-        $ticket_user = new \Ticket_User();
+        $ticket_user = new Ticket_User();
         $assigned_users = $ticket_user->find([
             'tickets_id' => $ticket_id,
             'users_id'   => $tech_id,
-            'type'       => \CommonITILActor::ASSIGN,
+            'type'       => CommonITILActor::ASSIGN,
         ]);
         $this->assertCount(0, $assigned_users);
     }
@@ -2088,21 +2119,21 @@ class ConfigTest extends MoreOptionsTestCase
         $this->login();
 
         $entity_a = $this->createItem(
-            \Entity::class,
+            Entity::class,
             ['name' => 'Inheritance Test A', 'entities_id' => 0],
             ['name'],
         );
         $this->clearLogEntriesContaining('glpiactiveentities_string');
 
         $entity_b = $this->createItem(
-            \Entity::class,
+            Entity::class,
             ['name' => 'Inheritance Test B', 'entities_id' => $entity_a->getID()],
             ['name'],
         );
         $this->clearLogEntriesContaining('glpiactiveentities_string');
 
         $entity_c = $this->createItem(
-            \Entity::class,
+            Entity::class,
             ['name' => 'Inheritance Test C', 'entities_id' => $entity_b->getID()],
             ['name'],
         );
@@ -2163,21 +2194,21 @@ class ConfigTest extends MoreOptionsTestCase
         $this->login();
 
         $grandparent = $this->createItem(
-            \Entity::class,
+            Entity::class,
             ['name' => 'GP2P2C Grandparent', 'entities_id' => 0],
             ['name'],
         );
         $this->clearLogEntriesContaining('glpiactiveentities_string');
 
         $parent = $this->createItem(
-            \Entity::class,
+            Entity::class,
             ['name' => 'GP2P2C Parent', 'entities_id' => $grandparent->getID()],
             ['name'],
         );
         $this->clearLogEntriesContaining('glpiactiveentities_string');
 
         $child = $this->createItem(
-            \Entity::class,
+            Entity::class,
             ['name' => 'GP2P2C Child', 'entities_id' => $parent->getID()],
             ['name'],
         );
@@ -2235,21 +2266,21 @@ class ConfigTest extends MoreOptionsTestCase
         $this->login();
 
         $grandparent = $this->createItem(
-            \Entity::class,
+            Entity::class,
             ['name' => 'Override GP', 'entities_id' => 0],
             ['name'],
         );
         $this->clearLogEntriesContaining('glpiactiveentities_string');
 
         $parent = $this->createItem(
-            \Entity::class,
+            Entity::class,
             ['name' => 'Override Parent', 'entities_id' => $grandparent->getID()],
             ['name'],
         );
         $this->clearLogEntriesContaining('glpiactiveentities_string');
 
         $child = $this->createItem(
-            \Entity::class,
+            Entity::class,
             ['name' => 'Override Child', 'entities_id' => $parent->getID()],
             ['name'],
         );
@@ -2299,14 +2330,14 @@ class ConfigTest extends MoreOptionsTestCase
         $this->login();
 
         $parent_entity = $this->createItem(
-            \Entity::class,
+            Entity::class,
             ['name' => 'Actor Group Parent Entity', 'entities_id' => 0],
             ['name'],
         );
         $this->clearLogEntriesContaining('glpiactiveentities_string');
 
         $child_entity = $this->createItem(
-            \Entity::class,
+            Entity::class,
             ['name' => 'Actor Group Child Entity', 'entities_id' => $parent_entity->getID()],
             ['name'],
         );
@@ -2319,7 +2350,7 @@ class ConfigTest extends MoreOptionsTestCase
             $this->assertEquals(
                 Config::CONFIG_PARENT,
                 $child_conf_raw->fields[$field],
-                "addConfig() must initialize $field to CONFIG_PARENT for non-root entities",
+                sprintf('addConfig() must initialize %s to CONFIG_PARENT for non-root entities', $field),
             );
         }
 
@@ -2355,14 +2386,14 @@ class ConfigTest extends MoreOptionsTestCase
         $this->login();
 
         $parent_entity = $this->createItem(
-            \Entity::class,
+            Entity::class,
             ['name' => 'Task Requirements Parent', 'entities_id' => 0],
             ['name'],
         );
         $this->clearLogEntriesContaining('glpiactiveentities_string');
 
         $child_entity = $this->createItem(
-            \Entity::class,
+            Entity::class,
             ['name' => 'Task Requirements Child', 'entities_id' => $parent_entity->getID()],
             ['name'],
         );
@@ -2390,14 +2421,14 @@ class ConfigTest extends MoreOptionsTestCase
         $_SESSION['glpiactive_entity'] = $child_entity->getID();
 
         // Blocked: missing all mandatory fields — inherited config from parent must block creation
-        $task_empty = new \TicketTask();
+        $task_empty = new TicketTask();
         $task_empty->input = ['content' => 'Test task missing fields'];
-        \GlpiPlugin\Moreoptions\Controller::checkTaskRequirements($task_empty);
+        Controller::checkTaskRequirements($task_empty);
         $this->assertFalse($task_empty->input, 'Task with missing mandatory fields should be blocked (input=false) via inherited config');
         $this->clearSessionMessages();
 
         // Unblocked: all mandatory fields filled — inherited config must allow creation
-        $task_filled = new \TicketTask();
+        $task_filled = new TicketTask();
         $task_filled->input = [
             'content'           => 'Test task with all fields',
             'taskcategories_id' => 1,
@@ -2405,7 +2436,7 @@ class ConfigTest extends MoreOptionsTestCase
             'users_id_tech'     => 1,
             'groups_id_tech'    => 1,
         ];
-        \GlpiPlugin\Moreoptions\Controller::checkTaskRequirements($task_filled);
+        Controller::checkTaskRequirements($task_filled);
         $this->assertNotFalse($task_filled->input, 'Task with all mandatory fields filled should not be blocked');
 
         $_SESSION['glpiactive_entity'] = $original_entity;
@@ -2425,21 +2456,21 @@ class ConfigTest extends MoreOptionsTestCase
         $this->login();
 
         $grandparent = $this->createItem(
-            \Entity::class,
+            Entity::class,
             ['name' => 'Mixed GP', 'entities_id' => 0],
             ['name'],
         );
         $this->clearLogEntriesContaining('glpiactiveentities_string');
 
         $parent = $this->createItem(
-            \Entity::class,
+            Entity::class,
             ['name' => 'Mixed Parent', 'entities_id' => $grandparent->getID()],
             ['name'],
         );
         $this->clearLogEntriesContaining('glpiactiveentities_string');
 
         $child = $this->createItem(
-            \Entity::class,
+            Entity::class,
             ['name' => 'Mixed Child', 'entities_id' => $parent->getID()],
             ['name'],
         );
@@ -2561,5 +2592,373 @@ class ConfigTest extends MoreOptionsTestCase
             $expected,
             Config::escaladeConfigHandlesTechnicianGroup($escalade_config, $handled_by_behaviors),
         );
+    }
+
+    /**
+     * Groups not allowed as requester must not be added as requester group
+     */
+    public function testTakeTheRequesterGroupSkipsGroupsNotAllowedAsRequester(): void
+    {
+        $conf = $this->getCurrentConfig();
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'entities_id'                 => 0,
+            'take_requester_group_ticket' => 2, // All
+        ]));
+
+        $allowed_group = $this->createItem(
+            Group::class,
+            [
+                'name'         => 'Requester allowed group',
+                'is_requester' => 1,
+            ],
+        );
+        $forbidden_group = $this->createItem(
+            Group::class,
+            [
+                'name'         => 'Requester forbidden group',
+                'is_requester' => 0,
+            ],
+        );
+
+        $user = new User();
+        $this->assertTrue($user->getFromDBByCrit(['name' => 'glpi']));
+
+        foreach ([$allowed_group, $forbidden_group] as $group) {
+            $this->createItem(
+                Group_User::class,
+                [
+                    'groups_id' => $group->getID(),
+                    'users_id'  => $user->getID(),
+                ],
+            );
+        }
+
+        $ticket = $this->createItem(
+            Ticket::class,
+            [
+                'name'    => 'Test ticket requester group not allowed',
+                'content' => 'Test content',
+            ],
+        );
+
+        $this->createItem(
+            Ticket_User::class,
+            [
+                'tickets_id' => $ticket->getID(),
+                'users_id'   => $user->getID(),
+                'type'       => Ticket_User::REQUESTER,
+            ],
+        );
+
+        $ticket_group = new Group_Ticket();
+        $groups = $ticket_group->find([
+            'tickets_id' => $ticket->getID(),
+            'type'       => CommonITILActor::REQUESTER,
+        ]);
+        $this->assertCount(1, $groups);
+        $this->assertEquals($allowed_group->getID(), current($groups)['groups_id']);
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'entities_id'                 => 0,
+            'take_requester_group_ticket' => 0,
+        ]));
+    }
+
+    /**
+     * Main group of the technician must not be added if it is not allowed as assigned
+     */
+    public function testTakeTheTechnicianGroupSkipsGroupNotAllowedAsAssigned(): void
+    {
+        $conf = $this->getCurrentConfig();
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'entities_id'                  => 0,
+            'take_technician_group_ticket' => 1, // Main group only
+        ]));
+
+        $forbidden_group = $this->createItem(
+            Group::class,
+            [
+                'name'      => 'Assign forbidden group',
+                'is_assign' => 0,
+            ],
+        );
+
+        $user = new User();
+        $this->assertTrue($user->getFromDBByCrit(['name' => 'tech']));
+
+        $this->createItem(
+            Group_User::class,
+            [
+                'groups_id' => $forbidden_group->getID(),
+                'users_id'  => $user->getID(),
+            ],
+        );
+        $this->updateItem(
+            User::class,
+            $user->getID(),
+            [
+                'groups_id' => $forbidden_group->getID(),
+            ],
+        );
+
+        $ticket = $this->createItem(
+            Ticket::class,
+            [
+                'name'    => 'Test ticket technician group not allowed',
+                'content' => 'Test content',
+            ],
+        );
+
+        $this->createItem(
+            Ticket_User::class,
+            [
+                'tickets_id' => $ticket->getID(),
+                'users_id'   => $user->getID(),
+                'type'       => Ticket_User::ASSIGN,
+            ],
+        );
+
+        $ticket_group = new Group_Ticket();
+        $this->assertCount(0, $ticket_group->find([
+            'tickets_id' => $ticket->getID(),
+            'groups_id'  => $forbidden_group->getID(),
+        ]));
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'entities_id'                  => 0,
+            'take_technician_group_ticket' => 0,
+        ]));
+    }
+
+    /**
+     * Item groups not allowed as assigned must not be added to the ticket
+     */
+    public function testTakeItemGroupsSkipsGroupNotAllowedAsAssigned(): void
+    {
+        $conf = $this->getCurrentConfig();
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'entities_id'            => 0,
+            'take_item_group_ticket' => 1,
+        ]));
+
+        $allowed_group = $this->createItem(
+            Group::class,
+            [
+                'name'      => 'Item group allowed',
+                'is_assign' => 1,
+            ],
+        );
+        $forbidden_group = $this->createItem(
+            Group::class,
+            [
+                'name'      => 'Item group forbidden',
+                'is_assign' => 0,
+            ],
+        );
+
+        $computer = $this->createItem(
+            Computer::class,
+            [
+                'name'        => 'Test computer group not allowed',
+                'entities_id' => 0,
+            ],
+        );
+
+        foreach ([$allowed_group, $forbidden_group] as $group) {
+            $this->createItem(
+                Group_Item::class,
+                [
+                    'items_id'  => $computer->getID(),
+                    'itemtype'  => Computer::class,
+                    'groups_id' => $group->getID(),
+                    'type'      => 1,
+                ],
+            );
+        }
+
+        $ticket = $this->createItem(
+            Ticket::class,
+            [
+                'name'    => 'Test ticket item group not allowed',
+                'content' => 'Test content',
+            ],
+        );
+
+        $this->createItem(
+            Item_Ticket::class,
+            [
+                'tickets_id' => $ticket->getID(),
+                'items_id'   => $computer->getID(),
+                'itemtype'   => Computer::class,
+            ],
+        );
+
+        $ticket_group = new Group_Ticket();
+        $groups = $ticket_group->find([
+            'tickets_id' => $ticket->getID(),
+            'type'       => CommonITILActor::ASSIGN,
+        ]);
+        $this->assertCount(1, $groups);
+        $this->assertEquals($allowed_group->getID(), current($groups)['groups_id']);
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'entities_id'            => 0,
+            'take_item_group_ticket' => 0,
+        ]));
+    }
+
+    /**
+     * Category technical group not allowed as assigned must not be added to the ticket
+     */
+    public function testUpdateTicketActorsOnCategoryChangeSkipsGroupNotAllowedAsAssigned(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'entities_id'                                          => 0,
+            'assign_technical_group_when_changing_category_ticket' => 1,
+        ]));
+
+        $forbidden_group = $this->createItem(
+            Group::class,
+            [
+                'name'      => 'Category group forbidden',
+                'is_assign' => 0,
+            ],
+        );
+
+        $category = $this->createItem(
+            ITILCategory::class,
+            [
+                'name'      => 'Test Category with forbidden group',
+                'groups_id' => $forbidden_group->getID(),
+            ],
+        );
+
+        $ticket = $this->createItem(
+            Ticket::class,
+            [
+                'name'    => 'Test ticket category group not allowed',
+                'content' => 'Test content',
+            ],
+        );
+
+        $this->updateItem(
+            Ticket::class,
+            $ticket->getID(),
+            [
+                'itilcategories_id' => $category->getID(),
+            ],
+        );
+
+        $ticket_group = new Group_Ticket();
+        $this->assertCount(0, $ticket_group->find([
+            'tickets_id' => $ticket->getID(),
+            'groups_id'  => $forbidden_group->getID(),
+        ]));
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'assign_technical_group_when_changing_category_ticket' => 0,
+        ]));
+    }
+
+    public function testUpdateCannotMoveConfigToAnotherEntity(): void
+    {
+        $this->login();
+
+        $entity_a = $this->createItem(
+            Entity::class,
+            [
+                'name' => 'Entity A',
+                'entities_id' => 0,
+            ],
+            ['name'],
+        );
+        $entity_b = $this->createItem(
+            Entity::class,
+            [
+                'name' => 'Entity B',
+                'entities_id' => 0,
+            ],
+            ['name'],
+        );
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+
+        $conf = Config::getConfig($entity_a->getID(), false);
+        $this->assertFalse($conf->isNewItem());
+
+        $this->assertTrue($conf->update([
+            'id'                     => $conf->getID(),
+            'entities_id'            => $entity_b->getID(),
+            'take_item_group_ticket' => 1,
+        ]));
+
+        $this->assertTrue($conf->getFromDB($conf->getID()));
+        $this->assertEquals($entity_a->getID(), $conf->fields['entities_id']);
+        $this->assertEquals(1, $conf->fields['take_item_group_ticket']);
+
+        // Entity B still has its own configuration, untouched
+        $conf_b = Config::getConfig($entity_b->getID(), false);
+        $this->assertFalse($conf_b->isNewItem());
+        $this->assertNotEquals($conf->getID(), $conf_b->getID());
+    }
+
+    public function testPrepareInputForUpdateKeepsOnlyConfigAndControlKeys(): void
+    {
+        $conf = new Config();
+
+        $input = $conf->prepareInputForUpdate([
+            'id'                     => 1,
+            'entities_id'            => 2,
+            'unknown_field'          => 'foo',
+            'take_item_group_ticket' => 1,
+            '_no_history'            => true,
+        ]);
+
+        $this->assertSame(
+            [
+                'id'                     => 1,
+                'take_item_group_ticket' => 1,
+                '_no_history'            => true,
+            ],
+            $input,
+        );
+    }
+
+    public function testConfigTabRequiresConfigRight(): void
+    {
+        $this->login();
+
+        $entity = new Entity();
+        $this->assertTrue($entity->getFromDB(0));
+        $conf = new Config();
+
+        // With the config right, the tab is shown
+        $this->assertNotEmpty($conf->getTabNameForItem($entity));
+
+        // Without it, neither the tab nor its content
+        $config_right = $_SESSION['glpiactiveprofile']['config'];
+        $_SESSION['glpiactiveprofile']['config'] = 0;
+
+        try {
+            $this->assertSame('', $conf->getTabNameForItem($entity));
+
+            ob_start();
+            try {
+                $result = Config::displayTabContentForItem($entity);
+            } finally {
+                $output = ob_get_clean();
+            }
+
+            $this->assertFalse($result);
+            $this->assertSame('', $output);
+        } finally {
+            $_SESSION['glpiactiveprofile']['config'] = $config_right;
+        }
     }
 }
