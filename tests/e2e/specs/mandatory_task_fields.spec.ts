@@ -30,14 +30,12 @@
  */
 
 import { randomUUID } from 'crypto';
-import { test, expect } from '../fixtures/moreoptions_fixture';
-import { MoreOptionsConfigPage } from '../pages/MoreOptionsConfigPage';
+import { test, expect, Page, createConfiguredEntity } from '../fixtures/moreoptions_fixture';
+import { YES } from '../pages/MoreOptionsConfigPage';
 // eslint-disable-next-line playwright/no-raw-locators
 import { GlpiPage } from '../../../../../tests/e2e/pages/GlpiPage';
 // eslint-disable-next-line playwright/no-raw-locators
 import { Profiles } from '../../../../../tests/e2e/utils/Profiles';
-// eslint-disable-next-line playwright/no-raw-locators
-import { getWorkerEntityId } from '../../../../../tests/e2e/utils/WorkerEntities';
 
 type TaskDef = {
     label: string,
@@ -46,49 +44,43 @@ type TaskDef = {
     taskApi: string,
 };
 
+const TICKET: TaskDef = { label: 'Ticket', url: 'ticket', api: 'Ticket', taskApi: 'TicketTask' };
 const ITIL_TYPES: TaskDef[] = [
-    { label: 'Ticket', url: 'ticket', api: 'Ticket', taskApi: 'TicketTask' },
+    TICKET,
     { label: 'Change', url: 'change', api: 'Change', taskApi: 'ChangeTask' },
     { label: 'Problem', url: 'problem', api: 'Problem', taskApi: 'ProblemTask' },
 ];
 
-for (const itil of ITIL_TYPES) {
-    test.describe(`MoreOptions - Mandatory task fields (${itil.label})`, () => {
+/**
+ * Open the item and the "Create a task" form, fill its content.
+ */
+async function doOpenTaskForm(page: Page, glpi: GlpiPage, itil: TaskDef, item_id: number, content: string)
+{
+    await page.goto(`/front/${itil.url}.form.php?id=${item_id}`);
+    await glpi.getButton('View other actions').click();
+    await page.getByRole('listitem', { name: 'Create a task' }).click();
+    const task_block = page.getByTestId(`new-${itil.taskApi}-block`);
+    await glpi.getRichTextByLabel('Task', task_block).fill(content);
+    return task_block;
+}
+
+// The task settings are shared by the three ITIL types, while the check runs
+// on each task itemtype: every type is covered with the category, the other
+// fields only on tickets.
+test.describe('MoreOptions - Mandatory task category', () => {
+    for (const itil of ITIL_TYPES) {
         test(`blocks a task without a category, allows it once one is set (${itil.label})`, async ({ page, profile, api, entity }) => {
             await profile.set(Profiles.SuperAdmin);
-
-            const entities_id = await api.createItem('Entity', {
-                'name': `MoreOptions mandatory task category ${itil.label} ${randomUUID()}`,
-                'entities_id': getWorkerEntityId(),
-            });
-            await entity.switchToWithRecursion(entities_id);
-            // The `api` fixture caches one authenticated session per worker for its
-            // whole lifetime: without a refresh, it never sees an entity created
-            // after that session's first request.
-            api.refreshSession();
-
-            const config_page = new MoreOptionsConfigPage(page);
-            await config_page.goto(entities_id);
-            const dropdown = config_page.getConfigDropdown('mandatory_task_category');
-            await config_page.doSetDropdownValue(dropdown, 'Yes');
-            await config_page.save_button.click();
-            await expect(dropdown).toHaveText('Yes');
-
+            const entities_id = await createConfiguredEntity(page, api, entity, { 'mandatory_task_category': YES });
             const item_id = await api.createItem(itil.api, {
                 name: `Test mandatory task category ${randomUUID()}`,
                 content: 'Test item',
                 entities_id: entities_id,
             });
-
             const glpi = new GlpiPage(page);
-            await page.goto(`/front/${itil.url}.form.php?id=${item_id}`);
 
-            await glpi.getButton('View other actions').click();
-            await page.getByRole('listitem', { name: 'Create a task' }).click();
-            const task_block = page.getByTestId(`new-${itil.taskApi}-block`);
-            await glpi.getRichTextByLabel('Task', task_block).fill('Task without a category');
+            let task_block = await doOpenTaskForm(page, glpi, itil, item_id, 'Task without a category');
             await task_block.getByRole('button', { name: 'Add', exact: true }).click();
-
             await expect(page.getByRole('alert').filter({ hasText: 'Category' })).toBeVisible();
             await expect(page.getByText('Task without a category')).not.toBeAttached();
 
@@ -99,175 +91,93 @@ for (const itil of ITIL_TYPES) {
                 is_active: true,
             });
 
-            await page.goto(`/front/${itil.url}.form.php?id=${item_id}`);
-            await glpi.getButton('View other actions').click();
-            await page.getByRole('listitem', { name: 'Create a task' }).click();
-            const retry_block = page.getByTestId(`new-${itil.taskApi}-block`);
-            await glpi.getRichTextByLabel('Task', retry_block).fill('Task with a category');
+            task_block = await doOpenTaskForm(page, glpi, itil, item_id, 'Task with a category');
             await glpi.doSetDropdownValue(
                 // Not exact: moreoptions marks the field as required, which appends a "*" to its label.
-                glpi.getDropdownByLabel('Category', retry_block, false),
+                glpi.getDropdownByLabel('Category', task_block, false),
                 task_category_name,
                 false,
             );
-            await retry_block.getByRole('button', { name: 'Add', exact: true }).click();
+            await task_block.getByRole('button', { name: 'Add', exact: true }).click();
             await expect(page.getByText('Task with a category')).toBeVisible();
         });
+    }
+});
 
-        test(`blocks a task without a duration, allows it once one is set (${itil.label})`, async ({ page, profile, api, entity }) => {
-            await profile.set(Profiles.SuperAdmin);
-
-            const entities_id = await api.createItem('Entity', {
-                'name': `MoreOptions mandatory task duration ${itil.label} ${randomUUID()}`,
-                'entities_id': getWorkerEntityId(),
-            });
-            await entity.switchToWithRecursion(entities_id);
-            // The `api` fixture caches one authenticated session per worker for its
-            // whole lifetime: without a refresh, it never sees an entity created
-            // after that session's first request.
-            api.refreshSession();
-
-            const config_page = new MoreOptionsConfigPage(page);
-            await config_page.goto(entities_id);
-            const dropdown = config_page.getConfigDropdown('mandatory_task_duration');
-            await config_page.doSetDropdownValue(dropdown, 'Yes');
-            await config_page.save_button.click();
-            await expect(dropdown).toHaveText('Yes');
-
-            const item_id = await api.createItem(itil.api, {
-                name: `Test mandatory task duration ${randomUUID()}`,
-                content: 'Test item',
-                entities_id: entities_id,
-            });
-
-            const glpi = new GlpiPage(page);
-            await page.goto(`/front/${itil.url}.form.php?id=${item_id}`);
-
-            await glpi.getButton('View other actions').click();
-            await page.getByRole('listitem', { name: 'Create a task' }).click();
-            const task_block = page.getByTestId(`new-${itil.taskApi}-block`);
-            await glpi.getRichTextByLabel('Task', task_block).fill('Task without a duration');
-            await task_block.getByRole('button', { name: 'Add', exact: true }).click();
-
-            await expect(page.getByRole('alert').filter({ hasText: 'Duration' })).toBeVisible();
-            await expect(page.getByText('Task without a duration')).not.toBeAttached();
-
-            await page.goto(`/front/${itil.url}.form.php?id=${item_id}`);
-            await glpi.getButton('View other actions').click();
-            await page.getByRole('listitem', { name: 'Create a task' }).click();
-            const retry_block = page.getByTestId(`new-${itil.taskApi}-block`);
-            await glpi.getRichTextByLabel('Task', retry_block).fill('Task with a duration');
-            await glpi.doSetDropdownValue(glpi.getDropdownByLabel('Duration', retry_block), '1h30');
-            await retry_block.getByRole('button', { name: 'Add', exact: true }).click();
-            await expect(page.getByText('Task with a duration')).toBeVisible();
-        });
-
-        test(`blocks a task without a user, allows it once one is set (${itil.label})`, async ({ page, profile, api, entity }) => {
-            await profile.set(Profiles.SuperAdmin);
-
-            const entities_id = await api.createItem('Entity', {
-                'name': `MoreOptions mandatory task user ${itil.label} ${randomUUID()}`,
-                'entities_id': getWorkerEntityId(),
-            });
-            await entity.switchToWithRecursion(entities_id);
-            // The `api` fixture caches one authenticated session per worker for its
-            // whole lifetime: without a refresh, it never sees an entity created
-            // after that session's first request.
-            api.refreshSession();
-
-            const config_page = new MoreOptionsConfigPage(page);
-            await config_page.goto(entities_id);
-            const dropdown = config_page.getConfigDropdown('mandatory_task_user');
-            await config_page.doSetDropdownValue(dropdown, 'Yes');
-            await config_page.save_button.click();
-            await expect(dropdown).toHaveText('Yes');
-
-            const item_id = await api.createItem(itil.api, {
-                name: `Test mandatory task user ${randomUUID()}`,
-                content: 'Test item',
-                entities_id: entities_id,
-            });
-
-            const glpi = new GlpiPage(page);
-            await page.goto(`/front/${itil.url}.form.php?id=${item_id}`);
-
-            await glpi.getButton('View other actions').click();
-            await page.getByRole('listitem', { name: 'Create a task' }).click();
-            const task_block = page.getByTestId(`new-${itil.taskApi}-block`);
-            await glpi.getRichTextByLabel('Task', task_block).fill('Task without a user');
-            // The user field is pre-filled with the current session user: clear it.
-            // Not exact: moreoptions marks the field as required, which appends a "*" to its label.
-            await glpi.doSetDropdownValue(glpi.getDropdownByLabel('User', task_block, false), '-----', false);
-            await task_block.getByRole('button', { name: 'Add', exact: true }).click();
-
-            await expect(page.getByRole('alert').filter({ hasText: 'User' })).toBeVisible();
-            await expect(page.getByText('Task without a user')).not.toBeAttached();
-
-            await page.goto(`/front/${itil.url}.form.php?id=${item_id}`);
-            await glpi.getButton('View other actions').click();
-            await page.getByRole('listitem', { name: 'Create a task' }).click();
-            const retry_block = page.getByTestId(`new-${itil.taskApi}-block`);
-            await glpi.getRichTextByLabel('Task', retry_block).fill('Task with a user');
-            // Left untouched: pre-filled with the current session user.
-            await retry_block.getByRole('button', { name: 'Add', exact: true }).click();
-            await expect(page.getByText('Task with a user')).toBeVisible();
-        });
-
-        test(`blocks a task without a group, allows it once one is set (${itil.label})`, async ({ page, profile, api, entity }) => {
-            await profile.set(Profiles.SuperAdmin);
-
-            const entities_id = await api.createItem('Entity', {
-                'name': `MoreOptions mandatory task group ${itil.label} ${randomUUID()}`,
-                'entities_id': getWorkerEntityId(),
-            });
-            await entity.switchToWithRecursion(entities_id);
-            // The `api` fixture caches one authenticated session per worker for its
-            // whole lifetime: without a refresh, it never sees an entity created
-            // after that session's first request.
-            api.refreshSession();
-
-            const config_page = new MoreOptionsConfigPage(page);
-            await config_page.goto(entities_id);
-            const dropdown = config_page.getConfigDropdown('mandatory_task_group');
-            await config_page.doSetDropdownValue(dropdown, 'Yes');
-            await config_page.save_button.click();
-            await expect(dropdown).toHaveText('Yes');
-
-            const item_id = await api.createItem(itil.api, {
-                name: `Test mandatory task group ${randomUUID()}`,
-                content: 'Test item',
-                entities_id: entities_id,
-            });
-
-            const glpi = new GlpiPage(page);
-            await page.goto(`/front/${itil.url}.form.php?id=${item_id}`);
-
-            await glpi.getButton('View other actions').click();
-            await page.getByRole('listitem', { name: 'Create a task' }).click();
-            const task_block = page.getByTestId(`new-${itil.taskApi}-block`);
-            await glpi.getRichTextByLabel('Task', task_block).fill('Task without a group');
-            await task_block.getByRole('button', { name: 'Add', exact: true }).click();
-
-            await expect(page.getByRole('alert').filter({ hasText: 'Group' })).toBeVisible();
-            await expect(page.getByText('Task without a group')).not.toBeAttached();
-
-            const group_name = `Test task group ${randomUUID()}`;
-            // `groups_id_tech` on a task only lists groups flagged for task usage.
-            await api.createItem('Group', {
-                name: group_name,
-                entities_id: entities_id,
-                is_task: true,
-            });
-
-            await page.goto(`/front/${itil.url}.form.php?id=${item_id}`);
-            await glpi.getButton('View other actions').click();
-            await page.getByRole('listitem', { name: 'Create a task' }).click();
-            const retry_block = page.getByTestId(`new-${itil.taskApi}-block`);
-            await glpi.getRichTextByLabel('Task', retry_block).fill('Task with a group');
-            // Not exact: moreoptions marks the field as required, which appends a "*" to its label.
-            await glpi.doSetDropdownValue(glpi.getDropdownByLabel('Group', retry_block, false), group_name, false);
-            await retry_block.getByRole('button', { name: 'Add', exact: true }).click();
-            await expect(page.getByText('Task with a group')).toBeVisible();
-        });
+test.describe('MoreOptions - Mandatory task fields (Ticket)', () => {
+    test.beforeEach(async ({ profile }) => {
+        await profile.set(Profiles.SuperAdmin);
     });
-}
+
+    test('blocks a task without a duration, allows it once one is set', async ({ page, api, entity }) => {
+        const entities_id = await createConfiguredEntity(page, api, entity, { 'mandatory_task_duration': YES });
+        const item_id = await api.createItem(TICKET.api, {
+            name: `Test mandatory task duration ${randomUUID()}`,
+            content: 'Test item',
+            entities_id: entities_id,
+        });
+        const glpi = new GlpiPage(page);
+
+        let task_block = await doOpenTaskForm(page, glpi, TICKET, item_id, 'Task without a duration');
+        await task_block.getByRole('button', { name: 'Add', exact: true }).click();
+        await expect(page.getByRole('alert').filter({ hasText: 'Duration' })).toBeVisible();
+        await expect(page.getByText('Task without a duration')).not.toBeAttached();
+
+        task_block = await doOpenTaskForm(page, glpi, TICKET, item_id, 'Task with a duration');
+        await glpi.doSetDropdownValue(glpi.getDropdownByLabel('Duration', task_block), '1h30');
+        await task_block.getByRole('button', { name: 'Add', exact: true }).click();
+        await expect(page.getByText('Task with a duration')).toBeVisible();
+    });
+
+    test('blocks a task without a user, allows it once one is set', async ({ page, api, entity }) => {
+        const entities_id = await createConfiguredEntity(page, api, entity, { 'mandatory_task_user': YES });
+        const item_id = await api.createItem(TICKET.api, {
+            name: `Test mandatory task user ${randomUUID()}`,
+            content: 'Test item',
+            entities_id: entities_id,
+        });
+        const glpi = new GlpiPage(page);
+
+        let task_block = await doOpenTaskForm(page, glpi, TICKET, item_id, 'Task without a user');
+        // The user field is pre-filled with the current session user: clear it.
+        // Not exact: moreoptions marks the field as required, which appends a "*" to its label.
+        await glpi.doSetDropdownValue(glpi.getDropdownByLabel('User', task_block, false), '-----', false);
+        await task_block.getByRole('button', { name: 'Add', exact: true }).click();
+        await expect(page.getByRole('alert').filter({ hasText: 'User' })).toBeVisible();
+        await expect(page.getByText('Task without a user')).not.toBeAttached();
+
+        // Left untouched: pre-filled with the current session user.
+        task_block = await doOpenTaskForm(page, glpi, TICKET, item_id, 'Task with a user');
+        await task_block.getByRole('button', { name: 'Add', exact: true }).click();
+        await expect(page.getByText('Task with a user')).toBeVisible();
+    });
+
+    test('blocks a task without a group, allows it once one is set', async ({ page, api, entity }) => {
+        const entities_id = await createConfiguredEntity(page, api, entity, { 'mandatory_task_group': YES });
+        const item_id = await api.createItem(TICKET.api, {
+            name: `Test mandatory task group ${randomUUID()}`,
+            content: 'Test item',
+            entities_id: entities_id,
+        });
+        const glpi = new GlpiPage(page);
+
+        let task_block = await doOpenTaskForm(page, glpi, TICKET, item_id, 'Task without a group');
+        await task_block.getByRole('button', { name: 'Add', exact: true }).click();
+        await expect(page.getByRole('alert').filter({ hasText: 'Group' })).toBeVisible();
+        await expect(page.getByText('Task without a group')).not.toBeAttached();
+
+        const group_name = `Test task group ${randomUUID()}`;
+        // `groups_id_tech` on a task only lists groups flagged for task usage.
+        await api.createItem('Group', {
+            name: group_name,
+            entities_id: entities_id,
+            is_task: true,
+        });
+
+        task_block = await doOpenTaskForm(page, glpi, TICKET, item_id, 'Task with a group');
+        // Not exact: moreoptions marks the field as required, which appends a "*" to its label.
+        await glpi.doSetDropdownValue(glpi.getDropdownByLabel('Group', task_block, false), group_name, false);
+        await task_block.getByRole('button', { name: 'Add', exact: true }).click();
+        await expect(page.getByText('Task with a group')).toBeVisible();
+    });
+});

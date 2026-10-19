@@ -29,12 +29,17 @@
  * -------------------------------------------------------------------------
  */
 
-import { Locator, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 // eslint-disable-next-line playwright/no-raw-locators
 import { GlpiPage } from '../../../../../tests/e2e/pages/GlpiPage';
 
 // The plugin registers a single tab (index 1) on the Entity item.
 const CONFIG_TAB = 'GlpiPlugin\\Moreoptions\\Config$1';
+
+// Entity::CONFIG_PARENT: the "Inherit" choice, only offered below the root entity.
+export const INHERIT = -2;
+export const NO = 0;
+export const YES = 1;
 
 export class MoreOptionsConfigPage extends GlpiPage
 {
@@ -55,18 +60,51 @@ export class MoreOptionsConfigPage extends GlpiPage
     }
 
     /**
-     * The config fields are rendered without an associated <label> (they sit
-     * in a table, one row per setting, with a column per itemtype), so they
-     * can't be located with `getDropdownByLabel`. The underlying <select>
-     * keeps the field name though, which select2 renders as an adjacent span.
+     * Each setting is a group of radio inputs sharing the field name (see
+     * templates/components/segmented_control.html.twig). The inputs are
+     * visually hidden: they are toggled through their adjacent <label>.
      */
     // eslint-disable-next-line playwright/no-raw-locators
-    public getConfigDropdown(field: string): Locator
+    public getConfigOption(field: string, value: number): Locator
     {
-        return this.page
-            .locator(`select[name="${field}"]`)
-            .locator('+ span')
-            .getByRole('combobox')
-        ;
+        return this.page.locator(`input[name="${field}"][value="${value}"]`);
+    }
+
+    /**
+     * Settings are split across sub-tabs: ticket / change / problem settings
+     * carry the type as a suffix, task settings carry none.
+     */
+    // eslint-disable-next-line playwright/no-raw-locators
+    public getConfigSubTab(field: string): Locator
+    {
+        const tab = field.match(/_(ticket|change|problem)$/)?.[1] ?? 'task';
+        return this.page.locator(`[data-mo-tab="${tab}"]`);
+    }
+
+    public async doSetConfigValue(field: string, value: number): Promise<void>
+    {
+        await this.getConfigSubTab(field).click();
+        // eslint-disable-next-line playwright/no-raw-locators
+        await this.getConfigOption(field, value).locator('+ label').click();
+    }
+
+    /**
+     * Open the entity's config tab, set the given settings, save, and check
+     * they were stored.
+     */
+    public async doSetConfig(entities_id: number, values: Record<string, number>): Promise<void>
+    {
+        await this.goto(entities_id);
+        for (const [field, value] of Object.entries(values)) {
+            await this.doSetConfigValue(field, value);
+        }
+        // The form posts then redirects back: wait for that reload, otherwise
+        // the checks below would pass on the not-yet-saved page.
+        const reloaded = this.page.waitForEvent('framenavigated', (frame) => frame === this.page.mainFrame());
+        await this.save_button.click();
+        await reloaded;
+        for (const [field, value] of Object.entries(values)) {
+            await expect(this.getConfigOption(field, value)).toBeChecked();
+        }
     }
 }

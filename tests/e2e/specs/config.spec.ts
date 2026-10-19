@@ -31,7 +31,7 @@
 
 import { randomUUID } from 'crypto';
 import { test, expect } from '../fixtures/moreoptions_fixture';
-import { MoreOptionsConfigPage } from '../pages/MoreOptionsConfigPage';
+import { INHERIT, MoreOptionsConfigPage, YES } from '../pages/MoreOptionsConfigPage';
 // eslint-disable-next-line playwright/no-raw-locators
 import { Profiles } from '../../../../../tests/e2e/utils/Profiles';
 // eslint-disable-next-line playwright/no-raw-locators
@@ -52,16 +52,11 @@ test.describe('MoreOptions - Entity configuration tab', () => {
 
         const config_page = new MoreOptionsConfigPage(page);
         await config_page.goto(entities_id);
+        await expect(config_page.getConfigOption('require_solution_to_close_ticket', INHERIT)).toBeChecked();
 
-        const dropdown = config_page.getConfigDropdown('require_solution_to_close_ticket');
-        await expect(dropdown).toHaveText('Inheritance of the parent entity');
-
-        await config_page.doSetDropdownValue(dropdown, 'Yes');
-        await config_page.save_button.click();
-        await expect(dropdown).toHaveText('Yes');
-
-        // The override survives a reload.
+        // Saved, then read back from a fresh page load.
+        await config_page.doSetConfig(entities_id, { 'require_solution_to_close_ticket': YES });
         await config_page.goto(entities_id);
-        await expect(config_page.getConfigDropdown('require_solution_to_close_ticket')).toHaveText('Yes');
+        await expect(config_page.getConfigOption('require_solution_to_close_ticket', YES)).toBeChecked();
     });
 });

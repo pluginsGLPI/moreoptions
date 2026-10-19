@@ -30,14 +30,14 @@
  */
 
 import { randomUUID } from 'crypto';
-import { test, expect, Page, APIRequestContext } from '../fixtures/moreoptions_fixture';
-import { MoreOptionsConfigPage } from '../pages/MoreOptionsConfigPage';
+import { test, expect, Page, APIRequestContext, createConfiguredEntity } from '../fixtures/moreoptions_fixture';
+import { YES } from '../pages/MoreOptionsConfigPage';
 // eslint-disable-next-line playwright/no-raw-locators
 import { GlpiPage } from '../../../../../tests/e2e/pages/GlpiPage';
 // eslint-disable-next-line playwright/no-raw-locators
 import { Profiles } from '../../../../../tests/e2e/utils/Profiles';
 // eslint-disable-next-line playwright/no-raw-locators
-import { getWorkerEntityId, getWorkerUserId } from '../../../../../tests/e2e/utils/WorkerEntities';
+import { getWorkerUserId } from '../../../../../tests/e2e/utils/WorkerEntities';
 // eslint-disable-next-line playwright/no-raw-locators
 import { Config as E2EConfig } from '../../../../../tests/e2e/utils/Config';
 
@@ -52,8 +52,9 @@ type ItilDef = {
     fk: string,
 };
 
+const TICKET: ItilDef = { label: 'Ticket', url: 'ticket', api: 'Ticket', userlink: 'Ticket_User', grouplink: 'Group_Ticket', fk: 'tickets_id' };
 const ITIL_TYPES: ItilDef[] = [
-    { label: 'Ticket', url: 'ticket', api: 'Ticket', userlink: 'Ticket_User', grouplink: 'Group_Ticket', fk: 'tickets_id' },
+    TICKET,
     { label: 'Change', url: 'change', api: 'Change', userlink: 'Change_User', grouplink: 'Change_Group', fk: 'changes_id' },
     { label: 'Problem', url: 'problem', api: 'Problem', userlink: 'Problem_User', grouplink: 'Group_Problem', fk: 'problems_id' },
 ];
@@ -133,28 +134,17 @@ async function getItilStatus(session: ApiSession, itemtype: string, id: number):
     return Number(body.status);
 }
 
+// Each ITIL type has its own settings, all checked by the same code: every
+// type is covered with the technician and the solution, the other fields
+// only on tickets.
 for (const itil of ITIL_TYPES) {
     test.describe(`MoreOptions - Mandatory fields to close (${itil.label})`, () => {
-        test(`blocks closing without a technician, allows it once one is assigned (${itil.label})`, async ({ page, profile, api, entity }) => {
+        test.beforeEach(async ({ profile }) => {
             await profile.set(Profiles.SuperAdmin);
+        });
 
-            const entities_id = await api.createItem('Entity', {
-                'name': `MoreOptions require technician ${itil.label} ${randomUUID()}`,
-                'entities_id': getWorkerEntityId(),
-            });
-            await entity.switchToWithRecursion(entities_id);
-            // The `api` fixture caches one authenticated session per worker for its
-            // whole lifetime: without a refresh, it never sees an entity created
-            // after that session's first request.
-            api.refreshSession();
-
-            const config_page = new MoreOptionsConfigPage(page);
-            await config_page.goto(entities_id);
-            const dropdown = config_page.getConfigDropdown(`require_technician_to_close_${itil.url}`);
-            await config_page.doSetDropdownValue(dropdown, 'Yes');
-            await config_page.save_button.click();
-            await expect(dropdown).toHaveText('Yes');
-
+        test(`blocks closing without a technician, allows it once one is assigned (${itil.label})`, async ({ page, api, entity }) => {
+            const entities_id = await createConfiguredEntity(page, api, entity, { [`require_technician_to_close_${itil.url}`]: YES });
             const item_id = await api.createItem(itil.api, {
                 name: `Test require technician ${randomUUID()}`,
                 content: 'Test item',
@@ -163,7 +153,6 @@ for (const itil of ITIL_TYPES) {
 
             const glpi = new GlpiPage(page);
             await page.goto(`/front/${itil.url}.form.php?id=${item_id}`);
-
             await doAttemptSolution(page, glpi, 'Rejected: no technician assigned.');
             await expect(page.getByRole('alert').filter({ hasText: 'Technician' })).toBeVisible();
             await expect(page.getByText('Rejected: no technician assigned.')).not.toBeAttached();
@@ -179,157 +168,8 @@ for (const itil of ITIL_TYPES) {
             await expect(page.getByText('Accepted: technician assigned.')).toBeVisible();
         });
 
-        test(`blocks closing without a technician group, allows it once one is assigned (${itil.label})`, async ({ page, profile, api, entity }) => {
-            await profile.set(Profiles.SuperAdmin);
-
-            const entities_id = await api.createItem('Entity', {
-                'name': `MoreOptions require tech group ${itil.label} ${randomUUID()}`,
-                'entities_id': getWorkerEntityId(),
-            });
-            await entity.switchToWithRecursion(entities_id);
-            // The `api` fixture caches one authenticated session per worker for its
-            // whole lifetime: without a refresh, it never sees an entity created
-            // after that session's first request.
-            api.refreshSession();
-
-            const config_page = new MoreOptionsConfigPage(page);
-            await config_page.goto(entities_id);
-            const dropdown = config_page.getConfigDropdown(`require_technicians_group_to_close_${itil.url}`);
-            await config_page.doSetDropdownValue(dropdown, 'Yes');
-            await config_page.save_button.click();
-            await expect(dropdown).toHaveText('Yes');
-
-            const item_id = await api.createItem(itil.api, {
-                name: `Test require technician group ${randomUUID()}`,
-                content: 'Test item',
-                entities_id: entities_id,
-            });
-
-            const glpi = new GlpiPage(page);
-            await page.goto(`/front/${itil.url}.form.php?id=${item_id}`);
-
-            await doAttemptSolution(page, glpi, 'Rejected: no technician group assigned.');
-            await expect(page.getByRole('alert').filter({ hasText: 'Technician group' })).toBeVisible();
-            await expect(page.getByText('Rejected: no technician group assigned.')).not.toBeAttached();
-
-            const groups_id = await api.createItem('Group', {
-                name: `Test group ${randomUUID()}`,
-                entities_id: entities_id,
-            });
-            await api.createItem(itil.grouplink, {
-                [itil.fk]: item_id,
-                groups_id: groups_id,
-                type: ASSIGN,
-            });
-
-            await page.goto(`/front/${itil.url}.form.php?id=${item_id}`);
-            await doAttemptSolution(page, glpi, 'Accepted: technician group assigned.');
-            await expect(page.getByText('Accepted: technician group assigned.')).toBeVisible();
-        });
-
-        test(`blocks closing without a category, allows it once one is set (${itil.label})`, async ({ page, profile, api, entity }) => {
-            await profile.set(Profiles.SuperAdmin);
-
-            const entities_id = await api.createItem('Entity', {
-                'name': `MoreOptions require category ${itil.label} ${randomUUID()}`,
-                'entities_id': getWorkerEntityId(),
-            });
-            await entity.switchToWithRecursion(entities_id);
-            // The `api` fixture caches one authenticated session per worker for its
-            // whole lifetime: without a refresh, it never sees an entity created
-            // after that session's first request.
-            api.refreshSession();
-
-            const config_page = new MoreOptionsConfigPage(page);
-            await config_page.goto(entities_id);
-            const dropdown = config_page.getConfigDropdown(`require_category_to_close_${itil.url}`);
-            await config_page.doSetDropdownValue(dropdown, 'Yes');
-            await config_page.save_button.click();
-            await expect(dropdown).toHaveText('Yes');
-
-            const item_id = await api.createItem(itil.api, {
-                name: `Test require category ${randomUUID()}`,
-                content: 'Test item',
-                entities_id: entities_id,
-            });
-
-            const glpi = new GlpiPage(page);
-            await page.goto(`/front/${itil.url}.form.php?id=${item_id}`);
-
-            await doAttemptSolution(page, glpi, 'Rejected: no category set.');
-            await expect(page.getByRole('alert').filter({ hasText: 'Category' })).toBeVisible();
-            await expect(page.getByText('Rejected: no category set.')).not.toBeAttached();
-
-            const itilcategories_id = await api.createItem('ITILCategory', {
-                name: `Test category ${randomUUID()}`,
-                entities_id: entities_id,
-            });
-            await api.updateItem(itil.api, item_id, { itilcategories_id: itilcategories_id });
-
-            await page.goto(`/front/${itil.url}.form.php?id=${item_id}`);
-            await doAttemptSolution(page, glpi, 'Accepted: category set.');
-            await expect(page.getByText('Accepted: category set.')).toBeVisible();
-        });
-
-        test(`blocks closing without a location, allows it once one is set (${itil.label})`, async ({ page, profile, api, entity }) => {
-            await profile.set(Profiles.SuperAdmin);
-
-            const entities_id = await api.createItem('Entity', {
-                'name': `MoreOptions require location ${itil.label} ${randomUUID()}`,
-                'entities_id': getWorkerEntityId(),
-            });
-            await entity.switchToWithRecursion(entities_id);
-            // The `api` fixture caches one authenticated session per worker for its
-            // whole lifetime: without a refresh, it never sees an entity created
-            // after that session's first request.
-            api.refreshSession();
-
-            const config_page = new MoreOptionsConfigPage(page);
-            await config_page.goto(entities_id);
-            const dropdown = config_page.getConfigDropdown(`require_location_to_close_${itil.url}`);
-            await config_page.doSetDropdownValue(dropdown, 'Yes');
-            await config_page.save_button.click();
-            await expect(dropdown).toHaveText('Yes');
-
-            const item_id = await api.createItem(itil.api, {
-                name: `Test require location ${randomUUID()}`,
-                content: 'Test item',
-                entities_id: entities_id,
-            });
-
-            const glpi = new GlpiPage(page);
-            await page.goto(`/front/${itil.url}.form.php?id=${item_id}`);
-
-            await doAttemptSolution(page, glpi, 'Rejected: no location set.');
-            await expect(page.getByRole('alert').filter({ hasText: 'Location' })).toBeVisible();
-            await expect(page.getByText('Rejected: no location set.')).not.toBeAttached();
-
-            const locations_id = await api.createItem('Location', {
-                name: `Test location ${randomUUID()}`,
-                entities_id: entities_id,
-            });
-            await api.updateItem(itil.api, item_id, { locations_id: locations_id });
-
-            await page.goto(`/front/${itil.url}.form.php?id=${item_id}`);
-            await doAttemptSolution(page, glpi, 'Accepted: location set.');
-            await expect(page.getByText('Accepted: location set.')).toBeVisible();
-        });
-
-        test(`blocks a direct close without a solution, allows it once one exists (${itil.label})`, async ({ page, profile, api, entity, request }) => {
-            await profile.set(Profiles.SuperAdmin);
-
-            const entities_id = await api.createItem('Entity', {
-                'name': `MoreOptions require solution ${itil.label} ${randomUUID()}`,
-                'entities_id': getWorkerEntityId(),
-            });
-            await entity.switchToWithRecursion(entities_id);
-
-            const config_page = new MoreOptionsConfigPage(page);
-            await config_page.goto(entities_id);
-            const dropdown = config_page.getConfigDropdown(`require_solution_to_close_${itil.url}`);
-            await config_page.doSetDropdownValue(dropdown, 'Yes');
-            await config_page.save_button.click();
-            await expect(dropdown).toHaveText('Yes');
+        test(`blocks a direct close without a solution, allows it once one exists (${itil.label})`, async ({ page, api, entity, request }) => {
+            const entities_id = await createConfiguredEntity(page, api, entity, { [`require_solution_to_close_${itil.url}`]: YES });
 
             // `require_solution_to_close` is checked through a direct status
             // change to Closed, a transition the sidebar's Status field only
@@ -363,3 +203,88 @@ for (const itil of ITIL_TYPES) {
         });
     });
 }
+
+test.describe('MoreOptions - Mandatory fields to close (Ticket only)', () => {
+    test.beforeEach(async ({ profile }) => {
+        await profile.set(Profiles.SuperAdmin);
+    });
+
+    test('blocks closing without a technician group, allows it once one is assigned', async ({ page, api, entity }) => {
+        const entities_id = await createConfiguredEntity(page, api, entity, { 'require_technicians_group_to_close_ticket': YES });
+        const item_id = await api.createItem(TICKET.api, {
+            name: `Test require technician group ${randomUUID()}`,
+            content: 'Test item',
+            entities_id: entities_id,
+        });
+
+        const glpi = new GlpiPage(page);
+        await page.goto(`/front/${TICKET.url}.form.php?id=${item_id}`);
+        await doAttemptSolution(page, glpi, 'Rejected: no technician group assigned.');
+        await expect(page.getByRole('alert').filter({ hasText: 'Technician group' })).toBeVisible();
+        await expect(page.getByText('Rejected: no technician group assigned.')).not.toBeAttached();
+
+        const groups_id = await api.createItem('Group', {
+            name: `Test group ${randomUUID()}`,
+            entities_id: entities_id,
+        });
+        await api.createItem(TICKET.grouplink, {
+            [TICKET.fk]: item_id,
+            groups_id: groups_id,
+            type: ASSIGN,
+        });
+
+        await page.goto(`/front/${TICKET.url}.form.php?id=${item_id}`);
+        await doAttemptSolution(page, glpi, 'Accepted: technician group assigned.');
+        await expect(page.getByText('Accepted: technician group assigned.')).toBeVisible();
+    });
+
+    test('blocks closing without a category, allows it once one is set', async ({ page, api, entity }) => {
+        const entities_id = await createConfiguredEntity(page, api, entity, { 'require_category_to_close_ticket': YES });
+        const item_id = await api.createItem(TICKET.api, {
+            name: `Test require category ${randomUUID()}`,
+            content: 'Test item',
+            entities_id: entities_id,
+        });
+
+        const glpi = new GlpiPage(page);
+        await page.goto(`/front/${TICKET.url}.form.php?id=${item_id}`);
+        await doAttemptSolution(page, glpi, 'Rejected: no category set.');
+        await expect(page.getByRole('alert').filter({ hasText: 'Category' })).toBeVisible();
+        await expect(page.getByText('Rejected: no category set.')).not.toBeAttached();
+
+        const itilcategories_id = await api.createItem('ITILCategory', {
+            name: `Test category ${randomUUID()}`,
+            entities_id: entities_id,
+        });
+        await api.updateItem(TICKET.api, item_id, { itilcategories_id: itilcategories_id });
+
+        await page.goto(`/front/${TICKET.url}.form.php?id=${item_id}`);
+        await doAttemptSolution(page, glpi, 'Accepted: category set.');
+        await expect(page.getByText('Accepted: category set.')).toBeVisible();
+    });
+
+    test('blocks closing without a location, allows it once one is set', async ({ page, api, entity }) => {
+        const entities_id = await createConfiguredEntity(page, api, entity, { 'require_location_to_close_ticket': YES });
+        const item_id = await api.createItem(TICKET.api, {
+            name: `Test require location ${randomUUID()}`,
+            content: 'Test item',
+            entities_id: entities_id,
+        });
+
+        const glpi = new GlpiPage(page);
+        await page.goto(`/front/${TICKET.url}.form.php?id=${item_id}`);
+        await doAttemptSolution(page, glpi, 'Rejected: no location set.');
+        await expect(page.getByRole('alert').filter({ hasText: 'Location' })).toBeVisible();
+        await expect(page.getByText('Rejected: no location set.')).not.toBeAttached();
+
+        const locations_id = await api.createItem('Location', {
+            name: `Test location ${randomUUID()}`,
+            entities_id: entities_id,
+        });
+        await api.updateItem(TICKET.api, item_id, { locations_id: locations_id });
+
+        await page.goto(`/front/${TICKET.url}.form.php?id=${item_id}`);
+        await doAttemptSolution(page, glpi, 'Accepted: location set.');
+        await expect(page.getByText('Accepted: location set.')).toBeVisible();
+    });
+});

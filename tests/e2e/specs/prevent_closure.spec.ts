@@ -30,46 +30,27 @@
  */
 
 import { randomUUID } from 'crypto';
-import { test, expect } from '../fixtures/moreoptions_fixture';
-import { MoreOptionsConfigPage } from '../pages/MoreOptionsConfigPage';
+import { test, expect, createConfiguredEntity } from '../fixtures/moreoptions_fixture';
+import { YES } from '../pages/MoreOptionsConfigPage';
 // eslint-disable-next-line playwright/no-raw-locators
 import { TicketPage } from '../../../../../tests/e2e/pages/TicketPage';
 // eslint-disable-next-line playwright/no-raw-locators
 import { Profiles } from '../../../../../tests/e2e/utils/Profiles';
-// eslint-disable-next-line playwright/no-raw-locators
-import { getWorkerEntityId } from '../../../../../tests/e2e/utils/WorkerEntities';
 
 test.describe('MoreOptions - Prevent closure with tasks in To Do status', () => {
     test('a ticket cannot be solved while it has a task still To Do', async ({ page, profile, api, entity }) => {
         await profile.set(Profiles.SuperAdmin);
 
-        // Isolate this test in its own entity: it turns on a setting that
-        // blocks every ticket closure in scope, which would otherwise be able
-        // to interfere with unrelated specs sharing the worker's entity.
-        const entity_name = `MoreOptions prevent closure ${randomUUID()}`;
-        const entities_id = await api.createItem('Entity', {
-            'name': entity_name,
-            'entities_id': getWorkerEntityId(),
+        const entities_id = await createConfiguredEntity(page, api, entity, { 'prevent_closure_ticket': YES });
+
+        // Created through the API: the creation form is not what is tested here.
+        const ticket_id = await api.createItem('Ticket', {
+            name: `Test prevent closure ${randomUUID()}`,
+            content: 'Test ticket',
+            entities_id: entities_id,
         });
-        // A freshly created entity is not immediately usable otherwise: its
-        // recursive rights are only picked up on the next explicit entity
-        // switch.
-        await entity.switchToWithRecursion(entities_id);
-
-        const config_page = new MoreOptionsConfigPage(page);
-        await config_page.goto(entities_id);
-        const prevent_closure_dropdown = config_page.getConfigDropdown('prevent_closure_ticket');
-        await config_page.doSetDropdownValue(prevent_closure_dropdown, 'Yes');
-        await config_page.save_button.click();
-        await expect(prevent_closure_dropdown).toHaveText('Yes');
-
         const ticket = new TicketPage(page);
-        await ticket.gotoCreationPage();
-        await ticket.getTextbox('Title').fill(`Test prevent closure ${randomUUID()}`);
-        await ticket.getRichTextByLabel('Description').fill('Test ticket');
-        await ticket.doSetEntityDropdown(entity_name);
-        await ticket.getButton('Add').click();
-        await page.waitForURL(/ticket\.form\.php\?id=\d+/);
+        await page.goto(`/front/ticket.form.php?id=${ticket_id}`);
 
         // Add a task and leave its status at its default (To Do).
         await ticket.getButton('View other actions').click();
