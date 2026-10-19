@@ -131,7 +131,7 @@ class Config extends CommonDBTM
      */
     public function prepareInputForUpdate($input): array
     {
-        $allowed = array_merge(['id'], self::getAllConfigFields());
+        $allowed = array_merge(['id'], self::getInheritableConfigFields());
 
         return array_filter(
             $input,

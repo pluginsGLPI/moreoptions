@@ -60,7 +60,6 @@ function plugin_init_moreoptions(): void
     /** @var array<string, mixed> $PLUGIN_HOOKS */
     global $PLUGIN_HOOKS;
 
-    $PLUGIN_HOOKS['csrf_compliant']['moreoptions'] = true;
     $PLUGIN_HOOKS['config_page']['moreoptions'] = "../../front/entity.form.php?id=" . Session::getActiveEntity() . "&forcetab=" . Config::class . "$1";
     $plugin = new Plugin();
     if ($plugin->isActivated('moreoptions') == false) {

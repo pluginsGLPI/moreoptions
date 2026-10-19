@@ -264,7 +264,7 @@ final class TreeEditorTest extends EscalationTestCase
 
         // Only the group itself is left out of the group dropdowns: every other one can be linked.
         $selected = $editor->getTemplateVariables()['selected_node'];
-        $others   = array_diff(array_keys(Group_Link::getGroupsForEntity($this->getEntity($group))), [$ids['Current']]);
+        $others   = array_values(array_diff(array_keys(Group_Link::getGroupsForEntity($this->getEntity($group))), [$ids['Current']]));
         $this->assertEqualsCanonicalizing($others, array_keys($selected['candidates_to']));
         $this->assertEqualsCanonicalizing($others, array_keys($selected['candidates_from']));
         $this->assertSame('D', $selected['candidates_to'][$ids['D']]);

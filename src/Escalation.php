@@ -61,9 +61,9 @@ use function Safe\json_encode;
  */
 class Escalation extends CommonDBTM
 {
-    public $dohistory = true;
+    public bool $dohistory = true;
 
-    public static $rightname = 'ticket';
+    public static string $rightname = 'ticket';
 
     public static function getTypeName($nb = 0): string
     {
@@ -146,7 +146,7 @@ class Escalation extends CommonDBTM
             'items_id' => $item->getID(),
         ];
 
-        if (!Session::haveRight('followup', ITILFollowup::SEEPRIVATE)) {
+        if (!Session::haveRight(ITILFollowup::$rightname, ITILFollowup::SEEPRIVATE)) {
             $criterias['is_private'] = 0;
         }
 

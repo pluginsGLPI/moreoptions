@@ -61,13 +61,13 @@ use function Safe\filemtime;
  */
 class Group_Link extends CommonDBRelation
 {
-    public static $itemtype_1 = Group::class;
+    public static ?string $itemtype_1 = Group::class;
 
-    public static $items_id_1 = 'groups_id_source';
+    public static ?string $items_id_1 = 'groups_id_source';
 
-    public static $itemtype_2 = Group::class;
+    public static ?string $itemtype_2 = Group::class;
 
-    public static $items_id_2 = 'groups_id_destination';
+    public static ?string $items_id_2 = 'groups_id_destination';
 
     public static function getTypeName($nb = 0): string
     {

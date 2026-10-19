@@ -515,7 +515,7 @@ class EscalationTest extends MoreOptionsTestCase
         $this->assertSame((int) $is_private, (int) $escalation->fields['is_private']);
 
         // Allowed to see private followups: the escalation is always shown, flagged as private
-        $this->assertNotEmpty(Session::haveRight('followup', ITILFollowup::SEEPRIVATE));
+        $this->assertNotEmpty(Session::haveRight(ITILFollowup::$rightname, ITILFollowup::SEEPRIVATE));
         $entries = $this->getEscalationTimelineEntries($item);
         $this->assertCount(1, $entries);
         $this->assertSame((int) $is_private, (int) $entries[0]['item']['is_private']);
@@ -523,7 +523,7 @@ class EscalationTest extends MoreOptionsTestCase
         // Not allowed to see private followups (but still allowed to see the item, or the core
         // returns an empty timeline): a private escalation is hidden
         $_SESSION['glpiactiveprofile']['followup'] &= ~ITILFollowup::SEEPRIVATE;
-        $this->assertEmpty(Session::haveRight('followup', ITILFollowup::SEEPRIVATE));
+        $this->assertEmpty(Session::haveRight(ITILFollowup::$rightname, ITILFollowup::SEEPRIVATE));
         $this->assertCount($is_private ? 0 : 1, $this->getEscalationTimelineEntries($item));
     }
 

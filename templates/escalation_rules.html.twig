@@ -30,7 +30,6 @@
  #}
 
 <form method="post" action="{{ path('/plugins/moreoptions/front/escalation_rules.php') }}" class="moreoptions-escalation-rules" data-track-changes="true" data-submit-once>
-    <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token() }}" />
 
     {% if actions_by_type is empty %}
         <div class="alert alert-secondary">
