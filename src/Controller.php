@@ -71,9 +71,9 @@ use User;
 
 class Controller extends CommonDBTM
 {
-    public $dohistory = true;
+    public bool $dohistory = true;
 
-    public static $rightname = 'config';
+    public static string $rightname = 'config';
 
     private static bool $solution_check_done = false;
 

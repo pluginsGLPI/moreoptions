@@ -47,9 +47,9 @@ use Session;
 
 class Config extends CommonDBTM
 {
-    public $dohistory = true;
+    public bool $dohistory = true;
 
-    public static $rightname = 'config';
+    public static string $rightname = 'config';
 
     public const CONFIG_PARENT = Entity::CONFIG_PARENT;
 
