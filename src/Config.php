@@ -810,9 +810,6 @@ class Config extends CommonDBTM
                 'assign_technician_from_task_problem',
                 'escalate_is_active',
                 'escalate_remove_technician',
-                'escalade_status_after_escalation_ticket',
-                'escalade_status_after_escalation_change',
-                'escalade_status_after_escalation_problem',
                 'escalade_assign_me_as_obsever_by_default',
                 'escalade_is_private_by_default',
             ] as $field
