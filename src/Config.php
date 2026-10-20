@@ -104,9 +104,7 @@ class Config extends CommonDBTM
         }
 
         if ($item::class === Entity::class) {
-            if ($item instanceof Entity) {
-                self::showForEntity($item);
-            }
+            self::showForEntity($item);
 
             return true;
         }
