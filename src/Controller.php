@@ -71,9 +71,9 @@ use User;
 
 class Controller extends CommonDBTM
 {
-    public $dohistory = true;
+    public bool $dohistory = true;
 
-    public static $rightname = 'config';
+    public static string $rightname = 'config';
 
     private static bool $solution_check_done = false;
 
@@ -563,7 +563,7 @@ class Controller extends CommonDBTM
         );
 
         TemplateRenderer::getInstance()->display('@moreoptions/timeline_solution_warning.html.twig', [
-            'marker_id'      => 'moreoptions-solution-warning-' . $item->getType() . '-' . $item->getID(),
+            'marker_id'      => 'moreoptions-solution-warning-' . $item::class . '-' . $item->getID(),
             'header'         => $header,
             'missing_fields' => $missing,
         ]);
@@ -610,12 +610,11 @@ class Controller extends CommonDBTM
     /**
      * Hooked on {@link \Glpi\Plugin\Hooks::POST_ITEM_FORM}. Renders, into the task creation/edit
      * form, a script that marks the fields configured as mandatory in moreoptions (category,
-     * duration, technician, technician group) with the usual red "required" marker and blocks
-     * client-side submission of the form until they are filled.
+     * duration, technician, technician group) with the usual red "required" marker.
      *
-     * The server-side block already performed by {@see self::checkTaskRequirements()} on actual
-     * submission (PRE_ITEM_ADD) is kept as-is; this only prevents the user from submitting an
-     * incomplete task in the first place.
+     * This is purely a visual hint: the actual block on submission is performed server-side by
+     * {@see self::checkTaskRequirements()} (PRE_ITEM_ADD), whose message is what gets shown to
+     * the user.
      *
      * @param array<string, mixed> $params
      */
@@ -655,9 +654,8 @@ class Controller extends CommonDBTM
 
         TemplateRenderer::getInstance()->display('@moreoptions/timeline_task_mandatory_fields.html.twig', [
             // Unique per-call anchor: lets the injected script find its own <form> reliably.
-            'marker_id'     => 'moreoptions-task-mandatory-' . bin2hex(random_bytes(6)),
-            'field_labels'  => $labels,
-            'error_message' => __('To create this task, you must fill in the following fields:', 'moreoptions'),
+            'marker_id'    => 'moreoptions-task-mandatory-' . bin2hex(random_bytes(6)),
+            'field_labels' => $labels,
         ]);
     }
 

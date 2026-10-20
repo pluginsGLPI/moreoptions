@@ -47,9 +47,9 @@ use Session;
 
 class Config extends CommonDBTM
 {
-    public $dohistory = true;
+    public bool $dohistory = true;
 
-    public static $rightname = 'config';
+    public static string $rightname = 'config';
 
     public const CONFIG_PARENT = Entity::CONFIG_PARENT;
 
@@ -75,12 +75,12 @@ class Config extends CommonDBTM
 
     public static function canView(): bool
     {
-        return (bool) Session::haveRight(self::$rightname, READ);
+        return Session::haveRight(self::$rightname, READ);
     }
 
     public function canEdit($ID): bool
     {
-        return (bool) Session::haveRight(self::$rightname, UPDATE);
+        return Session::haveRight(self::$rightname, UPDATE);
     }
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0): string
@@ -89,7 +89,7 @@ class Config extends CommonDBTM
             return '';
         }
 
-        if ($item->getType() === Entity::class) {
+        if ($item::class === Entity::class) {
             return self::createTabEntry(__('More options', 'moreoptions'), 0);
         }
 
@@ -103,10 +103,8 @@ class Config extends CommonDBTM
             return false;
         }
 
-        if ($item->getType() === Entity::class) {
-            if ($item instanceof Entity) {
-                self::showForEntity($item);
-            }
+        if ($item::class === Entity::class) {
+            self::showForEntity($item);
 
             return true;
         }
@@ -515,9 +513,7 @@ class Config extends CommonDBTM
      */
     public static function getConfig(?int $entityId = null, bool $useInheritance = true): self
     {
-        if ($entityId === null) {
-            $entityId = Session::getActiveEntity();
-        }
+        $entityId ??= Session::getActiveEntity();
 
         $moconfig = new self();
         $moconfig->getFromDBByCrit([

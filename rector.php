@@ -36,6 +36,7 @@ use Rector\Configuration\RectorConfigBuilder;
 require_once __DIR__ . '/../../src/Plugin.php';
 
 $baseline_file = __DIR__ . '/../../PluginsRector.php';
+
 if (!file_exists($baseline_file)) {
     throw new RuntimeException(
         sprintf(
