@@ -127,8 +127,8 @@ abstract class MoreOptionsTestCase extends DbTestCase
     protected function getCurrentConfig(): Config
     {
         $config = Config::getConfig();
-        if (empty($config->fields) || $config->isNewItem()) {
-            $config = $this->createTestConfig();
+        if ($config->fields === [] || $config->isNewItem()) {
+            return $this->createTestConfig();
         }
 
         return $config;
@@ -171,12 +171,8 @@ abstract class MoreOptionsTestCase extends DbTestCase
      */
     protected function initEntitySession(): void
     {
-        if (!isset($_SESSION['glpiactiveentities_string'])) {
-            $_SESSION['glpiactiveentities_string'] = '';
-        }
+        $_SESSION['glpiactiveentities_string'] ??= '';
 
-        if (!isset($_SESSION['glpiactiveentities'])) {
-            $_SESSION['glpiactiveentities'] = [];
-        }
+        $_SESSION['glpiactiveentities'] ??= [];
     }
 }

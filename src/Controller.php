@@ -563,7 +563,7 @@ class Controller extends CommonDBTM
         );
 
         TemplateRenderer::getInstance()->display('@moreoptions/timeline_solution_warning.html.twig', [
-            'marker_id'      => 'moreoptions-solution-warning-' . $item->getType() . '-' . $item->getID(),
+            'marker_id'      => 'moreoptions-solution-warning-' . $item::class . '-' . $item->getID(),
             'header'         => $header,
             'missing_fields' => $missing,
         ]);

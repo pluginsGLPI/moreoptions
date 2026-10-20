@@ -24,11 +24,19 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
+ * -------------------------------------------------------------------------
+ * @copyright Copyright (C) 2025 by the MoreOptions plugin team.
+ * @license   MIT https://opensource.org/licenses/mit-license.php
+ * @link      https://github.com/pluginsGLPI/moreoptions
+ * -------------------------------------------------------------------------
+ */
+
 use Rector\Configuration\RectorConfigBuilder;
 
 require_once __DIR__ . '/../../src/Plugin.php';
 
 $baseline_file = __DIR__ . '/../../PluginsRector.php';
+
 if (!file_exists($baseline_file)) {
     throw new RuntimeException(
         sprintf(
