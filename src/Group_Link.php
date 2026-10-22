@@ -140,7 +140,7 @@ class Group_Link extends CommonDBRelation
     {
         return TreeEditor::fromDatabase($entity->getID())->getTemplateVariables() + [
             // Changes with the script, for the browser not to keep an outdated one in its cache.
-            'script_version' => PLUGIN_MOREOPTIONS_VERSION . '-' . filemtime(dirname(__DIR__) . '/public/js/escalation_graph.js'),
+            'script_version' => PLUGIN_MOREOPTIONS_VERSION . '-' . filemtime(__DIR__ . '/../public/js/escalation_graph.js'),
         ];
     }
 

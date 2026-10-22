@@ -116,7 +116,7 @@ class Escalation extends CommonDBTM
 
         foreach (self::getEscalationsOf($item) as $row) {
             $timeline['MoreoptionsEscalation_' . $row['id']] = [
-                'type'  => self::getType(),
+                'type'  => static::class,
                 'class' => 'moreoptions-escalation',
                 'item'  => [
                     'id'                => $row['id'],
@@ -419,8 +419,8 @@ class Escalation extends CommonDBTM
         }
 
         TemplateRenderer::getInstance()->display('@moreoptions/escalation_button.html.twig', [
-            'marker_id'    => 'moreoptions-escalate-' . $item->getType() . '-' . $item->getID(),
-            'itemtype'     => $item->getType(),
+            'marker_id'    => 'moreoptions-escalate-' . $item::class . '-' . $item->getID(),
+            'itemtype'     => $item::class,
             'items_id'     => $item->getID(),
             'can_escalate' => $can_escalate,
             'history'      => $history,
@@ -472,7 +472,7 @@ class Escalation extends CommonDBTM
         }
 
         TemplateRenderer::getInstance()->display('@moreoptions/escalation_timeline.html.twig', [
-            'marker_id' => 'moreoptions-escalation-timeline-' . $item->getType() . '-' . $item->getID(),
+            'marker_id' => 'moreoptions-escalation-timeline-' . $item::class . '-' . $item->getID(),
         ]);
     }
 
