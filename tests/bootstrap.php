@@ -32,7 +32,10 @@
  */
 
 require_once __DIR__ . '/../../../tests/bootstrap.php';
-require_once __DIR__ . '/../vendor/autoload.php';
+// Not the plugin `vendor/autoload.php`: it would load the dev tools dependencies (e.g. an older
+// `twig/twig`) over the GLPI core ones.
+require_once __DIR__ . '/MoreOptionsTestCase.php';
+require_once __DIR__ . '/EscalationTestCase.php';
 
 if (!Plugin::isPluginActive('moreoptions')) {
     throw new RuntimeException('Plugin moreoptions is not active in the test database');
