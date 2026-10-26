@@ -370,6 +370,21 @@ class Controller extends CommonDBTM
 
     public static function preventClosure(CommonDBTM $item): bool
     {
+        if (self::hasPendingTasks($item)) {
+            Session::addMessageAfterRedirect(__s('The ticket you wish to close has tasks that need to be completed.', 'moreoptions'), false, ERROR);
+            $item->input = false;
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Whether closure prevention is enabled for the item's type and the item still has
+     * tasks in To Do status.
+     */
+    private static function hasPendingTasks(CommonDBTM $item): bool
+    {
         $conf = Config::getConfig();
 
         $tasks = [];
@@ -397,13 +412,11 @@ class Controller extends CommonDBTM
 
         foreach ($tasks as $t) {
             if (is_array($t) && isset($t['state']) && $t['state'] == Planning::TODO) {
-                Session::addMessageAfterRedirect(__s('The ticket you wish to close has tasks that need to be completed.', 'moreoptions'), false, ERROR);
-                $item->input = false;
-                return false;
+                return true;
             }
         }
 
-        return true;
+        return false;
     }
 
     /**
@@ -543,29 +556,42 @@ class Controller extends CommonDBTM
             return;
         }
 
-        $missing = self::getMissingCloseFields($item, true);
-        if (empty($missing)) {
+        $missing = self::getMissingCloseFields($item, true) ?? [];
+        $has_pending_tasks = self::hasPendingTasks($item);
+        if ($missing === [] && !$has_pending_tasks) {
             // Nothing configured as required, or everything is already filled: let the
             // normal "Add a solution" action be usable.
             return;
         }
 
-        $count = count($missing);
-        $header = sprintf(
-            _n(
-                '%1$d required field is missing, so this %2$s can\'t be solved yet.',
-                '%1$d required fields are missing, so this %2$s can\'t be solved yet.',
+        $header = null;
+        if ($missing !== []) {
+            $count = count($missing);
+            $header = sprintf(
+                _n(
+                    '%1$d required field is missing, so this %2$s can\'t be solved yet.',
+                    '%1$d required fields are missing, so this %2$s can\'t be solved yet.',
+                    $count,
+                    'moreoptions',
+                ),
                 $count,
-                'moreoptions',
-            ),
-            $count,
-            $item->getTypeName(1),
-        );
+                $item->getTypeName(1),
+            );
+        }
+
+        $tasks_warning = null;
+        if ($has_pending_tasks) {
+            $tasks_warning = sprintf(
+                __('This %s has tasks in To Do status, so it can\'t be solved yet.', 'moreoptions'),
+                $item->getTypeName(1),
+            );
+        }
 
         TemplateRenderer::getInstance()->display('@moreoptions/timeline_solution_warning.html.twig', [
             'marker_id'      => 'moreoptions-solution-warning-' . $item->getType() . '-' . $item->getID(),
             'header'         => $header,
             'missing_fields' => $missing,
+            'tasks_warning'  => $tasks_warning,
         ]);
     }
 

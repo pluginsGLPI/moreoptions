@@ -2930,6 +2930,59 @@ class ConfigTest extends MoreOptionsTestCase
         );
     }
 
+    /**
+     * Test that the "Add a solution" warning mentions tasks still in To Do status
+     * when closure prevention is enabled
+     */
+    public function testSolutionWarningShowsPendingTasks(): void
+    {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'entities_id'            => 0,
+            'prevent_closure_ticket' => 1,
+        ]));
+
+        $ticket = $this->createItem(
+            Ticket::class,
+            [
+                'name'    => 'Test ticket solution warning with pending tasks',
+                'content' => 'Test content',
+            ],
+        );
+        $task = $this->createItem(
+            TicketTask::class,
+            [
+                'tickets_id' => $ticket->getID(),
+                'content'    => 'Test task',
+                'state'      => Planning::TODO,
+            ],
+        );
+
+        $render = function () use ($ticket): string {
+            $this->assertTrue($ticket->getFromDB($ticket->getID()));
+            ob_start();
+            try {
+                Controller::showSolutionRequirementsWarning(['item' => $ticket]);
+            } finally {
+                $output = ob_get_clean();
+            }
+            return $output;
+        };
+
+        // A task in To Do status: the warning is shown
+        $this->assertStringContainsString('has tasks in To Do status', $render());
+
+        // Once the task is done, nothing blocks the solution anymore
+        $this->updateItem(TicketTask::class, $task->getID(), ['state' => Planning::DONE]);
+        $this->assertSame('', $render());
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'prevent_closure_ticket' => 0,
+        ]));
+    }
+
     public function testConfigTabRequiresConfigRight(): void
     {
         $this->login();
