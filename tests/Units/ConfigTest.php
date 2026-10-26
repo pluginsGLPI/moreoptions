@@ -2968,6 +2968,7 @@ class ConfigTest extends MoreOptionsTestCase
             } finally {
                 $output = ob_get_clean();
             }
+
             return $output;
         };
 

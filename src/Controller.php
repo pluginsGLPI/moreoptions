@@ -582,7 +582,7 @@ class Controller extends CommonDBTM
         $tasks_warning = null;
         if ($has_pending_tasks) {
             $tasks_warning = sprintf(
-                __('This %s has tasks in To Do status, so it can\'t be solved yet.', 'moreoptions'),
+                __("This %s has tasks in To Do status, so it can't be solved yet.", 'moreoptions'),
                 $item->getTypeName(1),
             );
         }
