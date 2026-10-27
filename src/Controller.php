@@ -402,21 +402,20 @@ class Controller extends CommonDBTM
                 'changes_id' => $item->fields['id'],
             ]);
         }
-
-        if ($item instanceof Problem && $conf->fields['prevent_closure_problem'] == 1) {
-            $task = new ProblemTask();
-            $tasks = $task->find([
-                'problems_id' => $item->fields['id'],
-            ]);
+        if (!$item instanceof CommonITILObject) {
+            return false;
         }
 
-        foreach ($tasks as $t) {
-            if (is_array($t) && isset($t['state']) && $t['state'] == Planning::TODO) {
-                return true;
-            }
+        $conf = Config::getConfig();
+        if (($conf->fields['prevent_closure_' . strtolower($item::class)] ?? 0) != 1) {
+            return false;
         }
 
-        return false;
+        return countElementsInTable($item::getTaskClassInstance()::getTable(), [
+            $item::getForeignKeyField() => $item->getID(),
+            'state'                     => Planning::TODO,
+        ]) > 0;
+    }
     }
 
     /**
