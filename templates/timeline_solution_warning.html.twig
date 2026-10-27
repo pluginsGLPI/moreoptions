@@ -50,12 +50,17 @@
     <div class="d-flex align-items-start gap-2">
         <i class="ti ti-alert-triangle text-warning mt-1" aria-hidden="true"></i>
         <div class="moreoptions-solution-warning-text">
-            <div class="mb-1">{{ header }}</div>
-            <ul class="mb-0 ps-3">
-                {% for field in missing_fields %}
-                    <li>{{ field }}</li>
-                {% endfor %}
-            </ul>
+            {% if missing_fields is not empty %}
+                <div class="mb-1">{{ header }}</div>
+                <ul class="mb-0 ps-3">
+                    {% for field in missing_fields %}
+                        <li>{{ field }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            {% if tasks_warning is not null %}
+                <div class="{{ missing_fields is not empty ? 'mt-1' : '' }}">{{ tasks_warning }}</div>
+            {% endif %}
         </div>
     </div>
 {% endset %}
