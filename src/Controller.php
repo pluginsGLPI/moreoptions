@@ -385,23 +385,6 @@ class Controller extends CommonDBTM
      */
     private static function hasPendingTasks(CommonDBTM $item): bool
     {
-        $conf = Config::getConfig();
-
-        $tasks = [];
-
-        if ($item instanceof Ticket && $conf->fields['prevent_closure_ticket'] == 1) {
-            $task = new TicketTask();
-            $tasks = $task->find([
-                'tickets_id' => $item->fields['id'],
-            ]);
-        }
-
-        if ($item instanceof Change && $conf->fields['prevent_closure_change'] == 1) {
-            $task = new ChangeTask();
-            $tasks = $task->find([
-                'changes_id' => $item->fields['id'],
-            ]);
-        }
         if (!$item instanceof CommonITILObject) {
             return false;
         }
@@ -415,7 +398,6 @@ class Controller extends CommonDBTM
             $item::getForeignKeyField() => $item->getID(),
             'state'                     => Planning::TODO,
         ]) > 0;
-    }
     }
 
     /**

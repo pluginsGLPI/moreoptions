@@ -48,6 +48,7 @@ use User;
 use Ticket_User;
 use ITILSolution;
 use CommonITILObject;
+use CommonITILTask;
 use Change;
 use Change_Group;
 use Change_User;
@@ -2931,40 +2932,54 @@ class ConfigTest extends MoreOptionsTestCase
     }
 
     /**
+     * @return iterable<string, array{class-string<CommonITILObject>, class-string<CommonITILTask>, string}>
+     */
+    public static function solutionWarningPendingTasksProvider(): iterable
+    {
+        yield 'Ticket'  => [Ticket::class, TicketTask::class, 'prevent_closure_ticket'];
+        yield 'Change'  => [Change::class, ChangeTask::class, 'prevent_closure_change'];
+        yield 'Problem' => [Problem::class, ProblemTask::class, 'prevent_closure_problem'];
+    }
+
+    /**
      * Test that the "Add a solution" warning mentions tasks still in To Do status
      * when closure prevention is enabled
+     *
+     * @param class-string<CommonITILObject> $itil_class
+     * @param class-string<CommonITILTask> $task_class
      */
-    public function testSolutionWarningShowsPendingTasks(): void
+    #[DataProvider('solutionWarningPendingTasksProvider')]
+    public function testSolutionWarningShowsPendingTasks(string $itil_class, string $task_class, string $config_key): void
     {
         $this->login();
 
         $conf = $this->getCurrentConfig();
         $this->assertTrue($this->updateTestConfig($conf, [
-            'entities_id'            => 0,
-            'prevent_closure_ticket' => 1,
+            'entities_id' => 0,
+            $config_key   => 1,
         ]));
 
-        $ticket = $this->createItem(
-            Ticket::class,
+        $item = $this->createItem(
+            $itil_class,
             [
-                'name'    => 'Test ticket solution warning with pending tasks',
+                'name'    => 'Test ' . $itil_class . ' solution warning with pending tasks',
                 'content' => 'Test content',
             ],
         );
         $task = $this->createItem(
-            TicketTask::class,
+            $task_class,
             [
-                'tickets_id' => $ticket->getID(),
-                'content'    => 'Test task',
-                'state'      => Planning::TODO,
+                $itil_class::getForeignKeyField() => $item->getID(),
+                'content'                         => 'Test task',
+                'state'                           => Planning::TODO,
             ],
         );
 
-        $render = function () use ($ticket): string {
-            $this->assertTrue($ticket->getFromDB($ticket->getID()));
+        $render = function () use ($item): string {
+            $this->assertTrue($item->getFromDB($item->getID()));
             ob_start();
             try {
-                Controller::showSolutionRequirementsWarning(['item' => $ticket]);
+                Controller::showSolutionRequirementsWarning(['item' => $item]);
             } finally {
                 $output = ob_get_clean();
             }
@@ -2976,12 +2991,15 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertStringContainsString('has tasks in To Do status', $render());
 
         // Once the task is done, nothing blocks the solution anymore
-        $this->updateItem(TicketTask::class, $task->getID(), ['state' => Planning::DONE]);
+        $this->updateItem($task_class, $task->getID(), ['state' => Planning::DONE]);
         $this->assertSame('', $render());
 
+        // Closure prevention disabled: a task in To Do status no longer triggers the warning
+        $this->updateItem($task_class, $task->getID(), ['state' => Planning::TODO]);
         $this->assertTrue($this->updateTestConfig($conf, [
-            'prevent_closure_ticket' => 0,
+            $config_key => 0,
         ]));
+        $this->assertSame('', $render());
     }
 
     public function testConfigTabRequiresConfigRight(): void
