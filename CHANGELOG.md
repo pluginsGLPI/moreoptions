@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fix config tab visibility and restrict config update fields
 - Fix tab redirect after save
 - Show tasks in To Do status in the "Add a solution" warning when closure prevention is enabled
+- Show the number of tasks to complete and of missing fields in the "Add a solution" warning
 
 ## Add
 
