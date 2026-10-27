@@ -3002,6 +3002,72 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertSame('', $render());
     }
 
+    /**
+     * @return iterable<string, array{class-string<CommonITILObject>, class-string<CommonITILTask>, string, string}>
+     */
+    public static function solutionWarningCombinedProvider(): iterable
+    {
+        yield 'Ticket'  => [Ticket::class, TicketTask::class, 'prevent_closure_ticket', 'require_category_to_close_ticket'];
+        yield 'Change'  => [Change::class, ChangeTask::class, 'prevent_closure_change', 'require_category_to_close_change'];
+        yield 'Problem' => [Problem::class, ProblemTask::class, 'prevent_closure_problem', 'require_category_to_close_problem'];
+    }
+
+    /**
+     * Test that the "Add a solution" warning combines pending tasks and missing
+     * required fields in a single sentence
+     *
+     * @param class-string<CommonITILObject> $itil_class
+     * @param class-string<CommonITILTask> $task_class
+     */
+    #[DataProvider('solutionWarningCombinedProvider')]
+    public function testSolutionWarningCombinesPendingTasksAndMissingFields(
+        string $itil_class,
+        string $task_class,
+        string $prevent_closure_key,
+        string $require_category_key,
+    ): void {
+        $this->login();
+
+        $conf = $this->getCurrentConfig();
+        $this->assertTrue($this->updateTestConfig($conf, [
+            'entities_id'         => 0,
+            $prevent_closure_key  => 1,
+            $require_category_key => 1,
+        ]));
+
+        // No category: one field is missing
+        $item = $this->createItem(
+            $itil_class,
+            [
+                'name'    => 'Test ' . $itil_class . ' solution warning with pending task and missing field',
+                'content' => 'Test content',
+            ],
+        );
+        $this->createItem(
+            $task_class,
+            [
+                $itil_class::getForeignKeyField() => $item->getID(),
+                'content'                         => 'Test task',
+                'state'                           => Planning::TODO,
+            ],
+        );
+
+        $this->assertTrue($item->getFromDB($item->getID()));
+        ob_start();
+        try {
+            Controller::showSolutionRequirementsWarning(['item' => $item]);
+        } finally {
+            $output = ob_get_clean();
+        }
+
+        $this->assertStringContainsString('1 task needs to be completed and 1 field is missing', $output);
+
+        $this->assertTrue($this->updateTestConfig($conf, [
+            $prevent_closure_key  => 0,
+            $require_category_key => 0,
+        ]));
+    }
+
     public function testConfigTabRequiresConfigRight(): void
     {
         $this->login();
