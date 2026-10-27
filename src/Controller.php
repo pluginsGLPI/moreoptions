@@ -370,40 +370,34 @@ class Controller extends CommonDBTM
 
     public static function preventClosure(CommonDBTM $item): bool
     {
-        $conf = Config::getConfig();
-
-        $tasks = [];
-
-        if ($item instanceof Ticket && $conf->fields['prevent_closure_ticket'] == 1) {
-            $task = new TicketTask();
-            $tasks = $task->find([
-                'tickets_id' => $item->fields['id'],
-            ]);
-        }
-
-        if ($item instanceof Change && $conf->fields['prevent_closure_change'] == 1) {
-            $task = new ChangeTask();
-            $tasks = $task->find([
-                'changes_id' => $item->fields['id'],
-            ]);
-        }
-
-        if ($item instanceof Problem && $conf->fields['prevent_closure_problem'] == 1) {
-            $task = new ProblemTask();
-            $tasks = $task->find([
-                'problems_id' => $item->fields['id'],
-            ]);
-        }
-
-        foreach ($tasks as $t) {
-            if (is_array($t) && isset($t['state']) && $t['state'] == Planning::TODO) {
-                Session::addMessageAfterRedirect(__s('The ticket you wish to close has tasks that need to be completed.', 'moreoptions'), false, ERROR);
-                $item->input = false;
-                return false;
-            }
+        if (self::hasPendingTasks($item)) {
+            Session::addMessageAfterRedirect(__s('The ticket you wish to close has tasks that need to be completed.', 'moreoptions'), false, ERROR);
+            $item->input = false;
+            return false;
         }
 
         return true;
+    }
+
+    /**
+     * Whether closure prevention is enabled for the item's type and the item still has
+     * tasks in To Do status.
+     */
+    private static function hasPendingTasks(CommonDBTM $item): bool
+    {
+        if (!$item instanceof CommonITILObject) {
+            return false;
+        }
+
+        $conf = Config::getConfig();
+        if (($conf->fields['prevent_closure_' . strtolower($item::class)] ?? 0) != 1) {
+            return false;
+        }
+
+        return countElementsInTable($item::getTaskClassInstance()::getTable(), [
+            $item::getForeignKeyField() => $item->getID(),
+            'state'                     => Planning::TODO,
+        ]) > 0;
     }
 
     /**
@@ -543,29 +537,42 @@ class Controller extends CommonDBTM
             return;
         }
 
-        $missing = self::getMissingCloseFields($item, true);
-        if (empty($missing)) {
+        $missing = self::getMissingCloseFields($item, true) ?? [];
+        $has_pending_tasks = self::hasPendingTasks($item);
+        if ($missing === [] && !$has_pending_tasks) {
             // Nothing configured as required, or everything is already filled: let the
             // normal "Add a solution" action be usable.
             return;
         }
 
-        $count = count($missing);
-        $header = sprintf(
-            _n(
-                '%1$d required field is missing, so this %2$s can\'t be solved yet.',
-                '%1$d required fields are missing, so this %2$s can\'t be solved yet.',
+        $header = null;
+        if ($missing !== []) {
+            $count = count($missing);
+            $header = sprintf(
+                _n(
+                    '%1$d required field is missing, so this %2$s can\'t be solved yet.',
+                    '%1$d required fields are missing, so this %2$s can\'t be solved yet.',
+                    $count,
+                    'moreoptions',
+                ),
                 $count,
-                'moreoptions',
-            ),
-            $count,
-            $item->getTypeName(1),
-        );
+                $item->getTypeName(1),
+            );
+        }
+
+        $tasks_warning = null;
+        if ($has_pending_tasks) {
+            $tasks_warning = sprintf(
+                __("This %s has tasks in To Do status, so it can't be solved yet.", 'moreoptions'),
+                $item->getTypeName(1),
+            );
+        }
 
         TemplateRenderer::getInstance()->display('@moreoptions/timeline_solution_warning.html.twig', [
             'marker_id'      => 'moreoptions-solution-warning-' . $item::class . '-' . $item->getID(),
             'header'         => $header,
             'missing_fields' => $missing,
+            'tasks_warning'  => $tasks_warning,
         ]);
     }
 
