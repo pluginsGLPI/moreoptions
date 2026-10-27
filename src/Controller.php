@@ -565,7 +565,7 @@ class Controller extends CommonDBTM
             $item->getTypeName(1),
             count($reasons) === 2
                 ? sprintf(__('%1$s and %2$s', 'moreoptions'), $reasons[0], $reasons[1])
-                : $reasons[0],
+                : ($reasons[0] ?? ''),
         );
 
         TemplateRenderer::getInstance()->display('@moreoptions/timeline_solution_warning.html.twig', [
