@@ -385,38 +385,19 @@ class Controller extends CommonDBTM
      */
     private static function hasPendingTasks(CommonDBTM $item): bool
     {
+        if (!$item instanceof CommonITILObject) {
+            return false;
+        }
+
         $conf = Config::getConfig();
-
-        $tasks = [];
-
-        if ($item instanceof Ticket && $conf->fields['prevent_closure_ticket'] == 1) {
-            $task = new TicketTask();
-            $tasks = $task->find([
-                'tickets_id' => $item->fields['id'],
-            ]);
+        if (($conf->fields['prevent_closure_' . strtolower($item::class)] ?? 0) != 1) {
+            return false;
         }
 
-        if ($item instanceof Change && $conf->fields['prevent_closure_change'] == 1) {
-            $task = new ChangeTask();
-            $tasks = $task->find([
-                'changes_id' => $item->fields['id'],
-            ]);
-        }
-
-        if ($item instanceof Problem && $conf->fields['prevent_closure_problem'] == 1) {
-            $task = new ProblemTask();
-            $tasks = $task->find([
-                'problems_id' => $item->fields['id'],
-            ]);
-        }
-
-        foreach ($tasks as $t) {
-            if (is_array($t) && isset($t['state']) && $t['state'] == Planning::TODO) {
-                return true;
-            }
-        }
-
-        return false;
+        return countElementsInTable($item::getTaskClassInstance()::getTable(), [
+            $item::getForeignKeyField() => $item->getID(),
+            'state'                     => Planning::TODO,
+        ]) > 0;
     }
 
     /**
