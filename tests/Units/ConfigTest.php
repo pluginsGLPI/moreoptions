@@ -2988,7 +2988,7 @@ class ConfigTest extends MoreOptionsTestCase
         };
 
         // A task in To Do status: the warning is shown
-        $this->assertStringContainsString('has tasks in To Do status', $render());
+        $this->assertStringContainsString('1 task needs to be completed', $render());
 
         // Once the task is done, nothing blocks the solution anymore
         $this->updateItem($task_class, $task->getID(), ['state' => Planning::DONE]);
