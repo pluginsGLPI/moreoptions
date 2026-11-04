@@ -108,7 +108,8 @@ abstract class EscalationTestCase extends MoreOptionsTestCase
             $links[EscalationLink::fromRow($row)->getKey()] = $row['link_type'];
         }
 
-        ksort($links);
+        // Natural order: in the order of the group ids, "9-10" before "10-11".
+        ksort($links, SORT_NATURAL);
 
         return $links;
     }

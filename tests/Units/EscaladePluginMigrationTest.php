@@ -229,6 +229,80 @@ final class EscaladePluginMigrationTest extends EscalationTestCase
         $this->assertCount(2, $this->getEntityLinks(0));
     }
 
+    public function testLinksClosingALoopAreSkipped(): void
+    {
+        global $DB;
+
+        $this->login();
+        ['A' => $a, 'B' => $b, 'C' => $c, 'D' => $d] = $this->createGroups(['A', 'B', 'C', 'D'], $this->getRootEntityId(), true);
+        // B -> A closes A -> B, C -> A closes A -> B -> C.
+        $this->insertEscaladeLinks([[$a, $b], [$b, $a], [$b, $c], [$c, $a], [$c, $d]]);
+
+        $result = (new EscaladePluginMigration($DB))->execute();
+        $this->assertTrue($result->isFullyProcessed());
+        $this->assertFalse($result->hasErrors());
+
+        $warnings = $this->getMessages($result, MessageType::Warning);
+        $this->assertCount(2, $warnings);
+        $this->assertStringStartsWith('Escalation link from "B" to "A" has been ignored', $warnings[0]);
+        $this->assertStringStartsWith('Escalation link from "C" to "A" has been ignored', $warnings[1]);
+
+        $this->assertSame([
+            sprintf('%d-%d', $a, $b) => LinkStrategyEnum::INHERITED->value,
+            sprintf('%d-%d', $b, $c) => LinkStrategyEnum::INHERITED->value,
+            sprintf('%d-%d', $c, $d) => LinkStrategyEnum::INHERITED->value,
+        ], $this->getEntityLinks(0));
+        $this->assertNull(Group_Link::findLoop(0));
+    }
+
+    public function testLinksClosingALoopWithExistingLinksAreSkipped(): void
+    {
+        global $DB;
+
+        $this->login();
+        ['A' => $a, 'B' => $b, 'C' => $c] = $this->createGroups(['A', 'B', 'C'], $this->getRootEntityId(), true);
+        // A removed link (LinkStrategyEnum::NONE) does not apply: it cannot close a loop.
+        $this->createLinks(0, [[$b, $a, LinkStrategyEnum::BASIC], [$c, $a, LinkStrategyEnum::NONE]]);
+        $this->insertEscaladeLinks([[$a, $b], [$a, $c]]);
+
+        $result = (new EscaladePluginMigration($DB))->execute();
+        $this->assertTrue($result->isFullyProcessed());
+
+        $warnings = $this->getMessages($result, MessageType::Warning);
+        $this->assertCount(1, $warnings);
+        $this->assertStringStartsWith('Escalation link from "A" to "B" has been ignored', $warnings[0]);
+
+        $this->assertSame([
+            sprintf('%d-%d', $a, $c) => LinkStrategyEnum::INHERITED->value,
+            sprintf('%d-%d', $b, $a) => LinkStrategyEnum::BASIC->value,
+            sprintf('%d-%d', $c, $a) => LinkStrategyEnum::NONE->value,
+        ], $this->getEntityLinks(0));
+        $this->assertNull(Group_Link::findLoop(0));
+    }
+
+    public function testLoopsWithLinksOfSubEntitiesAreReported(): void
+    {
+        global $DB;
+
+        $this->login();
+        $child_id = $this->createChildEntity('Child', $this->getRootEntityId());
+        ['A' => $a, 'B' => $b] = $this->createGroups(['A', 'B'], $this->getRootEntityId(), true);
+        $this->createLinks($child_id, [[$b, $a, LinkStrategyEnum::BASIC]]);
+        $this->insertEscaladeLinks([[$a, $b]]);
+
+        $result = (new EscaladePluginMigration($DB))->execute();
+        $this->assertTrue($result->isFullyProcessed());
+
+        // The link is imported: it only makes a loop in the sub-entity, where it is reported.
+        $this->assertSame([sprintf('%d-%d', $a, $b) => LinkStrategyEnum::INHERITED->value], $this->getEntityLinks(0));
+        $this->assertSame($child_id, Group_Link::findLoop(0)['entities_id'] ?? null);
+
+        $warnings = $this->getMessages($result, MessageType::Warning);
+        $this->assertCount(1, $warnings);
+        $this->assertStringContainsString('Child', $warnings[0]);
+        $this->assertStringContainsString('make a loop', $warnings[0]);
+    }
+
     public function testActiveFilterIsActivatedInTheRootEntity(): void
     {
         global $DB;

@@ -34,9 +34,12 @@
 
 namespace GlpiPlugin\Moreoptions\Migration;
 
+use Dropdown;
+use Entity;
 use Glpi\Message\MessageType;
 use Glpi\Migration\AbstractPluginMigration;
 use GlpiPlugin\Moreoptions\Config;
+use GlpiPlugin\Moreoptions\EscalationTree\EscalationGraph;
 use GlpiPlugin\Moreoptions\EscalationTree\EscalationLink;
 use GlpiPlugin\Moreoptions\Group_Link;
 use GlpiPlugin\Moreoptions\LinkStrategy\LinkStrategyEnum;
@@ -48,7 +51,7 @@ use Override;
  * escalation tree of MoreOptions (see Group_Link):
  * - the groups a group can escalate to (`glpi_plugin_escalade_groups_groups`) become links of the
  *   root entity, replicated in all its sub-entities (see LinkStrategyEnum::INHERITED): the links of
- *   Escalade apply in all the entities;
+ *   Escalade apply in all the entities, except the ones closing a loop, which Escalade allows;
  * - the activation of the filter (`use_filter_assign_group`) becomes the one of the root entity,
  *   which its sub-entities inherit unless they define their own.
  *
@@ -92,6 +95,7 @@ final class EscaladePluginMigration extends AbstractPluginMigration
     protected function processMigration(): bool
     {
         $this->migrateLinks();
+        $this->warnAboutLoops();
         $this->migrateFilterActivation();
         $this->warnAboutUserBypasses();
 
@@ -101,6 +105,7 @@ final class EscaladePluginMigration extends AbstractPluginMigration
     /**
      * The links of Escalade become inherited links of the root entity. A link MoreOptions already
      * has between the same groups in the root entity is kept as it is: it was set from MoreOptions.
+     * A link closing a loop is skipped, in the order of Escalade: the first links are kept.
      */
     private function migrateLinks(): void
     {
@@ -115,6 +120,17 @@ final class EscaladePluginMigration extends AbstractPluginMigration
 
         $groups = $this->getExistingGroups();
         $done   = [];
+
+        // Escalade allows loops (A -> B and B -> A), MoreOptions does not: a link closing one with
+        // the links of the root entity, already there or imported before it, is skipped.
+        $graph = new EscalationGraph();
+        foreach (Group_Link::getRowsOfEntity(0) as $existing) {
+            $existing = EscalationLink::fromRow($existing);
+            if ($existing->strategy !== LinkStrategyEnum::NONE) {
+                $graph->addEdge($existing->source, $existing->destination);
+            }
+        }
+
         foreach ($rows as $row) {
             $source      = (int) $row['groups_id_source'];
             $destination = (int) $row['groups_id_destination'];
@@ -155,16 +171,54 @@ final class EscaladePluginMigration extends AbstractPluginMigration
                 continue;
             }
 
+            if (isset($graph->getDescendants($destination)[$source])) {
+                $this->result->addMessage(
+                    MessageType::Warning,
+                    sprintf(
+                        __('Escalation link from "%1$s" to "%2$s" has been ignored: "%2$s" already escalates to "%1$s", directly or not, and escalation links cannot make a loop.', 'moreoptions'),
+                        $groups[$source],
+                        $groups[$destination],
+                    ),
+                );
+                continue;
+            }
+
             $this->importItem(
                 Group_Link::class,
                 ['entities_id' => 0] + (new EscalationLink($source, $destination, LinkStrategyEnum::INHERITED))->toRow(),
                 null,
                 ['_no_message' => true],
             );
+            $graph->addEdge($source, $destination);
         }
 
         $this->progress_indicator?->setProgressBarMessage('');
         $this->progress_indicator?->finish();
+    }
+
+    /**
+     * The imported links cannot make a loop in the root entity (see migrateLinks()), but they still
+     * can with the links of a sub-entity: no change could be saved in its tree until one is removed.
+     */
+    private function warnAboutLoops(): void
+    {
+        $loop = Group_Link::findLoop(0);
+        if ($loop === null) {
+            return;
+        }
+
+        $names = array_map(
+            static fn(int $groups_id): string => Dropdown::getDropdownName(Group::getTable(), $groups_id),
+            [...$loop['groups'], $loop['groups'][0]],
+        );
+        $this->result->addMessage(
+            MessageType::Warning,
+            sprintf(
+                __('The escalation links of the entity "%1$s" make a loop (%2$s): remove one of them in the escalation tree of the entity, no change can be saved there until then.', 'moreoptions'),
+                Dropdown::getDropdownName(Entity::getTable(), $loop['entities_id']),
+                implode(' -> ', $names),
+            ),
+        );
     }
 
     /**
