@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-02 10:20+0000\n"
-"PO-Revision-Date: 2026-10-02 10:20+0000\n"
+"POT-Creation-Date: 2026-11-04 14:38+0000\n"
+"PO-Revision-Date: 2026-11-04 14:38+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
 "Language: en_GB\n"
@@ -222,6 +222,10 @@ msgid "Inherit"
 msgstr "Inherit"
 
 #: templates/config.html.twig
+msgid "Inherit"
+msgstr "Inherit"
+
+#: templates/config.html.twig
 msgid ""
 "The \"Use the technician's group\" option from Escalade is enabled and takes "
 "precedence over this one."
@@ -306,7 +310,19 @@ msgstr "Controller"
 msgid "The ticket you wish to close has tasks that need to be completed."
 msgstr "The ticket you wish to close has tasks that need to be completed."
 
-#: src/Controller.php:516
+#: templates/components/segmented_control.html.twig
+msgid "Follow the parent entity"
+msgstr "Follow the parent entity"
+
+#: src/Controller.php:82
+msgid "Controller"
+msgstr "Controller"
+
+#: src/Controller.php:374
+msgid "The ticket you wish to close has tasks that need to be completed."
+msgstr "The ticket you wish to close has tasks that need to be completed."
+
+#: src/Controller.php:509
 #, php-format
 msgid "To close this %s, you must fill in the following fields:"
 msgstr "To close this %s, you must fill in the following fields:"
@@ -426,3 +442,87 @@ msgstr "These settings are shared by tickets, changes and problems."
 #: src/Config.php:406
 msgid "Activate escalation"
 msgstr "Activate escalation"
+
+#: src/Controller.php:551
+#, php-format
+msgid "%d task needs to be completed"
+msgid_plural "%d tasks need to be completed"
+msgstr[0] "%d task needs to be completed"
+msgstr[1] "%d tasks need to be completed"
+
+#: src/Controller.php:558
+#, php-format
+msgid "%d field is missing"
+msgid_plural "%d fields are missing"
+msgstr[0] "%d field is missing"
+msgstr[1] "%d fields are missing"
+
+#: src/Controller.php:564
+#, php-format
+msgid "This %1$s can't be solved yet, %2$s"
+msgstr "This %1$s can't be solved yet, %2$s"
+
+#: src/Controller.php:567
+#, php-format
+msgid "%1$s and %2$s"
+msgstr "%1$s and %2$s"
+
+#: src/Controller.php:608
+msgid "To create this task, you must fill in the following fields:"
+msgstr "To create this task, you must fill in the following fields:"
+
+#: src/Config.php:58 src/Config.php:63 src/Config.php:93
+msgid "More options"
+msgstr "More options"
+
+#: src/Config.php:204
+msgid "Default"
+msgstr "Default"
+
+#: src/Config.php:383
+msgid "Actors and groups"
+msgstr "Actors and groups"
+
+#: src/Config.php:386
+msgid "Take the group of associated item"
+msgstr "Take the group of associated item"
+
+#: src/Config.php:387
+msgid "Take the requester group"
+msgstr "Take the requester group"
+
+#: src/Config.php:388
+msgid "Take the technician group"
+msgstr "Take the technician group"
+
+#: src/Config.php:389
+msgid "Assign technical manager when changing category"
+msgstr "Assign technical manager when changing category"
+
+#: src/Config.php:390
+msgid "Assign technical group when changing category"
+msgstr "Assign technical group when changing category"
+
+#: src/Config.php:391
+msgid "Assign technician from task to parent item"
+msgstr "Assign technician from task to parent item"
+
+#: src/Config.php:395
+msgid "Closure"
+msgstr "Closure"
+
+#: src/Config.php:398
+msgid "Prevent closure with tasks in To Do status"
+msgstr "Prevent closure with tasks in To Do status"
+
+#: src/Config.php:402
+msgid "Mandatory fields to Solve and Close ITILs"
+msgstr "Mandatory fields to Solve and Close ITILs"
+
+#: src/Config.php:415
+msgid "Mandatory fields for Tasks creation"
+msgstr "Mandatory fields for Tasks creation"
+
+#: src/Config.php:417
+msgid "These settings are shared by tickets, changes and problems."
+msgstr "These settings are shared by tickets, changes and problems."

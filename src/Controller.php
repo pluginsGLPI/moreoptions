@@ -371,40 +371,34 @@ class Controller extends CommonDBTM
 
     public static function preventClosure(CommonDBTM $item): bool
     {
-        $conf = Config::getConfig();
-
-        $tasks = [];
-
-        if ($item instanceof Ticket && $conf->fields['prevent_closure_ticket'] == 1) {
-            $task = new TicketTask();
-            $tasks = $task->find([
-                'tickets_id' => $item->fields['id'],
-            ]);
-        }
-
-        if ($item instanceof Change && $conf->fields['prevent_closure_change'] == 1) {
-            $task = new ChangeTask();
-            $tasks = $task->find([
-                'changes_id' => $item->fields['id'],
-            ]);
-        }
-
-        if ($item instanceof Problem && $conf->fields['prevent_closure_problem'] == 1) {
-            $task = new ProblemTask();
-            $tasks = $task->find([
-                'problems_id' => $item->fields['id'],
-            ]);
-        }
-
-        foreach ($tasks as $t) {
-            if (is_array($t) && isset($t['state']) && $t['state'] == Planning::TODO) {
-                Session::addMessageAfterRedirect(__s('The ticket you wish to close has tasks that need to be completed.', 'moreoptions'), false, ERROR);
-                $item->input = false;
-                return false;
-            }
+        if (self::countPendingTasks($item) > 0) {
+            Session::addMessageAfterRedirect(__s('The ticket you wish to close has tasks that need to be completed.', 'moreoptions'), false, ERROR);
+            $item->input = false;
+            return false;
         }
 
         return true;
+    }
+
+    /**
+     * Number of tasks in To Do status of the item, or 0 when closure prevention is not
+     * enabled for the item's type.
+     */
+    private static function countPendingTasks(CommonDBTM $item): int
+    {
+        if (!$item instanceof CommonITILObject) {
+            return 0;
+        }
+
+        $conf = Config::getConfig();
+        if (($conf->fields['prevent_closure_' . strtolower($item::class)] ?? 0) != 1) {
+            return 0;
+        }
+
+        return countElementsInTable($item::getTaskClassInstance()::getTable(), [
+            $item::getForeignKeyField() => $item->getID(),
+            'state'                     => Planning::TODO,
+        ]);
     }
 
     /**
@@ -557,23 +551,35 @@ class Controller extends CommonDBTM
             return;
         }
 
-        $missing = self::getMissingCloseFields($item, true);
-        if (empty($missing)) {
+        $missing = self::getMissingCloseFields($item, true) ?? [];
+        $pending_tasks = self::countPendingTasks($item);
+        if ($missing === [] && $pending_tasks === 0) {
             // Nothing configured as required, or everything is already filled: let the
             // normal "Add a solution" action be usable.
             return;
         }
 
-        $count = count($missing);
+        $reasons = [];
+        if ($pending_tasks > 0) {
+            $reasons[] = sprintf(
+                _n('%d task needs to be completed', '%d tasks need to be completed', $pending_tasks, 'moreoptions'),
+                $pending_tasks,
+            );
+        }
+
+        if ($missing !== []) {
+            $reasons[] = sprintf(
+                _n('%d field is missing', '%d fields are missing', count($missing), 'moreoptions'),
+                count($missing),
+            );
+        }
+
         $header = sprintf(
-            _n(
-                '%1$d required field is missing, so this %2$s can\'t be solved yet.',
-                '%1$d required fields are missing, so this %2$s can\'t be solved yet.',
-                $count,
-                'moreoptions',
-            ),
-            $count,
+            __('This %1$s can\'t be solved yet, %2$s', 'moreoptions'),
             $item->getTypeName(1),
+            count($reasons) === 2
+                ? sprintf(__('%1$s and %2$s', 'moreoptions'), $reasons[0], $reasons[1])
+                : ($reasons[0] ?? ''),
         );
 
         TemplateRenderer::getInstance()->display('@moreoptions/timeline_solution_warning.html.twig', [

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-02 10:20+0000\n"
+"POT-Creation-Date: 2026-11-04 14:38+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -308,6 +308,107 @@ msgstr ""
 
 #: src/Controller.php:616 src/Controller.php:674
 msgid "To create this task, you must fill in the following fields:"
+msgstr ""
+
+#: templates/components/segmented_control.html.twig
+msgid "Follow the parent entity"
+msgstr ""
+
+#: src/Controller.php:82
+msgid "Controller"
+msgstr ""
+
+#: src/Controller.php:374
+msgid "The ticket you wish to close has tasks that need to be completed."
+msgstr ""
+
+#: src/Controller.php:509
+#, php-format
+msgid "To close this %s, you must fill in the following fields:"
+msgstr ""
+
+#: src/Controller.php:551
+#, php-format
+msgid "%d task needs to be completed"
+msgid_plural "%d tasks need to be completed"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Controller.php:558
+#, php-format
+msgid "%d field is missing"
+msgid_plural "%d fields are missing"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Controller.php:564
+#, php-format
+msgid "This %1$s can't be solved yet, %2$s"
+msgstr ""
+
+#: src/Controller.php:567
+#, php-format
+msgid "%1$s and %2$s"
+msgstr ""
+
+#: src/Controller.php:608
+msgid "To create this task, you must fill in the following fields:"
+msgstr ""
+
+#: src/Config.php:58 src/Config.php:63 src/Config.php:93
+msgid "More options"
+msgstr ""
+
+#: src/Config.php:204
+msgid "Default"
+msgstr ""
+
+#: src/Config.php:383
+msgid "Actors and groups"
+msgstr ""
+
+#: src/Config.php:386
+msgid "Take the group of associated item"
+msgstr ""
+
+#: src/Config.php:387
+msgid "Take the requester group"
+msgstr ""
+
+#: src/Config.php:388
+msgid "Take the technician group"
+msgstr ""
+
+#: src/Config.php:389
+msgid "Assign technical manager when changing category"
+msgstr ""
+
+#: src/Config.php:390
+msgid "Assign technical group when changing category"
+msgstr ""
+
+#: src/Config.php:391
+msgid "Assign technician from task to parent item"
+msgstr ""
+
+#: src/Config.php:395
+msgid "Closure"
+msgstr ""
+
+#: src/Config.php:398
+msgid "Prevent closure with tasks in To Do status"
+msgstr ""
+
+#: src/Config.php:402
+msgid "Mandatory fields to Solve and Close ITILs"
+msgstr ""
+
+#: src/Config.php:415
+msgid "Mandatory fields for Tasks creation"
+msgstr ""
+
+#: src/Config.php:417
+msgid "These settings are shared by tickets, changes and problems."
 msgstr ""
 
 #: src/EscalationTree/EscalationTree.php:231
