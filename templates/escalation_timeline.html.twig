@@ -36,6 +36,8 @@
  #  - moves the "<icon> | <source groups> -> <target group>" summary before the "Created: ... by ..." badge,
  #  - moves the button collapsing the comment next to the badge,
  #  - puts a small separator before the "internal" icon.
+ # It also adds an "Escalations" switch to the timeline filter: the core filter script shows the entries
+ # having the class of each checked switch `data-itemtype`, i.e. `moreoptions-escalation` here.
  #}
 <span id="{{ marker_id }}" style="display: none;" aria-hidden="true"></span>
 <script>
@@ -73,6 +75,35 @@
 
             private_icon.classList.remove('ms-2');
             private_icon.before(separator);
+        }
+    });
+
+    // The timeline filter is rendered after the timeline actions, so wait for it.
+    $(function() {
+        var filters = container.querySelector('#filter-timeline-popover .list-group');
+        if (!filters || filters.querySelector('#timeline-filter-moreoptions-escalation')) {
+            return;
+        }
+
+        var filter = $(
+            '<li class="list-group-item list-group-item-action py-1">'
+            + '<div class="form-check form-switch trigger-filter moreoptions-escalation" role="button">'
+            + '<input class="form-check-input" type="checkbox" id="timeline-filter-moreoptions-escalation" autocomplete="off" checked data-itemtype="moreoptions-escalation" />'
+            + '<label class="form-check-label" for="timeline-filter-moreoptions-escalation" role="button">'
+            + '<i class="ms-2" aria-hidden="true"></i> '
+            + '</label>'
+            + '</div>'
+            + '</li>'
+        );
+        filter.find('i').addClass({{ filter_icon|json_encode|raw }});
+        filter.find('label').append(document.createTextNode({{ filter_title|json_encode|raw }}));
+
+        // Before "Historical", which is the last one and unchecked by default
+        var log_filter = filters.querySelector('.trigger-filter.Log');
+        if (log_filter) {
+            filter.insertBefore(log_filter.closest('li'));
+        } else {
+            filter.appendTo(filters);
         }
     });
 })();

@@ -135,6 +135,13 @@
     color: white !important;
 }
 
+// "Escalations" switch of the timeline filter (see escalation_timeline.html.twig), colored when
+// checked like the switches of the core.
+.filter-timeline-popover .form-check.moreoptions-escalation .form-check-input:checked {
+    background-color: color-mix(in srgb, var(--mo-escalation-background), var(--mo-escalation-border) 25%);
+    border-color: var(--mo-escalation-border);
+}
+
 // Escalation entries in the timeline (see Escalation::getTimelineContent() and
 // escalation_timeline.html.twig): a centered card, with a dashed border when private, holding the
 // "<icon> | <source groups> -> <target group>" summary next to the "Created: ... by ..." badge,

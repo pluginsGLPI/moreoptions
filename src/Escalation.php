@@ -137,9 +137,11 @@ class Escalation extends CommonDBTM
      * The escalations of the item the current user can see (private ones require the right to see
      * private followups).
      *
+     * @param string|array<string> $order
+     *
      * @return array<int, array<string, mixed>>
      */
-    private static function getEscalationsOf(CommonITILObject $item, string $order = 'id ASC'): array
+    private static function getEscalationsOf(CommonITILObject $item, string|array $order = 'id ASC'): array
     {
         $criterias = [
             'itemtype' => $item::class,
@@ -439,7 +441,7 @@ class Escalation extends CommonDBTM
         $group_name = static fn(int $groups_id): string => Dropdown::getDropdownName(Group::getTable(), $groups_id);
 
         $history = [];
-        foreach (self::getEscalationsOf($item, 'date_creation DESC, id DESC') as $row) {
+        foreach (self::getEscalationsOf($item, ['date_creation DESC', 'id DESC']) as $row) {
             $groups_id = (int) $row['groups_id'];
             $history[] = [
                 'id'        => (int) $row['id'],
@@ -460,7 +462,8 @@ class Escalation extends CommonDBTM
     /**
      * Called from the {@link \Glpi\Plugin\Hooks::TIMELINE_ACTIONS} hook (see
      * Controller::showTimelineActions()). Renders the script that lays out the header of escalation
-     * entries (summary, "Created: ... by ..." badge, collapse button, "internal" icon).
+     * entries (summary, "Created: ... by ..." badge, collapse button, "internal" icon) and adds
+     * an "Escalations" switch to the timeline filter.
      *
      * @param array<string, mixed> $params
      */
@@ -472,7 +475,9 @@ class Escalation extends CommonDBTM
         }
 
         TemplateRenderer::getInstance()->display('@moreoptions/escalation_timeline.html.twig', [
-            'marker_id' => 'moreoptions-escalation-timeline-' . $item::class . '-' . $item->getID(),
+            'marker_id'    => 'moreoptions-escalation-timeline-' . $item::class . '-' . $item->getID(),
+            'filter_title' => self::getTypeName(Session::getPluralNumber()),
+            'filter_icon'  => self::getIcon(),
         ]);
     }
 
