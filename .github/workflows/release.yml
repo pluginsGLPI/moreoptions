@@ -1,0 +1,16 @@
+name: "Publish release"
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: "read"
+
+jobs:
+  publish-release:
+    name: "Publish release"
+    permissions:
+      contents: "write"
+    uses: "glpi-project/plugin-release-workflows/.github/workflows/publish-release.yml@v1"
