@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Fix rights checks on escalations
 
+### Added
+
+- Add tags to the plugin XML
+
 ## [1.0.0] - 2026-11-05
 
 ### Fixed
