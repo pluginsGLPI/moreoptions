@@ -5,9 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
-
-- GLPI 12 Compatibility
+## [1.0.0] - 2026-11-05
 
 ### Fixed
 
@@ -17,8 +15,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Show tasks in To Do status in the "Add a solution" warning when closure prevention is enabled
 - Show the number of tasks to complete and of missing fields in the "Add a solution" warning
 
-## Add
+### Added
 
+- GLPI 12 compatibility
 - Add rector config
 - Implementation of the basic concept of escalation
 - Add the "Escalate to group" action to the ticket, change and problem business rules, and a page to switch the rules "Technician group" actions to it
