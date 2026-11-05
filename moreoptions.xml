@@ -28,7 +28,7 @@ Ce plugin ajoute plusieurs options de configuration pour les objets ITIL (ticket
    <homepage>https://github.com/pluginsGLPI/moreoptions</homepage>
    <download>https://github.com/pluginsGLPI/moreoptions/releases</download>
    <issues>https://github.com/pluginsGLPI/moreoptions/issues</issues>
-   <readme>https://github.com/pluginsGLPI/moreoptions/blob/main/README.md</readme>
+   <readme>https://raw.githubusercontent.com/pluginsGLPI/moreoptions/refs/heads/main/README.md</readme>
    <authors>
       <author>Teclib'</author>
    </authors>
@@ -57,4 +57,32 @@ Ce plugin ajoute plusieurs options de configuration pour les objets ITIL (ticket
       <lang>fr_FR</lang>
    </langs>
    <license>MIT</license>
+   <tags>
+      <en>
+         <tag>ITIL</tag>
+         <tag>Ticket</tag>
+         <tag>Change</tag>
+         <tag>Problem</tag>
+         <tag>Groups</tag>
+         <tag>Escalation</tag>
+         <tag>Closure</tag>
+         <tag>Task</tag>
+         <tag>Mandatory fields</tag>
+         <tag>Assignment</tag>
+         <tag>Behaviors</tag>
+      </en>
+      <fr>
+         <tag>ITIL</tag>
+         <tag>Ticket</tag>
+         <tag>Changement</tag>
+         <tag>Problème</tag>
+         <tag>Groupes</tag>
+         <tag>Escalade</tag>
+         <tag>Clôture</tag>
+         <tag>Tâche</tag>
+         <tag>Champs obligatoires</tag>
+         <tag>Attribution</tag>
+         <tag>Comportements</tag>
+      </fr>
+   </tags>
 </root>
