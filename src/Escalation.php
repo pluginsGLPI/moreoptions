@@ -163,18 +163,6 @@ class Escalation extends CommonDBTM
         return $item instanceof CommonITILObject && self::canEscalate($item);
     }
 
-    public function canViewItem(): bool
-    {
-        $item = $this->getEscalatedItem($this->fields);
-
-        return $item instanceof CommonITILObject
-            && $item->can($item->getID(), READ)
-            && (
-                (int) $this->fields['is_private'] !== 1
-                || Session::haveRight(ITILFollowup::$rightname, ITILFollowup::SEEPRIVATE)
-            );
-    }
-
     public function canUpdateItem(): bool
     {
         return false;

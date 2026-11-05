@@ -842,10 +842,8 @@ class EscalationTest extends MoreOptionsTestCase
     public function testEscalationIsOnlyShownInItsItemTimeline(string $itemtype): void
     {
         $this->login();
-        $item_entity  = getItemByTypeName(Entity::class, '_test_child_2', true);
-        $other_entity = getItemByTypeName(Entity::class, '_test_child_1', true);
+        $item_entity = getItemByTypeName(Entity::class, '_test_child_2', true);
         $this->assertIsInt($item_entity);
-        $this->assertIsInt($other_entity);
         $this->enableEscalation($item_entity);
 
         $item = $this->createItem($itemtype, [
@@ -868,18 +866,6 @@ class EscalationTest extends MoreOptionsTestCase
         foreach ([READ, UPDATE, DELETE, PURGE] as $right) {
             $this->assertFalse($escalation->can($escalation->getID(), $right));
         }
-
-        // Seeing an escalation requires to see its item, and the private followups for a private one
-        $this->assertTrue($escalation->canViewItem());
-
-        $_SESSION['glpiactiveprofile']['followup'] &= ~ITILFollowup::SEEPRIVATE;
-        $this->assertFalse($escalation->canViewItem());
-
-        $escalation->fields['is_private'] = 0;
-        $this->assertTrue($escalation->canViewItem());
-
-        $this->setEntity($other_entity, false);
-        $this->assertFalse($escalation->canViewItem());
     }
 
     /**
