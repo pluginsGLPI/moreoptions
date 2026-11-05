@@ -32,23 +32,15 @@
  * -------------------------------------------------------------------------
  */
 
-use Glpi\Exception\Http\AccessDeniedHttpException;
 use GlpiPlugin\Moreoptions\Escalation;
 
 Session::checkLoginUser();
 
 if (isset($_POST['add'])) {
-    $item = getItemForItemtype($_POST['itemtype'] ?? '');
-    if (
-        !$item instanceof CommonITILObject
-        || !$item->getFromDB((int) ($_POST['items_id'] ?? 0))
-        || !$item->canAssign()
-        || !Escalation::isEnabledFor($item)
-    ) {
-        throw new AccessDeniedHttpException();
-    }
-
-    (new Escalation())->add($_POST);
+    // See Escalation::canCreateItem(): the user must be able to escalate this very item.
+    $escalation = new Escalation();
+    $escalation->check(-1, CREATE, $_POST);
+    $escalation->add($_POST);
 }
 
 Html::back();
