@@ -59,24 +59,30 @@ Ce plugin ajoute plusieurs options de configuration pour les objets ITIL (ticket
    <license>MIT</license>
    <tags>
       <en>
-         <tag>Groups</tag>
+         <tag>ITIL</tag>
          <tag>Ticket</tag>
          <tag>Change</tag>
          <tag>Problem</tag>
-         <tag>Assistance</tag>
+         <tag>Groups</tag>
          <tag>Escalation</tag>
          <tag>Closure</tag>
+         <tag>Task</tag>
+         <tag>Mandatory fields</tag>
+         <tag>Assignment</tag>
          <tag>Behaviors</tag>
       </en>
       <fr>
-         <tag>Groupes</tag>
+         <tag>ITIL</tag>
          <tag>Ticket</tag>
          <tag>Changement</tag>
          <tag>Problème</tag>
-         <tag>Helpdesk</tag>
+         <tag>Groupes</tag>
          <tag>Escalade</tag>
          <tag>Clôture</tag>
-         <tag>Behaviors</tag>
+         <tag>Tâche</tag>
+         <tag>Champs obligatoires</tag>
+         <tag>Attribution</tag>
+         <tag>Comportements</tag>
       </fr>
    </tags>
 </root>
