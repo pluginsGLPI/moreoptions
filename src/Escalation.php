@@ -111,7 +111,7 @@ class Escalation extends CommonDBTM
      *
      * @param array<string, mixed> $fields
      */
-    private static function getEscalatedItem(array $fields): ?CommonITILObject
+    private function getEscalatedItem(array $fields): ?CommonITILObject
     {
         $itemtype = $fields['itemtype'] ?? null;
         if (!in_array($itemtype, self::getSupportedItemtypes(), true)) {
@@ -158,16 +158,16 @@ class Escalation extends CommonDBTM
 
     public function canCreateItem(): bool
     {
-        $item = self::getEscalatedItem($this->fields);
+        $item = $this->getEscalatedItem($this->fields);
 
-        return $item !== null && self::canEscalate($item);
+        return $item instanceof CommonITILObject && self::canEscalate($item);
     }
 
     public function canViewItem(): bool
     {
-        $item = self::getEscalatedItem($this->fields);
+        $item = $this->getEscalatedItem($this->fields);
 
-        return $item !== null
+        return $item instanceof CommonITILObject
             && $item->can($item->getID(), READ)
             && (
                 (int) $this->fields['is_private'] !== 1
@@ -439,8 +439,8 @@ class Escalation extends CommonDBTM
      */
     public function prepareInputForAdd($input)
     {
-        $item = self::getEscalatedItem($input);
-        if ($item === null || !self::isEnabledFor($item)) {
+        $item = $this->getEscalatedItem($input);
+        if (!$item instanceof CommonITILObject || !self::isEnabledFor($item)) {
             return false;
         }
 
