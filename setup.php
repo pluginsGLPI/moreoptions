@@ -41,7 +41,7 @@ use GlpiPlugin\Moreoptions\EscalationRule;
 use GlpiPlugin\Moreoptions\Group_Link;
 
 /** @phpstan-ignore theCodingMachineSafe.function (safe to assume this isn't already defined) */
-define('PLUGIN_MOREOPTIONS_VERSION', '1.0.0+glpi12');
+define('PLUGIN_MOREOPTIONS_VERSION', '1.0.1+glpi12');
 
 // Minimal GLPI version, inclusive
 /** @phpstan-ignore theCodingMachineSafe.function (safe to assume this isn't already defined) */
