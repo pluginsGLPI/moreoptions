@@ -95,6 +95,100 @@ class Escalation extends CommonDBTM
     }
 
     /**
+     * Whether the current user can escalate the item: escalation is enabled for its entity, and
+     * the user can see this very item (which checks its entity) and assign it.
+     */
+    public static function canEscalate(CommonITILObject $item): bool
+    {
+        return !$item->isNewItem()
+            && self::isEnabledFor($item)
+            && $item->can($item->getID(), READ)
+            && $item->canAssign();
+    }
+
+    /**
+     * The escalated item of an escalation, from its `itemtype` and `items_id` fields or input.
+     *
+     * @param array<string, mixed> $fields
+     */
+    private function getEscalatedItem(array $fields): ?CommonITILObject
+    {
+        $itemtype = $fields['itemtype'] ?? null;
+        if (!in_array($itemtype, self::getSupportedItemtypes(), true)) {
+            return null;
+        }
+
+        $item = new $itemtype();
+
+        return $item->getFromDB((int) ($fields['items_id'] ?? 0)) ? $item : null;
+    }
+
+    /**
+     * Escalations are created through the "Escalate" form, or by business rules (which do not
+     * check the rights of the current user), then only shown in the timeline of their item: they
+     * are not readable, editable nor deletable on their own (e.g. through the API, which lists
+     * every row of the table, the table having no entity).
+     */
+    public static function canCreate(): bool
+    {
+        return Session::haveRight(Ticket::$rightname, Ticket::ASSIGN)
+            || Session::haveRight(Change::$rightname, UPDATE)
+            || Session::haveRight(Problem::$rightname, UPDATE);
+    }
+
+    public static function canView(): bool
+    {
+        return false;
+    }
+
+    public static function canUpdate(): bool
+    {
+        return false;
+    }
+
+    public static function canDelete(): bool
+    {
+        return false;
+    }
+
+    public static function canPurge(): bool
+    {
+        return false;
+    }
+
+    public function canCreateItem(): bool
+    {
+        $item = $this->getEscalatedItem($this->fields);
+
+        return $item instanceof CommonITILObject && self::canEscalate($item);
+    }
+
+    public function canUpdateItem(): bool
+    {
+        return false;
+    }
+
+    public function canDeleteItem(): bool
+    {
+        return false;
+    }
+
+    public function canPurgeItem(): bool
+    {
+        return false;
+    }
+
+    /**
+     * `is_private` is an "internal" flag, like for followups, not a "personal" one: without this,
+     * CommonDBTM::can() would grant every right to the author of a private escalation, the
+     * creation included, whatever its item.
+     */
+    public function maybePrivate(): bool
+    {
+        return false;
+    }
+
+    /**
      * Hooked on {@link \Glpi\Plugin\Hooks::TIMELINE_ITEMS}. Adds the escalations of the item
      * to its timeline.
      *
@@ -321,16 +415,20 @@ class Escalation extends CommonDBTM
 
     /**
      * The author is always the current user, and the source groups are the groups assigned to
-     * the item before the escalation. Escalating to a group the item cannot be escalated to (see
-     * self::getEscalationBlocker()) is refused.
+     * the item before the escalation. Escalating an item of an entity where escalation is not
+     * enabled, or to a group the item cannot be escalated to (see self::getEscalationBlocker()),
+     * is refused.
+     *
+     * The rights of the current user are not checked here, but by self::canCreateItem() (see
+     * front/escalation.form.php): business rules escalate items whatever the user who triggers them.
      *
      * @param array<string, mixed> $input
      * @return array<string, mixed>|false
      */
     public function prepareInputForAdd($input)
     {
-        $item = getItemForItemtype($input['itemtype'] ?? '');
-        if (!$item instanceof CommonITILObject || !$item->getFromDB((int) ($input['items_id'] ?? 0))) {
+        $item = $this->getEscalatedItem($input);
+        if (!$item instanceof CommonITILObject || !self::isEnabledFor($item)) {
             return false;
         }
 
@@ -414,7 +512,7 @@ class Escalation extends CommonDBTM
             return;
         }
 
-        $can_escalate = $item->canAssign();
+        $can_escalate = self::canEscalate($item);
         $history      = self::getHistory($item, $can_escalate);
         if (!$can_escalate && $history === []) {
             return;

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix rights checks on escalations
+
 ### Added
 
 - Add tags to the plugin XML

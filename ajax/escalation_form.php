@@ -41,8 +41,7 @@ $item = getItemForItemtype($_GET['itemtype'] ?? '');
 if (
     !$item instanceof CommonITILObject
     || !$item->getFromDB((int) ($_GET['items_id'] ?? 0))
-    || !$item->canAssign()
-    || !Escalation::isEnabledFor($item)
+    || !Escalation::canEscalate($item)
 ) {
     throw new AccessDeniedHttpException();
 }

@@ -750,6 +750,125 @@ class EscalationTest extends MoreOptionsTestCase
     }
 
     /**
+     * Escalating requires to see this very item, not only the right to assign items: an item of an
+     * entity the user has no access to cannot be escalated (e.g. through the "Escalate" form or the
+     * API, which both check Escalation::can()).
+     *
+     * @param class-string<CommonITILObject> $itemtype
+     */
+    #[DataProvider('itemtypeProvider')]
+    public function testEscalationRequiresAccessToTheItem(string $itemtype): void
+    {
+        $this->login();
+        $item_entity  = getItemByTypeName(Entity::class, '_test_child_2', true);
+        $other_entity = getItemByTypeName(Entity::class, '_test_child_1', true);
+        $this->assertIsInt($item_entity);
+        $this->assertIsInt($other_entity);
+        $this->enableEscalation($item_entity);
+        $this->enableEscalation($other_entity);
+
+        $item = $this->createItem($itemtype, [
+            'name'        => 'Test escalation',
+            'content'     => 'Test content',
+            'entities_id' => $item_entity,
+        ]);
+        $this->assertInstanceOf(CommonITILObject::class, $item);
+
+        $input = [
+            'itemtype'  => $item::class,
+            'items_id'  => $item->getID(),
+            'groups_id' => $this->createGroup($item_entity, 'Target group')->getID(),
+        ];
+        // The author of a private escalation gets no more right on it
+        $private_input = $input + ['is_private' => 1, 'users_id' => Session::getLoginUserID()];
+
+        // Allowed to assign items, but only in another entity
+        $this->setEntity($other_entity, false);
+        $this->assertTrue($item->canAssign());
+        $this->assertFalse(Escalation::canEscalate($item));
+        $this->assertFalse((new Escalation())->can(-1, CREATE, $input));
+        $this->assertFalse((new Escalation())->can(-1, CREATE, $private_input));
+
+        // In the entity of the item
+        $this->setEntity($item_entity, false);
+        $this->assertTrue(Escalation::canEscalate($item));
+        $this->assertTrue((new Escalation())->can(-1, CREATE, $input));
+    }
+
+    /**
+     * An item of an entity where escalation is not enabled cannot be escalated, whatever the way
+     * the escalation is created.
+     *
+     * @param class-string<CommonITILObject> $itemtype
+     */
+    #[DataProvider('itemtypeProvider')]
+    public function testEscalationRequiresEscalationEnabled(string $itemtype): void
+    {
+        $this->login();
+        $entities_id = $this->getTestRootEntity(true);
+        $this->assertIsInt($entities_id);
+
+        $item = $this->createItem($itemtype, [
+            'name'        => 'Test escalation',
+            'content'     => 'Test content',
+            'entities_id' => $entities_id,
+        ]);
+        $this->assertInstanceOf(CommonITILObject::class, $item);
+        $this->assertFalse(Escalation::isEnabledFor($item));
+
+        $input = [
+            'itemtype'  => $item::class,
+            'items_id'  => $item->getID(),
+            'groups_id' => $this->createGroup($entities_id, 'Target group')->getID(),
+        ];
+        $this->assertFalse(Escalation::canEscalate($item));
+        $this->assertFalse((new Escalation())->can(-1, CREATE, $input));
+        $this->assertFalse((new Escalation())->add($input));
+
+        $this->assertSame(0, countElementsInTable(Escalation::getTable(), [
+            'itemtype' => $item::class,
+            'items_id' => $item->getID(),
+        ]));
+        $this->assertSame([], $this->getAssignedGroupIds($item));
+    }
+
+    /**
+     * Escalations are only shown in the timeline of their item: they cannot be read, edited nor
+     * deleted on their own (e.g. through the API), even by their author.
+     *
+     * @param class-string<CommonITILObject> $itemtype
+     */
+    #[DataProvider('itemtypeProvider')]
+    public function testEscalationIsOnlyShownInItsItemTimeline(string $itemtype): void
+    {
+        $this->login();
+        $item_entity = getItemByTypeName(Entity::class, '_test_child_2', true);
+        $this->assertIsInt($item_entity);
+        $this->enableEscalation($item_entity);
+
+        $item = $this->createItem($itemtype, [
+            'name'        => 'Test escalation',
+            'content'     => 'Test content',
+            'entities_id' => $item_entity,
+        ]);
+        $this->assertInstanceOf(CommonITILObject::class, $item);
+
+        $escalation = $this->createItem(Escalation::class, [
+            'itemtype'   => $item::class,
+            'items_id'   => $item->getID(),
+            'groups_id'  => $this->createGroup($item_entity, 'Target group')->getID(),
+            'is_private' => 1,
+        ]);
+        $this->assertInstanceOf(Escalation::class, $escalation);
+        $this->assertSame(Session::getLoginUserID(), (int) $escalation->fields['users_id']);
+
+        $this->assertFalse(Escalation::canView());
+        foreach ([READ, UPDATE, DELETE, PURGE] as $right) {
+            $this->assertFalse($escalation->can($escalation->getID(), $right));
+        }
+    }
+
+    /**
      * Enable the escalation option for the given entity.
      *
      * @param array<string, mixed> $options Other escalation options to set
