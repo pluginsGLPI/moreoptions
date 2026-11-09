@@ -61,9 +61,9 @@ function plugin_init_moreoptions(): void
     global $PLUGIN_HOOKS;
 
     $PLUGIN_HOOKS['config_page']['moreoptions'] = "../../front/entity.form.php?id=" . Session::getActiveEntity() . "&forcetab=" . Config::class . "$1";
-    $plugin = new Plugin();
-    if ($plugin->isActivated('moreoptions') == false) {
-        return ;
+    // Init also runs for inactive plugins (plugin list, install); getPlugins() lists active ones without a query.
+    if (!in_array('moreoptions', Plugin::getPlugins(), true)) {
+        return;
     }
 
     Plugin::registerClass(Config::class, ['addtabon' => 'Entity']);
@@ -72,7 +72,7 @@ function plugin_init_moreoptions(): void
 
     $PLUGIN_HOOKS[Hooks::ITEM_PURGE]['moreoptions'][Entity::class] = Group_Link::cleanForEntity(...);
 
-    $PLUGIN_HOOKS[Hooks::ADD_CSS]['moreoptions'][] = 'css/moreoptions.scss';
+    $PLUGIN_HOOKS[Hooks::ADD_CSS]['moreoptions'][] = 'css/moreoptions.css';
 
     $PLUGIN_HOOKS[Hooks::ITEM_ADD]['moreoptions'][Entity::class] = Config::addConfig(...);
 

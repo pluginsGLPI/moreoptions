@@ -1506,6 +1506,35 @@ class ConfigTest extends MoreOptionsTestCase
         $this->assertEquals(1, $effective_config->fields['mandatory_task_category']);
     }
 
+    public function testResolvedConfigIsRefreshedAfterParentUpdate(): void
+    {
+        $this->login();
+
+        $child_entity = $this->createItem(Entity::class, ['name' => 'Cached child entity', 'entities_id' => 0], ['name']);
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+        $child_entity_id = $child_entity->getID();
+        $this->assertIsInt($child_entity_id);
+
+        $root_conf = Config::getConfig(0, false);
+        $this->updateItem(Config::class, $root_conf->getID(), ['prevent_closure_ticket' => 0]);
+        $this->updateItem(Config::class, Config::getConfig($child_entity_id, false)->getID(), ['prevent_closure_ticket' => Config::CONFIG_PARENT]);
+        $this->assertEquals(0, Config::getConfig($child_entity_id)->fields['prevent_closure_ticket']);
+
+        $this->updateItem(Config::class, $root_conf->getID(), ['prevent_closure_ticket' => 1]);
+
+        $this->assertEquals(1, Config::getConfig($child_entity_id)->fields['prevent_closure_ticket']);
+    }
+
+    public function testResolvedConfigCopiesAreIndependent(): void
+    {
+        $this->login();
+
+        $first_copy = Config::getConfig(0);
+        $first_copy->fields['prevent_closure_ticket'] = 42;
+
+        $this->assertNotEquals(42, Config::getConfig(0)->fields['prevent_closure_ticket']);
+    }
+
     /**
      * Test multi-level parent entity configuration inheritance
      */

@@ -44,6 +44,13 @@ abstract class MoreOptionsTestCase extends DbTestCase
 
     public const TU_PASS = 'glpi';
 
+    public function setUp(): void
+    {
+        parent::setUp();
+        // Each test rolls back its transaction, so configurations resolved by a previous test are stale.
+        Config::clearConfigCache();
+    }
+
     /**
      * Login with the test user
      */
