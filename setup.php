@@ -147,6 +147,7 @@ function plugin_version_moreoptions(): array
         'author'         => '<a href="http://www.teclib.com">Teclib\'</a>',
         'license'        => '',
         'homepage'       => '',
+        'csp_compliant'  => true,
         'requirements'   => [
             'glpi' => [
                 'min' => PLUGIN_MOREOPTIONS_MIN_GLPI_VERSION,
