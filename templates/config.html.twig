@@ -136,4 +136,4 @@
     </form>
 </div>
 
-{{ call('Html::script', ['/plugins/moreoptions/js/moreoptions.js', {}, false])|raw }}
+{{ call('Html::script', ['/plugins/moreoptions/js/moreoptions.js', {'version': constant('PLUGIN_MOREOPTIONS_VERSION')}, false])|raw }}
