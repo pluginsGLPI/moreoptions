@@ -66,7 +66,7 @@
  #}
 
 <div class="asset mo-config">
-    <form id="mo-config-form-{{ rand }}" action="{{ path('plugins/moreoptions/front/config.form.php') }}" method="post">
+    <form id="mo-config-form-{{ rand }}" data-moreoptions-config-form action="{{ path('plugins/moreoptions/front/config.form.php') }}" method="post">
         <ul class="nav nav-tabs" role="tablist">
             {% for tab in tabs %}
                 <li class="nav-item">
@@ -136,28 +136,4 @@
     </form>
 </div>
 
-<script>
-    (() => {
-        // The page is reloaded once saved: back on the tab it was saved from.
-        const form = document.getElementById('mo-config-form-{{ rand }}');
-        const key = 'moreoptions_config_tab';
-        try {
-            const saved = sessionStorage.getItem(key);
-            sessionStorage.removeItem(key);
-            const tab = saved !== null ? form.querySelector(`[data-mo-tab="${CSS.escape(saved)}"]`) : null;
-            if (tab !== null) {
-                bootstrap.Tab.getOrCreateInstance(tab).show();
-            }
-        } catch {
-            // No storage (private browsing): the first tab is shown.
-        }
-
-        form.addEventListener('submit', () => {
-            try {
-                sessionStorage.setItem(key, form.querySelector('.nav-link.active')?.dataset.moTab ?? '');
-            } catch {
-                // Same
-            }
-        });
-    })();
-</script>
+{{ call('Html::script', ['/plugins/moreoptions/js/moreoptions.js', {}, false])|raw }}

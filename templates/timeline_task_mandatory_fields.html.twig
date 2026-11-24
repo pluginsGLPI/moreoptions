@@ -35,47 +35,5 @@
  # on their label, matching GLPI's own convention) and blocks client-side submission until they
  # are filled.
  #}
-<span id="{{ marker_id }}" style="display: none;" aria-hidden="true"></span>
-<script>
-(function() {
-    var fieldLabels = {{ field_labels|json_encode|raw }};
-    var errorMessage = {{ error_message|json_encode|raw }};
-    var marker = document.getElementById({{ marker_id|json_encode|raw }});
-    var form = marker ? marker.closest('form') : null;
-    if (!form) {
-        return;
-    }
-
-    function isEmpty(value) {
-        return value === null || value === undefined || value === '' || value === '0';
-    }
-
-    Object.keys(fieldLabels).forEach(function(name) {
-        var fieldContainer = form.querySelector('[data-testid="form-field-' + name + '"]');
-        var label = fieldContainer ? fieldContainer.querySelector('label') : null;
-        if (label && !label.querySelector('.moreoptions-required-mark')) {
-            var mark = document.createElement('span');
-            mark.className = 'required moreoptions-required-mark';
-            mark.textContent = '*';
-            label.appendChild(document.createTextNode(' '));
-            label.appendChild(mark);
-        }
-    });
-
-    form.addEventListener('submit', function(e) {
-        var missing = [];
-        Object.keys(fieldLabels).forEach(function(name) {
-            var field = form.querySelector('[name="' + name + '"]');
-            var value = field ? field.value : '';
-            if (isEmpty(value)) {
-                missing.push(fieldLabels[name]);
-            }
-        });
-        if (missing.length > 0) {
-            e.preventDefault();
-            e.stopPropagation();
-            window.alert(errorMessage + '\n- ' + missing.join('\n- '));
-        }
-    });
-})();
-</script>
+<span id="{{ marker_id }}" data-moreoptions-mandatory-fields="{{ {'labels': field_labels, 'error': error_message}|json_encode }}" style="display: none;" aria-hidden="true"></span>
+{{ call('Html::script', ['/plugins/moreoptions/js/moreoptions.js', {}, false])|raw }}
