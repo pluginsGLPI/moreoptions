@@ -61,6 +61,8 @@ use Group_Item;
 use Item_Ticket;
 use CommonITILActor;
 use Entity;
+use Glpi\Debug\Profile as DebugProfile;
+use Session;
 use GlpiPlugin\Moreoptions\Controller;
 use ChangeTask;
 use ProblemTask;
@@ -1533,6 +1535,33 @@ class ConfigTest extends MoreOptionsTestCase
         $first_copy->fields['prevent_closure_ticket'] = 42;
 
         $this->assertNotEquals(42, Config::getConfig(0)->fields['prevent_closure_ticket']);
+    }
+
+    public function testResolvingConfigTwiceQueriesConfigTableOnce(): void
+    {
+        $this->login();
+
+        $level_1_entity = $this->createItem(Entity::class, ['name' => 'Query count level 1', 'entities_id' => 0], ['name']);
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+        $level_2_entity = $this->createItem(Entity::class, ['name' => 'Query count level 2', 'entities_id' => $level_1_entity->getID()], ['name', 'entities_id']);
+        $this->clearLogEntriesContaining('glpiactiveentities_string');
+        $level_2_entity_id = $level_2_entity->getID();
+        $this->assertIsInt($level_2_entity_id);
+        Config::clearConfigCache();
+
+        $_SESSION['glpi_use_mode'] = Session::DEBUG_MODE;
+        $queries_before = count(DebugProfile::getCurrent()->getDebugInfo()['sql']['queries'] ?? []);
+        Config::getConfig($level_2_entity_id);
+        Config::getConfig($level_2_entity_id);
+        $queries = array_slice(DebugProfile::getCurrent()->getDebugInfo()['sql']['queries'], $queries_before);
+        $_SESSION['glpi_use_mode'] = Session::NORMAL_MODE;
+
+        $config_table = Config::getTable();
+        $config_queries = array_filter(
+            $queries,
+            static fn(array $query): bool => str_contains($query['query'], "FROM `$config_table`"),
+        );
+        $this->assertCount(1, $config_queries);
     }
 
     /**
