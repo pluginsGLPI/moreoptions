@@ -62,6 +62,9 @@ class Config extends CommonDBTM
 
     public const CONFIG_PARENT = Entity::CONFIG_PARENT;
 
+    /** @var array<string, self> resolved configurations of the current request, by entity chain */
+    private static array $configs_cache = [];
+
     public static function getMenuName(): string
     {
         return __('More options', 'moreoptions');
@@ -710,23 +713,107 @@ class Config extends CommonDBTM
     public static function getConfig(?int $entityId = null, bool $useInheritance = true): self
     {
         $entityId ??= Session::getActiveEntity();
+        $chain = $useInheritance ? self::getEntityChain($entityId) : [$entityId];
+        $key = implode(',', $chain);
 
-        $moconfig = new self();
-        $moconfig->getFromDBByCrit([
-            'entities_id' => $entityId,
-        ]);
+        self::$configs_cache[$key] ??= self::buildConfig(self::resolveInheritance($chain, self::fetchConfigRows($chain)));
 
-        if ($useInheritance && $entityId > 0) {
-            $entity = new Entity();
-            if ($entity->getFromDB($entityId)) {
-                $parentConfig = self::getConfig((int) $entity->fields['entities_id'], true);
-                foreach (self::getInheritableConfigFields() as $field) {
-                    if (($moconfig->fields[$field] ?? 0) == self::CONFIG_PARENT) {
-                        $moconfig->fields[$field] = $parentConfig->fields[$field] ?? 0;
-                    }
-                }
+        return clone self::$configs_cache[$key];
+    }
+
+    public static function clearConfigCache(): void
+    {
+        self::$configs_cache = [];
+    }
+
+    public function post_addItem(): void
+    {
+        parent::post_addItem();
+        self::clearConfigCache();
+    }
+
+    public function post_updateItem($history = true): void
+    {
+        parent::post_updateItem($history);
+        self::clearConfigCache();
+    }
+
+    public function post_purgeItem(): void
+    {
+        parent::post_purgeItem();
+        self::clearConfigCache();
+    }
+
+    /**
+     * @return list<int> the given entity and its ancestors, root first
+     */
+    private static function getEntityChain(int $entityId): array
+    {
+        $ancestors = array_map(intval(...), array_values(getAncestorsOf(Entity::getTable(), $entityId)));
+
+        return array_values(array_unique([...$ancestors, $entityId]));
+    }
+
+    /**
+     * @param list<int> $entityIds
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private static function fetchConfigRows(array $entityIds): array
+    {
+        /** @var DBmysql $DB */
+        global $DB;
+
+        $rows = [];
+        foreach ($DB->request(['FROM' => self::getTable(), 'WHERE' => ['entities_id' => $entityIds]]) as $row) {
+            $rows[(int) $row['entities_id']] = $row;
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param list<int> $chain
+     * @param array<int, array<string, mixed>> $rows
+     *
+     * @return array<string, mixed> fields of the last entity of the chain
+     */
+    private static function resolveInheritance(array $chain, array $rows): array
+    {
+        $resolved = null;
+        foreach ($chain as $entityId) {
+            $resolved = $resolved === null
+                ? ($rows[$entityId] ?? [])
+                : self::inheritFields($rows[$entityId] ?? [], $resolved);
+        }
+
+        return $resolved ?? [];
+    }
+
+    /**
+     * @param array<string, mixed> $fields
+     * @param array<string, mixed> $parentFields
+     *
+     * @return array<string, mixed>
+     */
+    private static function inheritFields(array $fields, array $parentFields): array
+    {
+        foreach (self::getInheritableConfigFields() as $field) {
+            if ((int) ($fields[$field] ?? 0) === self::CONFIG_PARENT) {
+                $fields[$field] = $parentFields[$field] ?? 0;
             }
         }
+
+        return $fields;
+    }
+
+    /**
+     * @param array<string, mixed> $fields
+     */
+    private static function buildConfig(array $fields): self
+    {
+        $moconfig = new self();
+        $moconfig->getFromResultSet($fields);
 
         return $moconfig;
     }
